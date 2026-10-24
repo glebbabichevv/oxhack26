@@ -67,6 +67,11 @@ same overconfidence on Polymarket near resolution (slope 0.91–0.93; ours ≈ 0
 Qiu & Qiu (arXiv 2610.13593, Polymarket weather) find favourites overpriced most in the final 1–12 h: an independent
 replication in a domain we don't trade.
 
+**Q: What about Kalshi?** On 931 sports events listed on both venues (702 events, matched by text and date), the prices
+a day out agree within half a cent (median; 89% within 2¢) and are equally accurate (Brier 0.2083 vs 0.2094, paired
+difference inside noise). Both are overconfident (calibration slope 0.95 Polymarket, 0.87 Kalshi). So in sports near
+resolution we don't see the opposite Kalshi bias the 46k study reports. (`integrations/kalshi/match.json`, PR #21)
+
 **Q: The classic de-vig models (Shin, power)?** They get Polymarket backwards. Shin assumes longshots are overpriced;
 fitted freely per horizon, Shin's insider share is negative everywhere: −0.012 a month out (≈ fair), −0.073 a day out.
 Trading Shin loses money (−6.9¢ per $1 walk-forward, 670 trades).
