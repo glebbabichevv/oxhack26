@@ -102,3 +102,6 @@ from agent_router import router as agent_router; app.include_router(agent_router
 
 # Decision Journal: POST/GET /api/journal (journal.py; Vercel Blob when BLOB_READ_WRITE_TOKEN is set).
 from journal import router as journal_router; app.include_router(journal_router)  # noqa: E402
+
+# Live track record: cumulative result per $1 of resolved journal decisions and Seal 1 calls (track.py).
+from track import router as track_router; app.include_router(track_router)  # noqa: E402

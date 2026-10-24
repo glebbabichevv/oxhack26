@@ -19,7 +19,7 @@ function points(horizons: CalibrationHorizon[], b?: Backtest): Pt[] {
       const bin = h.bins.find((x) => Math.abs(x.price_mid - PRICE) < 0.001);
       if (!bin || bin.n < MIN_N) return null;
       const se = 1.645 * Math.sqrt((bin.observed * (1 - bin.observed)) / bin.n);
-      const perTrade = b?.by_horizon.find((x) => x.horizon_hours === h.horizon_hours)?.with_costs.mean_return_per_trade;
+      const perTrade = b?.by_horizon.find((x) => x.horizon_hours === h.horizon_hours)?.with_costs.mean_return_per_trade ?? undefined;
       return { h: h.horizon_hours, p: bin.observed, lo: bin.observed - se, hi: bin.observed + se, n: bin.n, perTrade };
     })
     .filter((x): x is Pt => x !== null)

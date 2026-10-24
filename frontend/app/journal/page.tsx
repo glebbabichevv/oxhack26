@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ActionChip, FramedCard, Hero, Nav, Section, Segmented } from "@/design/components/Page";
 import { API_URL, cents, getJSON, int, pct } from "@/lib/api";
 import type { CapsuleData } from "@/components/Capsule";
+import { TrackChart, type Track } from "@/components/TrackChart";
 
 // Decision Journal (GET /api/journal): every call someone acted on, what Horizon said then, and how it ended.
 type Entry = {
@@ -58,12 +59,17 @@ export default function JournalPage() {
   const [scope, setScope] = useState<"all" | "me">("all");
   const [data, setData] = useState<Journal>();
   const [capsule, setCapsule] = useState<CapsuleData>();
+  const [track, setTrack] = useState<Track>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("me");
     if (id) { setMe(id); setScope("me"); }
     getJSON<CapsuleData>("/api/capsule").then(setCapsule).catch(() => undefined);
+    const loadTrack = () => getJSON<Track>("/api/track").then(setTrack).catch(() => undefined);
+    loadTrack();
+    const t = setInterval(() => { if (document.visibilityState === "visible") loadTrack(); }, 5 * 60_000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
@@ -89,6 +95,16 @@ export default function JournalPage() {
           second="Then scored when the market resolves."
           lead="The Horizon extension logs each decision with what the model said at that moment: the price, Horizon's probability and the action, including the times it said not to trade. Nothing is edited afterwards; outcomes come from Polymarket's own resolution."
         />
+
+        <div id="track">
+          <Section
+            title="Cumulative result per $1"
+            lead="Every resolved decision counts as $1 on the side taken, in the order the markets resolved: the journal's logged calls, and every buy call in Seal 1."
+            controls={<p className="text-[12px] text-ink-faint">Live: markets resolve overnight; nothing here is backtest.</p>}
+          >
+            <FramedCard>{track ? <TrackChart track={track} /> : <div className="h-[200px] animate-pulse rounded-input bg-fill-soft" />}</FramedCard>
+          </Section>
+        </div>
 
         <div id="decisions">
           <Section
