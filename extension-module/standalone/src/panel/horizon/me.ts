@@ -24,20 +24,39 @@ export async function meUrl() {
   return `${SITE}/me?${qs(id, wallet)}`;
 }
 
-export type Me = { pnl?: number; summary?: string };
+export type Me = { pnl?: number; summary?: string; label?: string };
 const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined);
+const money2 = (x: number) => `$${Math.abs(x).toFixed(2)}`;
+const signed = (x: number) => (Math.abs(x) < 0.005 ? 'even' : `${x > 0 ? 'up' : 'down'} ${money2(x)}`);
 
-/** One-line result from /api/me, tolerant of the exact field names; undefined if not available. */
+/**
+ * The strip from GET /api/me (backend/me.py): the user's real Polymarket positions if a wallet is
+ * set and has any; else their self-reported placed bets once resolved; else what following every
+ * Horizon call would have made; else "No settled bets yet". Not live (404/5xx) → undefined.
+ */
 export async function fetchMe(): Promise<Me | undefined> {
   try {
     const [id, wallet] = [await installId(), await getWallet()];
     const p = new URLSearchParams({ install_id: id, ...(wallet ? { wallet } : {}) });
-    const r = await fetch(`${API}/api/me?${p}`, { signal: AbortSignal.timeout(5000) });
+    const r = await fetch(`${API}/api/me?${p}`, { signal: AbortSignal.timeout(6000) });
     if (!r.ok) return undefined;
     const j = await r.json() as Record<string, any>;
-    const pnl = num(j.pnl_usd) ?? num(j.pnl) ?? num(j.total_pnl) ?? num(j.result_usd) ?? num(j.summary?.pnl_usd) ?? num(j.summary?.pnl) ?? num(j.totals?.pnl_usd) ?? num(j.totals?.pnl);
-    const summary = typeof j.summary === 'string' ? j.summary : typeof j.headline === 'string' ? j.headline : typeof j.text === 'string' ? j.text : undefined;
-    return pnl === undefined && !summary ? undefined : { pnl, summary };
+    const wt = j.wallet?.totals;
+    if (wt && (num(wt.n_open) ?? 0) + (num(wt.n_closed) ?? 0) > 0 && num(wt.total_usd) !== undefined) {
+      const x = wt.total_usd as number;
+      return { pnl: x, summary: `You're ${signed(x)}`, label: 'from your Polymarket positions' };
+    }
+    const placed = j.journal?.placed, all = j.journal?.if_followed_all;
+    if ((num(placed?.n_resolved) ?? 0) > 0 && num(placed?.pnl_usd) !== undefined) {
+      const x = placed.pnl_usd as number;
+      return { pnl: x, summary: `You're ${signed(x)}`, label: 'self-reported' };
+    }
+    if ((num(all?.n_resolved) ?? 0) > 0 && num(all?.pnl_usd) !== undefined) {
+      const x = all.pnl_usd as number;
+      return { pnl: x, summary: `If you'd followed Horizon: ${signed(x)}` };
+    }
+    const open = num(placed?.n_open) ?? 0;
+    return { summary: `No settled bets yet${open ? ` (${open} open)` : ''}` };
   } catch { return undefined; }
 }
 

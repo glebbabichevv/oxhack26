@@ -12,7 +12,7 @@ import {
 import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
 import { intendedAction, verdictOf } from './policy';
-import { fetchMe, openMyResults, upDown } from './me';
+import { fetchMe, openMyResults } from './me';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -199,7 +199,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       await openMyResults();
       const me = await fetchMe();
       done('ok');
-      return { opened: true, summary: me ? (me.pnl !== undefined ? upDown(me.pnl) : me.summary) : undefined };
+      return { opened: true, summary: me?.summary };
     }
     case 'set_bankroll': {
       const n = Number(args.amount);

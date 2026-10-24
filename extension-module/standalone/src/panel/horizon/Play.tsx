@@ -570,7 +570,10 @@ function MeStrip() {
   return (
     <div className="mt-3 flex items-center justify-between gap-3">
       {me ? (
-        <span className="text-subhead font-semibold" style={{ color: me.pnl === undefined ? INK : me.pnl >= 0 ? UP : DOWN }}>{me.pnl !== undefined ? upDown(me.pnl) : me.summary}</span>
+        <span className="min-w-0">
+          <span className="block text-subhead font-semibold" style={{ color: me.pnl === undefined || Math.abs(me.pnl) < 0.005 ? INK : me.pnl > 0 ? UP : DOWN }}>{me.summary}</span>
+          {me.label ? <span className="block text-caption text-[#94a3b8]">{me.label}</span> : null}
+        </span>
       ) : <span />}
       <button type="button" onClick={() => void openMyResults()} className="hz-chip inline-flex shrink-0 items-center gap-1 rounded-control px-3.5 py-1.5 text-footnote font-semibold">
         Open my results <Icon d={I.external} size={12} />
