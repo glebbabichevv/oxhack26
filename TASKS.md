@@ -40,5 +40,6 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [ ] Devpost page: what it does, how we built it, sponsor tech used, what we brought in vs built here; cite arXiv 2602.19520
 - [ ] Collect best Delta thread links (ideation, build, testing) for the Zed track
 - [ ] Rehearse pitch 5x with a timer
+- [ ] Before the repo goes public: delete `docs/design-reference/` (old-product screenshots)
 
 ## Done
