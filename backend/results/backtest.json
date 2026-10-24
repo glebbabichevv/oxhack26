@@ -9,7 +9,7 @@
   "val_logloss": {
    "market": 0.5688,
    "simple": 0.5645,
-   "full": 0.5682
+   "full": 0.5675
   }
  },
  "with_costs": {
@@ -825,6 +825,10 @@
    }
   ]
  },
+ "return_ci": [
+  1.41,
+  4.07
+ ],
  "without_costs": {
   "n_trades": 8209,
   "return": 7.0593,
@@ -1754,16 +1758,30 @@
   {
    "kind": "no_lift",
    "domain": "culture",
+   "horizon_hours": 168,
+   "n": 699,
+   "text": "culture, 168h: model Brier 0.0669 vs market 0.0666 \u2014 no lift"
+  },
+  {
+   "kind": "no_lift",
+   "domain": "culture",
    "horizon_hours": 72,
-   "n": 94,
-   "text": "culture, 72h: model Brier 0.0822 vs market 0.0815 \u2014 no lift"
+   "n": 956,
+   "text": "culture, 72h: model Brier 0.0907 vs market 0.0902 \u2014 no lift"
   },
   {
    "kind": "no_lift",
    "domain": "culture",
    "horizon_hours": 24,
-   "n": 96,
-   "text": "culture, 24h: model Brier 0.0312 vs market 0.0294 \u2014 no lift"
+   "n": 856,
+   "text": "culture, 24h: model Brier 0.078 vs market 0.0777 \u2014 no lift"
+  },
+  {
+   "kind": "no_lift",
+   "domain": "culture",
+   "horizon_hours": 12,
+   "n": 782,
+   "text": "culture, 12h: model Brier 0.0644 vs market 0.0639 \u2014 no lift"
   },
   {
    "kind": "no_lift",
@@ -1783,22 +1801,15 @@
    "kind": "no_lift",
    "domain": "politics",
    "horizon_hours": 168,
-   "n": 1490,
-   "text": "politics, 168h: model Brier 0.0686 vs market 0.0684 \u2014 no lift"
+   "n": 864,
+   "text": "politics, 168h: model Brier 0.0723 vs market 0.0723 \u2014 no lift"
   },
   {
    "kind": "no_lift",
    "domain": "politics",
    "horizon_hours": 72,
-   "n": 1801,
-   "text": "politics, 72h: model Brier 0.0769 vs market 0.0768 \u2014 no lift"
-  },
-  {
-   "kind": "no_lift",
-   "domain": "politics",
-   "horizon_hours": 12,
-   "n": 1642,
-   "text": "politics, 12h: model Brier 0.0608 vs market 0.0608 \u2014 no lift"
+   "n": 939,
+   "text": "politics, 72h: model Brier 0.0635 vs market 0.0635 \u2014 no lift"
   },
   {
    "kind": "no_lift",
