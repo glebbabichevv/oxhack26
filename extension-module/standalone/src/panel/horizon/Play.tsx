@@ -649,7 +649,28 @@ function WalletField() {
         <button type="submit" className="hz-chip rounded-control px-4 text-body font-semibold">Save</button>
       </form>
       {msg ? <p className="mt-1.5 text-caption" style={{ color: msg.ok ? UP : DOWN }}>{msg.text}</p> : null}
+      <SellAlertsToggle hasWallet={WALLET_RE.test(v.trim())} />
     </div>
+  );
+}
+
+/** "Tell me when it's time to sell": on by default once a wallet is set (background checks every 15 min). */
+function SellAlertsToggle({ hasWallet }: { hasWallet: boolean }) {
+  const [on, setOn] = useState<boolean>();
+  useEffect(() => { void chrome.storage.local.get('horizonSellAlerts').then((r) => setOn(r.horizonSellAlerts === undefined ? undefined : !!r.horizonSellAlerts)); }, []);
+  const value = hasWallet && (on ?? true);
+  return (
+    <label className={`mt-4 flex items-center justify-between gap-3 ${hasWallet ? '' : 'opacity-50'}`}>
+      <span>
+        <span className="block text-body font-medium text-[#0f172a]">Tell me when it's time to sell</span>
+        <span className="block text-caption text-[#64748b]">Checks your positions every 15 minutes. You still press Sell yourself.</span>
+      </span>
+      <button type="button" role="switch" aria-checked={value} disabled={!hasWallet}
+        onClick={() => { const next = !value; setOn(next); void chrome.storage.local.set({ horizonSellAlerts: next }); }}
+        className="relative h-6 w-10 shrink-0 rounded-full transition-ui duration-fast" style={{ background: value ? '#0f172a' : 'rgba(15,23,42,0.15)' }}>
+        <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-fast" style={{ left: 2, transform: value ? 'translateX(16px)' : 'none' }} />
+      </button>
+    </label>
   );
 }
 
