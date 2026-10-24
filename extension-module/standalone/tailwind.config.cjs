@@ -19,5 +19,5 @@ module.exports = {
       transitionTimingFunction: { soft: 'cubic-bezier(0.22, 1, 0.36, 1)' },
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/typography')],
 };
