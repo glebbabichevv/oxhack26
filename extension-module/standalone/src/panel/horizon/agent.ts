@@ -11,6 +11,7 @@ import {
 } from './ledger';
 import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
+import { verdictOf } from './policy';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -129,6 +130,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const q = await quoteOne(m, slug);
       if (!q) return { error: 'market not found' };
       const a = await getAccount();
+      if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: 'price is fair after costs (advantage under 1¢): skip' };
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });

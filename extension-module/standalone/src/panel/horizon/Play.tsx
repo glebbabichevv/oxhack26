@@ -11,6 +11,28 @@ import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
+import { verdictOf, verdictRank } from './policy';
+import { API } from './agent';
+
+/** "Why wait" numbers from the backtest (return per $1 by horizon, after costs); none if offline. */
+let whyCache: Promise<string | undefined> | undefined;
+function whyWait(): Promise<string | undefined> {
+  whyCache ??= fetch(`${API}/api/backtest`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).then((b) => {
+    const by = new Map<number, number>((b?.by_horizon ?? []).map((h: any) => [h.horizon_hours, h.with_costs?.mean_return_per_trade]));
+    const late = [by.get(24), by.get(12)].filter((x): x is number => typeof x === 'number');
+    if (!late.length) return undefined;
+    const c = (x: number) => `${x >= 0 ? '' : '−'}${Math.round(Math.abs(x) * 100)}¢`;
+    const avg = late.reduce((s2, x) => s2 + x, 0) / late.length;
+    const parts = [by.get(72) !== undefined ? `3 days out ${c(by.get(72)!)}` : '', by.get(168) !== undefined ? `a week out ${c(by.get(168)!)}` : ''].filter(Boolean);
+    return `Why wait: in our test, bets placed within 24h of the end earned ~${c(avg)} per $1${parts.length ? `; ${parts.join(', ')}` : ''}.`;
+  }).catch(() => undefined);
+  return whyCache;
+}
+function WhyWait() {
+  const [t, setT] = useState<string>();
+  useEffect(() => { void whyWait().then(setT); }, []);
+  return t ? <p className="mt-1.5 text-caption text-[#64748b]">{t}</p> : <p className="mt-1.5 text-caption text-[#64748b]">Why wait: in our test, bets placed within 24h of the end earned much more per $1 than earlier ones.</p>;
+}
 
 export const UP = '#15803d';
 export const DOWN = '#e11d48';
@@ -27,7 +49,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 const sideOf = (d: Decision): Side | undefined => (d.action === 'BUY_YES' ? 'YES' : d.action === 'BUY_NO' ? 'NO' : undefined);
 const clean = (s: string) => s.replace(/\s*\(.*\)\s*$/, '').replace(/\s+/g, ' ').trim();
 /** "Price too low" when Horizon backs Yes, "too high" when it backs No, else fair. */
-const priceWord = (d: Decision) => (d.action === 'BUY_YES' ? 'Price too low' : d.action === 'BUY_NO' ? 'Price too high' : 'Price fair, skip');
+const priceWord = (d: Decision) => (verdictOf(d) === 'SKIP' ? 'Price fair, skip' : d.action === 'BUY_YES' ? 'Price too low' : 'Price too high');
 const stakeFor = (a: Account | undefined, d: Decision) => Math.max(1, Math.floor(a ? suggested(a, d) : 0));
 /** One plain reason per decision. */
 export const reasonOf = (d: Decision) => d.action === 'BUY_YES'
@@ -266,7 +288,8 @@ export function AmountControl({ value, onChange, max, compact = false, label }: 
 export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   model: Model; a?: Account; marketSlug: string; title: string; d: Decision; tabId?: number; onDetails?: () => void;
 }) {
-  const side = sideOf(d);
+  const verdict = verdictOf(d);
+  const side = verdict === 'SKIP' ? undefined : sideOf(d);
   const sug = stakeFor(a, d);
   const [chosen, setChosen] = useState<number>();
   const amount = chosen ?? sug;
@@ -298,8 +321,15 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
       <p className="mt-2.5 text-subhead text-[#475569]">
         Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side ? UP : MUTED }}>{priceWord(d)}</b>
       </p>
-      {side ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
-      {side && !doing ? (
+      {d.domain === 'crypto' ? <p className="mt-1 text-caption text-[#94a3b8]">Crypto: our tests show no edge here. Polymarket prices these well.</p> : null}
+      {side && verdict === 'BET' ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
+      {side && verdict === 'WAIT' ? (
+        <div className="mt-4 rounded-card bg-[rgba(15,23,42,0.04)] px-3.5 py-3">
+          <p className="inline-flex items-center gap-1.5 text-subhead font-semibold text-[#0f172a]"><Icon d={I.clock} size={15} /> Wait. {bestTime(d.hours)}</p>
+          <WhyWait />
+        </div>
+      ) : null}
+      {side && verdict === 'BET' && !doing ? (
         <>
           <div className="mt-4 flex items-stretch gap-2">
             <AmountControl value={amount} onChange={setChosen} max={a?.bankroll ?? 1000} />
@@ -333,11 +363,12 @@ function Collapsible({ title, children }: { title: string; children: React.React
 }
 
 function Row({ title, d, onClick, active }: { title: string; d: Decision; onClick: () => void; active?: boolean }) {
-  const good = !!sideOf(d);
+  const v = verdictOf(d);
+  const good = v !== 'SKIP';
   return (
     <button type="button" onClick={onClick} className={`hz-row-link hz-rule -mx-2 flex w-[calc(100%+16px)] items-center gap-3 rounded-control px-2 py-3 text-left ${active ? 'bg-[rgba(15,23,42,0.03)]' : ''}`}>
       <span className="min-w-0 flex-1 line-clamp-2 text-body font-medium">{clean(title)}</span>
-      <span className="shrink-0 text-footnote font-semibold" style={{ color: good ? UP : MUTED }}>{good ? priceWord(d) : 'Skip'}</span>
+      <span className="shrink-0 text-footnote font-semibold" style={{ color: good ? UP : MUTED }}>{v === 'WAIT' ? 'Later' : good ? priceWord(d) : 'Skip'}</span>
     </button>
   );
 }
@@ -353,7 +384,7 @@ export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; 
   if (ev === 'error') return <div className="px-4 pt-6 text-body text-[#475569]">Could not read this market. <button type="button" onClick={load} className="font-semibold text-[#0f172a] underline underline-offset-[3px]">Try again</button></div>;
   const band = model.tradable;
   const legs = ev.legs.filter((l) => l.decision && l.marketSlug && l.decision.price >= band[0] && l.decision.price <= band[1])
-    .sort((x, y) => Number(!!sideOf(y.decision!)) - Number(!!sideOf(x.decision!)) || y.decision!.netEdge - x.decision!.netEdge);
+    .sort((x, y) => verdictRank[verdictOf(y.decision!)] - verdictRank[verdictOf(x.decision!)] || y.decision!.netEdge - x.decision!.netEdge);
   if (!legs.length) {
     return (
       <div className="px-4 pb-6 pt-3">
@@ -382,7 +413,7 @@ export function Tonight({ model, a, tabId, url, title, onDetails }: { model: Mod
   const [st, setSt] = useState<{ picks: MarketPick[] } | 'loading' | 'error'>('loading');
   const [pick, setPick] = useState(0);
   const [about, setAbout] = useState<{ q: string; rows: ScanRow[] }>();
-  const run = useCallback(() => { setSt('loading'); setPick(0); scanMarkets(model, 'all', 24, 12).then(setSt).catch(() => setSt('error')); }, [model]);
+  const run = useCallback(() => { setSt('loading'); setPick(0); scanMarkets(model, 'all', 24, 20).then((r) => setSt({ picks: r.picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, 12) })).catch(() => setSt('error')); }, [model]);
   useEffect(() => { run(); }, [run]);
   useEffect(() => {
     const s = url && /^https?:/.test(url) && !/polymarket\.com/.test(url) ? subjectOf(title, url) : undefined;
@@ -525,7 +556,8 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
     } catch (e) { answer = `Stopped: ${(e as Error).message ?? e}`; }
     if (sig.current.stop) { answer = 'Stopped.'; ctx.plan = []; }
     // Main-line legs first: they set up reliably; sub-tab legs (exact score, halves...) go last.
-    ctx.plan = [...ctx.plan.filter((x) => !subTabOf(x.q)), ...ctx.plan.filter((x) => subTabOf(x.q))];
+    const later = (x: PlanItem) => !!x.q.decision && verdictOf(x.q.decision) === 'WAIT';
+    ctx.plan = [...ctx.plan.filter((x) => !later(x) && !subTabOf(x.q)), ...ctx.plan.filter((x) => !later(x) && subTabOf(x.q)), ...ctx.plan.filter(later)];
     for (const item of ctx.plan) journalOf(item, 'agent', 'shown');
     // The model's words only when they are plain and on-message; with a plan, one line of ours.
     if (answer && /\b(demo|balance|portfolio|simulat|paper)/i.test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
@@ -544,7 +576,9 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
   // The user can change any amount; a row picks up its new amount when it is set up.
   const [amounts, setAmounts] = useState<Record<number, number>>({});
   const plan = plan0.map((p, k) => (p.kind === 'buy' && amounts[k] !== undefined ? { ...p, amount: amounts[k] } : p));
-  const LIVE = Math.min(3, plan.filter((x) => !subTabOf(x.q)).length);
+  const isLater = (x: PlanItem) => !!x.q.decision && verdictOf(x.q.decision) === 'WAIT';
+  const LIVE = Math.min(3, plan.filter((x) => !subTabOf(x.q) && !isLater(x)).length);
+  const firstLater = plan.findIndex(isLater);
   const [liveDone, setLiveDone] = useState(LIVE === 0);
   const [one, setOne] = useState<number>();
   const total = plan.reduce((s, p) => s + (p.kind === 'buy' ? p.amount : 0), 0);
@@ -557,6 +591,7 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
             const d = p.q.decision;
             return (
               <li key={k} className="hz-rule py-2.5">
+                {k === firstLater ? <p className="mb-1.5 text-footnote font-semibold text-[#64748b]">Later tonight / tomorrow</p> : null}
                 <div className="flex items-start justify-between gap-3">
                   <span className="min-w-0 text-body font-medium leading-snug">{clean(p.name)}</span>
                   {p.kind === 'buy' ? (
@@ -570,7 +605,8 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
                   <p className="mt-0.5 text-caption text-[#94a3b8]">Horizon suggests {money(p.suggested)}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
                 ) : null}
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
-                {k >= LIVE && liveDone && one !== k ? (subTabOf(p.q) ? (
+                {isLater(p) && d ? <p className="mt-1 inline-flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {bestTime(d.hours)}</p> : null}
+                {k >= LIVE && liveDone && one !== k && !isLater(p) ? (subTabOf(p.q) ? (
                   <a href={`https://polymarket.com/event/${p.q.eventSlug}`} target="_blank" rel="noreferrer" className="hz-chip mt-1.5 inline-flex items-center gap-1 rounded-control px-3 py-1 text-footnote font-semibold">Open <Icon d={I.external} size={12} /></a>
                 ) : (
                   <button type="button" onClick={() => setOne(k)} className="hz-chip mt-1.5 rounded-control px-3 py-1 text-footnote font-semibold">Set up</button>
