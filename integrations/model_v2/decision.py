@@ -1,6 +1,6 @@
 """Trading rules for model v2: Polymarket taker fees, conservative edge, fractional Kelly,
 one trade per market at the earliest qualifying horizon, held to resolution, and caps so the
-whole book never stakes more than one starting bankroll at a time."""
+whole book never stakes more than its current equity (at most one starting bankroll) at a time."""
 import heapq
 
 import numpy as np
@@ -56,21 +56,25 @@ def earliest_trades(df, q, lo, hi, cost, min_edge, kelly_mult):
 
 def apply_caps(trades):
     """Size each trade, release stakes at resolution (a trade entering at the exact resolution
-    time gets the capital back), and return only the trades that received a positive stake."""
+    time gets the capital back), and return only the trades that received a positive stake.
+    The bankroll cap tracks equity: open stakes may not exceed min(BANKROLL_CAP, 1 + realised P&L
+    of trades already resolved), so losses shrink what can be staked."""
     t = trades.sort_values(["entry_at", "market_id"]).copy()
-    open_, used, by_event, stakes = [], 0.0, {}, []
+    open_, used, realised, by_event, stakes = [], 0.0, 0.0, {}, []
     for r in t.itertuples():
         while open_ and open_[0][0] <= r.entry_at:
-            _, stake, ev = heapq.heappop(open_)
+            _, stake, ev, ret = heapq.heappop(open_)
             used = max(used - stake, 0.0)
+            realised += stake * ret
             by_event[ev] = max(by_event[ev] - stake, 0.0)
-        s = min(r.kelly, PER_EVENT_CAP - by_event.get(r.event_slug, 0.0), BANKROLL_CAP - used)
+        bankroll = min(BANKROLL_CAP, 1.0 + realised)
+        s = min(r.kelly, PER_EVENT_CAP - by_event.get(r.event_slug, 0.0), bankroll - used)
         s = 0.0 if s <= DUST else s
         stakes.append(s)
         if s > 0:
             used += s
             by_event[r.event_slug] = by_event.get(r.event_slug, 0.0) + s
-            heapq.heappush(open_, (r.resolved_at, s, r.event_slug))
+            heapq.heappush(open_, (r.resolved_at, s, r.event_slug, r.ret))
     t["stake"] = stakes
     t = t[t["stake"] > 0].copy()
     t["kelly"] = t["stake"]

@@ -56,7 +56,8 @@ def test_earliest_trades_picks_longest_qualifying_horizon_and_drops_no_trade():
 
 
 def trades(rows):
-    t = pd.DataFrame(rows, columns=["market_id", "event_slug", "kelly", "entry_at", "resolved_at"])
+    cols = ["market_id", "event_slug", "kelly", "entry_at", "resolved_at", "ret"]
+    t = pd.DataFrame([r if len(r) == 6 else (*r, 0.0) for r in rows], columns=cols)
     t["entry_at"] = pd.to_datetime(t.entry_at, utc=True)
     t["resolved_at"] = pd.to_datetime(t.resolved_at, utc=True)
     return t
@@ -95,3 +96,18 @@ def test_event_cap_frees_up_after_release():
     t = apply_caps(trades(rows)).set_index("market_id")
     assert np.isclose(t.loc["c", "stake"], 0.05)
     assert (t.stake > 0).all()
+
+
+def test_bankroll_cap_shrinks_after_a_released_loss():
+    rows = [("loser", "eL", 0.05, "2026-06-01", "2026-06-02", -1.0)]  # realised -0.05 before the wave
+    rows += [(f"m{i}", f"e{i}", 0.05, "2026-06-03", "2026-06-10") for i in range(30)]  # 1.5 wanted
+    t = apply_caps(trades(rows)).set_index("market_id")
+    assert np.isclose(t.loc["loser", "stake"], 0.05)
+    assert np.isclose(t.stake.drop("loser").sum(), 0.95)
+
+
+def test_bankroll_cap_stays_at_one_after_a_released_win():
+    rows = [("winner", "eW", 0.05, "2026-06-01", "2026-06-02", 1.0)]
+    rows += [(f"m{i}", f"e{i}", 0.05, "2026-06-03", "2026-06-10") for i in range(30)]
+    t = apply_caps(trades(rows)).set_index("market_id")
+    assert np.isclose(t.stake.drop("winner").sum(), 1.0)
