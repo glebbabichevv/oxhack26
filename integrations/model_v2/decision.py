@@ -13,6 +13,7 @@ FEE_RATE = {"sports": 0.05, "crypto": 0.07, "politics": 0.04, "science_tech": 0.
             "culture": 0.05, "other": 0.05, "geopolitics": 0.0}
 PER_TRADE_CAP, PER_EVENT_CAP, BANKROLL_CAP = 0.05, 0.10, 1.0
 EPS = 0.01
+DUST = 1e-12  # stakes at or below this are float noise, not trades
 
 
 def trade_cost(p, spread, fees_on, domain, min_half=0.01):
@@ -54,20 +55,23 @@ def earliest_trades(df, q, lo, hi, cost, min_edge, kelly_mult):
 
 
 def apply_caps(trades):
+    """Size each trade, release stakes at resolution (a trade entering at the exact resolution
+    time gets the capital back), and return only the trades that received a positive stake."""
     t = trades.sort_values(["entry_at", "market_id"]).copy()
     open_, used, by_event, stakes = [], 0.0, {}, []
     for r in t.itertuples():
         while open_ and open_[0][0] <= r.entry_at:
             _, stake, ev = heapq.heappop(open_)
-            used -= stake
-            by_event[ev] -= stake
+            used = max(used - stake, 0.0)
+            by_event[ev] = max(by_event[ev] - stake, 0.0)
         s = min(r.kelly, PER_EVENT_CAP - by_event.get(r.event_slug, 0.0), BANKROLL_CAP - used)
-        s = max(s, 0.0)
+        s = 0.0 if s <= DUST else s
         stakes.append(s)
         if s > 0:
             used += s
             by_event[r.event_slug] = by_event.get(r.event_slug, 0.0) + s
             heapq.heappush(open_, (r.resolved_at, s, r.event_slug))
     t["stake"] = stakes
+    t = t[t["stake"] > 0].copy()
     t["kelly"] = t["stake"]
     return t
