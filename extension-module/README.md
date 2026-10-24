@@ -10,7 +10,7 @@ The Argos client layer (page reading and actions) is unchanged; the card is one 
 ## Horizon tools for the Argos agent (MCP)
 
 `backend/horizon_mcp.py` is an MCP server with two tools, served by the public API at
-**`https://horizon-api-iota.vercel.app/mcp`** (also `/api/mcp`). Same math as `horizon.ts`, in pure Python from
+**`https://oxhack26-production.up.railway.app/mcp`** (also `/api/mcp`). Same math as `horizon.ts`, in pure Python from
 `results/model.json`; parity: `python3 backend/horizon_mcp.py parity capsule/seal-20261024T153130Z.json`
 (359 markets, 0 action mismatches, max |diff| 5e-5).
 
@@ -27,7 +27,7 @@ notifications get 202; `GET`/`DELETE` are 405 (no SSE stream, no sessions). No a
 ### Add it in Argos
 1. Argos side panel → Integrations → MCP servers → Add.
 2. Name: `Horizon` (the agent then sees `mcp_horizon_horizon_check` and `mcp_horizon_horizon_scan`). URL:
-   `https://horizon-api-iota.vercel.app/mcp`. Leave the token empty. Save: Argos probes the server and should show 2 tools.
+   `https://oxhack26-production.up.railway.app/mcp`. Leave the token empty. Save: Argos probes the server and should show 2 tools.
 3. Needs a Pro account: on the free tier Argos strips all MCP tools from the agent.
 
 ### Demo script (3 steps)
@@ -46,7 +46,7 @@ Local fallback (only if Argos's backend runs on the same machine; production Arg
 `standalone/` holds every Horizon-authored file of the standalone extension. The build also includes the
 browser-use layer of our earlier product (content script: page reading, `find`, `click`, `fill_input`), which stays in
 the private repo and is not mirrored here. There is no chat, login, account or backend: the extension's only network
-calls go to `gamma-api.polymarket.com` (prices) and `horizon-api-iota.vercel.app` (model, backtest, capsule).
+calls go to `gamma-api.polymarket.com` (prices) and `oxhack26-production.up.railway.app` (model, backtest, capsule).
 `scripts/finish.mjs` fails the build if the bundle mentions any other product's servers.
 
 The side panel is the analysis tool:

@@ -1,54 +1,56 @@
 # Demo script — 90 seconds (Role C, TheMarkz3)
 
-Walked against https://horizon-two-gilt.vercel.app (18:25 Sat, model 2026-10-24-390c312, fees on) and `backend/results/*.json`.
-Old *-jet-mu URLs are frozen: never show them. Rule: say only numbers that are on the screen. If results change, update this file.
-Live cards change hourly. Pick the hero card on the morning of the demo (see "Hero card" below).
-Length: ~215 spoken words ≈ 90 s at 145 wpm; ~190 (≈ 80 s) without the (cut first) line. Rehearse with a timer.
+Follows A's decisions v2 (inbox C 18:54): **three moments — insight (curve) → decision on a match page → agent sets up
+2–3 bets + Journal.** Bridge / scan / MCP / Kalshi / crypto go to Q&A only. Never say "gamble". No demo money: the
+extension fills the Polymarket ticket, a human presses Trade (in the demo we stop before Trade).
+Audience: people who trade on Polymarket, or read "Polymarket says 70%" in the news.
+Walked against https://web-production-c7376.up.railway.app and /journal (20:40 Sat, model 2026-10-24-390c312, fees on).
+Say only numbers that are on the screen. ~205 spoken words ≈ 85 s at 145 wpm. Rehearse with a timer.
 
-## 0:00–0:10 — hook · screen: headline
-"A prediction-market price is a probability with a clock on it. Research says those prices are off, depending on the
-clock. We asked a trader's question: can you make money on it, and *when*?"
+## Setup (before you start talking)
+- Tab 1: the site, scrolled to the top. Tab 2: a Polymarket **match page** with a Buy card, ending 12–48 h out
+  (pick it on Sunday morning, see "Match page"). Tab 3: /journal. Horizon side panel open, bankroll set to $100.
+- Agent ready in the side panel. Don't type the prompt in advance; the judges should see it run.
 
-## 0:10–0:35 — the time curve · screen: hero curve "How often a 15¢ contract wins, by time left"
-"We trained on 23,838 resolved Polymarket markets and tested out of time on the 10,579 after mid-May.
-Take a 15-cent contract. A month out it wins 13%: about fair. Twelve hours out it wins 20%. Prices get overconfident
-as resolution nears."
-(Point along the curve.) "After the spread and Polymarket's fees, a trade a month out loses 19%. A day out it makes
-12.6%. That's the *when*."
+## 1 · Insight — 0:00–0:30 · Tab 1: hero curve + KPI
+"When the news says 'Polymarket gives this 15%', how often does it actually happen? We checked 10,579 markets that
+resolved after our model was trained.
+(Point along the curve.) A month before the end, a 15-cent contract wins 13%: fair. Twelve hours before, the same
+price wins 20%. Prices get overconfident as the end gets close, and that's when correcting them pays.
+(Point at the KPI.) Out of sample, after Polymarket's fees: plus 12.7 cents per dollar staked, 90% interval 7 to 19."
 
-## 0:35–0:50 — the model and the money · screen: KPI row
-"A four-number model corrects it and beats the market price, Brier 0.1297 against 0.1305. Trading it on the test set,
-never more than one bankroll at risk: plus 190%, interval 94 to 285. Always backing the favourite loses 908."
+## 2 · Decision — 0:30–0:55 · Tab 2: match page + Horizon card
+"That's history. Here's a match tonight.
+(Point at the verdict.) Market [p] cents, Horizon [q]%, with its range. Buy YES, [k] dollars of a hundred, and it's
+inside the 12-to-24-hour window where this paid best.
+(Click the button: the ticket fills.) Horizon fills the order. The human presses Trade, not us.
+(Point at a No-trade leg if there is one.) And here it says don't: the gap doesn't cover the fee."
 
-## 0:50–1:05 — the decision · screen: Live decisions
-"For every open market right now: price, our probability, and the call after costs."
-(Point at hero card.) "[Question]: market [p], model [q]. Buy YES, stake [k]% of bankroll."
-(Point at a "No trade" card.) "Here the gap is inside the model's uncertainty: no trade."
+## 3 · Agent + Journal — 0:55–1:25 · side panel agent, then Tab 3
+"Now the agent. (Type:) *Find me two or three bets tonight in sports and set them up.*
+(While it runs.) It scans tonight's markets, checks each one with the same model, and prepares the tickets.
+(Switch to /journal.) Every call lands here with the time, the price and our probability, including the ones where
+it said 'don't'. Each one is scored when the market resolves, and nothing can be edited.
+(Scroll to Seals.) Yesterday we hashed our predictions and timestamped them in Bitcoin before the outcomes. They open at
+12:30: [result, read it off the screen, whatever it says]."
 
-## 1:05–1:25 — sealed before the outcomes · screen: "Sealed" section
-"A backtest can always be tuned. So yesterday afternoon we hashed our probabilities for every market ending before
-judging, timestamped them in Bitcoin, and froze 87 trade calls on GitHub. [Result: Brier model vs market, n trades,
-n won, P&L — read it off the screen, whatever it says.]" *(If it lost or is inconclusive: "That's one night,
-far too little to judge, and we said so before the seal.")*
-(cut first) "Our first small sample said 'politics, a month out'. It didn't replicate on 11 times more data, so we threw it out."
+## Close — 1:25–1:30
+"Horizon tells you when a market is wrong enough to act on, and when it isn't."
 
-## 1:25–1:30 — close
-"Horizon tells you when a market is wrong enough to trade, and when it isn't."
+## Match page (pick on Sunday morning)
+A sports match ending in 12–48 h (the card's best window), volume ≥ $1M, with **one Buy leg and one No-trade leg** on
+the same page if possible (moneyline + draw markets usually give both). Check the ticket fills before judging starts.
 
-## Hero card (pick on the day)
-Prefer a **sports BUY_YES** card at 12–48 h out (the curve says that's where it pays), ≥ $1M volume, and a **No trade** card next to it.
-Good: a card that is *also* in the forward-test snapshot, so you can say "this one is in the frozen set too".
+## Say it right
+- Headline is **+12.7¢ per $1 staked**, CI +7.0¢ to +19.1¢ (event bootstrap; C re-ran it independently:
+  +12.7¢ [+6.9¢, +18.8¢]). The bankroll view (+199%, ≤ 1 bankroll at risk) is for Q&A, with "mostly sports".
+- "After fees" = the spread (1¢ floor) + Polymarket's own taker fee for each market.
+- A month out it loses (−19% a trade); 12–24 h out it makes 12.6–14.8% a trade. Never "100× per day".
+- Agent prepares, human presses Trade. No demo money anywhere.
+- The Journal is real usage from the extension and the agent today; if asked, every row has a timestamp and the
+  outcome comes from Polymarket's resolution.
 
-## Say it right (judges will check)
-- "+190%" = profit as a share of the starting bankroll, summed (no compounding), with total open stakes capped at one
-  bankroll. Uncapped it's +205% (open stakes peaked at 1.20 bankrolls). Never "3× return".
-- **Per dollar actually staked: +12%** (+11.9% capped, +12.7% uncapped). The leverage-free number; use it if pushed.
-- Costs = max(spread / 2, 1¢) + Polymarket's taker fee, rate × p(1−p) from each market's own fee schedule (93.5% of
-  test rows have fees on; sports mostly 3% or 5%, crypto 7%). Historical spreads aren't in the API, so 1¢ is a floor.
-- Max drawdown 31% capped (29% uncapped). Hit rate 21%: a longshot strategy, many small losses, a few big wins.
-- Only **sports** is solid on its own (+132%, CI +77% to +192%). Every other type's CI includes 0; crypto −4%.
-- A month out loses after fees (−19.0% a trade, 313 trades, noisy). The edge is a last-week effect.
-- Never "100× per day" (A, 16:41). Say "short trades tie up capital ~30× less time".
-- "Longshots underpriced" holds for roughly 10–35¢ from a week out. Under 10¢ a day out, contracts win ~3%: about fair.
+## Backup if the Wi-Fi or the extension fails
+Play `integrations/pitch/backup_demo.webm` (site walk) and say moment 2 and 3 over the Journal page.
 
 ## Likely HRT questions → `QA_CHEATSHEET.md`
