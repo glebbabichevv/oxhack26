@@ -37,5 +37,6 @@ def test_models_learn_overconfidence_and_bands_bracket_q():
         q, lo, hi = m.fit(df).predict(df)
         b = in_band(df.price_yes)
         assert np.all(lo[b] <= q[b] + 1e-9) and np.all(q[b] <= hi[b] + 1e-9)
+        assert (hi[b] - lo[b]).mean() > 1e-4  # bootstrap band has positive width (not all refits identical)
         long = b & (df.price_yes < 0.2)
         assert q[long].mean() > df.price_yes[long].mean()  # longshots corrected upward
