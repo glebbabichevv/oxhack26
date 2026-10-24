@@ -19,7 +19,7 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [ ] Deploy to Vercel early (public URL by 16:30)
 
 ### Role C — data pipeline
-- [x] [Ayaz] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv` — **team dataset: 34.7k markets** (`integrations/fetch_horizons.py`)
+- [x] [Ayaz (B), on C's behalf] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv` — **team dataset: 34.7k markets** (`integrations/fetch_horizons.py`)
 - [x] [Ayaz] Open markets → `data/live.csv` (`integrations/fetch_live.py`)
 - [x] [Ayaz] Sanity checks (`integrations/check_data.py`)
 - [x] [TheMarkz3] First pipeline + 3.1k-market sample and the calibration check that caught the sign flip (`integrations/polymarket.py`, `calibration_check.py`) — superseded as the main dataset by Ayaz's
