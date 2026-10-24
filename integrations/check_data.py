@@ -8,7 +8,9 @@ import pandas as pd
 
 from common import DATA
 
-h = pd.read_csv(DATA / "horizons.csv", parse_dates=["resolved_at", "end_date", "price_ts"])
+h = pd.read_csv(DATA / "horizons.csv")
+for col in ("resolved_at", "end_date", "price_ts"):
+    h[col] = pd.to_datetime(h[col], format="ISO8601", utc=True)
 live = pd.read_csv(DATA / "live.csv")
 fails = []
 
@@ -37,7 +39,7 @@ print(by_h.round(4).to_string())
 print("\nrows by domain x horizon:")
 print(pd.crosstab(h.domain, h.horizon_hours, margins=True).to_string())
 print("\nmarkets resolved per quarter (for choosing the out-of-time cutoff):")
-print(h.drop_duplicates("market_id").resolved_at.dt.to_period("Q").value_counts().sort_index().to_string())
+print(h.drop_duplicates("market_id").resolved_at.dt.tz_localize(None).dt.to_period("Q").value_counts().sort_index().to_string())
 
 print(f"\nlive.csv: {len(live)} open markets")
 check(live.price_yes.between(0, 1).all(), "live prices in [0, 1]")
