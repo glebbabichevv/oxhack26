@@ -1,0 +1,1863 @@
+{
+"name": "seal-20261024T153130Z.json",
+"sealed_at": "2026-10-24T15:31:30+00:00",
+"posted_at": null,
+"calls": [
+{
+"market_id": "0x34163c3542f45c0a21f1dded186db37e82b20d7a41e23666ad3ce946799329d8",
+"question": "Will Samsunspor win on 2026-10-24?",
+"price_yes": 0.305,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.352697
+},
+{
+"market_id": "0x80f094fa8301d5366c13e88f0cf63eaca6e84bcab898946300c968ecaff8ada5",
+"question": "Will Amed Sportif win on 2026-10-24?",
+"price_yes": 0.415,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.448029
+},
+{
+"market_id": "0xc9b7767a2bc79508110ee965e14e95c437da40d055a52de19e1a583c8e912aed",
+"question": "Will SK Slavia Praha win on 2026-10-24?",
+"price_yes": 0.775,
+"spread": 0.01,
+"action": "BUY_NO",
+"q_yes": 0.750759
+},
+{
+"market_id": "0x89dd434d5dcb37c5169cba1b3074d052aa54a679e9de6c6b50fb592ef5971427",
+"question": "Will SSC Napoli win on 2026-10-24?",
+"price_yes": 0.355,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.396693
+},
+{
+"market_id": "0x0d9cb12b0e7c7e66835b55bb59373dc150172209c0028b54dbfcbf20b3f1959e",
+"question": "Will SSC Napoli vs. AS Roma end in a draw?",
+"price_yes": 0.295,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.343727
+},
+{
+"market_id": "0xcb8debf4d07687540ed04abd1ff790b55a6ba456f44524c25bdedfac382f7d8d",
+"question": "Will AS Roma win on 2026-10-24?",
+"price_yes": 0.355,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.396693
+},
+{
+"market_id": "0xad5ad382d8aebd0575d36578bd344975a79d97cd65fb4a5129724b650c73bfa1",
+"question": "SSC Napoli leading at halftime?",
+"price_yes": 0.285,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.334693
+},
+{
+"market_id": "0x300b62080518bffccfc8bb31607b5d14f7e77ea685cfa43a248210349459cbe1",
+"question": "Exact Score: SSC Napoli 2 - 2 AS Roma?",
+"price_yes": 0.065,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.105616
+},
+{
+"market_id": "0xbfca610c2aff2316f68a61e5b86ed0e2fc1582c0ef01792fab8625cd0d23c656",
+"question": "Will the price of Bitcoin be between $78,000 and $80,000 on October 24?",
+"price_yes": 0.9455,
+"spread": 0.031,
+"action": "BUY_NO",
+"q_yes": 0.92015
+},
+{
+"market_id": "0xaa7dadd82073787125ca670c87e80c8780d0662135ad7d38f700a7a01efe8149",
+"question": "Will the price of Ethereum be above $2,300 on October 24?",
+"price_yes": 0.243,
+"spread": 0.074,
+"action": "BUY_YES",
+"q_yes": 0.295939
+},
+{
+"market_id": "0x61498f5daac97a7ff2dee5462809eac18be519da0a4ce76080b455b6aa3d4be7",
+"question": "Will the price of Bitcoin be between $80,000 and $82,000 on October 24?",
+"price_yes": 0.068,
+"spread": 0.056,
+"action": "BUY_YES",
+"q_yes": 0.109466
+},
+{
+"market_id": "0x7f847b0d377de7d00c433b36b779f8ba938b29525cddb3289d9ee7e4b068490c",
+"question": "Will the price of Bitcoin be above $80,000 on October 24?",
+"price_yes": 0.053,
+"spread": 0.006,
+"action": "BUY_YES",
+"q_yes": 0.089783
+},
+{
+"market_id": "0x4bda8ffbb7d1ff8cfe3e59c5ef5c2f8c5ad3d16c8f6fa7e02f521650917fd802",
+"question": "Will the price of Ethereum be between $2,300 and $2,400 on October 24?",
+"price_yes": 0.248,
+"spread": 0.054,
+"action": "BUY_YES",
+"q_yes": 0.300627
+},
+{
+"market_id": "0xaeefc62097d2218700d7800bb187b627ff36c9d3e3e429ea133ea0cea8bec4e7",
+"question": "Will Servette Geneva win on 2026-10-24?",
+"price_yes": 0.485,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.50662
+},
+{
+"market_id": "0x54c846f985090c7af31c5364961bbde3d44d37bb4b5e69129b998445a3ac312c",
+"question": "Will FC Vaduz win on 2026-10-24?",
+"price_yes": 0.265,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.316411
+},
+{
+"market_id": "0x59d4686a0e96b928d1753cce07d056fe3344d66d975c36c9de57d3d0c18b2b97",
+"question": "Will Chelsea FC win on 2026-10-24?",
+"price_yes": 0.485,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.50662
+},
+{
+"market_id": "0xb7a882417812d20543360074289acb9a6fa6be089eb7e3012670fabb7952a3f0",
+"question": "Will Chelsea FC vs. Tottenham Hotspur FC end in a draw?",
+"price_yes": 0.255,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.307156
+},
+{
+"market_id": "0xbbcc5ff8d0786081bc83020d8eea0a5e40d2dc7703513a66e86691ccd1232a1b",
+"question": "Will Tottenham Hotspur FC win on 2026-10-24?",
+"price_yes": 0.255,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.307156
+},
+{
+"market_id": "0x362ebc5b65e220bcefebe641a78c6ff8dc0e9bcdd2477797bbde3a6dda9e7ac0",
+"question": "Exact Score: Chelsea FC 0 - 0 Tottenham Hotspur FC?",
+"price_yes": 0.0465,
+"spread": 0.003,
+"action": "BUY_YES",
+"q_yes": 0.080873
+},
+{
+"market_id": "0x6b8e2ddd3ac40ce1bc927884063dcd2a64b1e10a5f26aac16c7fb149124837ac",
+"question": "Exact Score: Chelsea FC 0 - 1 Tottenham Hotspur FC?",
+"price_yes": 0.049,
+"spread": 0.004,
+"action": "BUY_YES",
+"q_yes": 0.084331
+},
+{
+"market_id": "0x7bb9644f5b2f8979e66cc29ae6a8988d41f5bc45f9cde6a9fbd1f48d9eb70589",
+"question": "Exact Score: Chelsea FC 1 - 0 Tottenham Hotspur FC?",
+"price_yes": 0.075,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.118299
+},
+{
+"market_id": "0x501fd6d2107fcb72168210300662792f9a81909dd3b0f3defcfb9104964237b2",
+"question": "Exact Score: Chelsea FC 1 - 1 Tottenham Hotspur FC?",
+"price_yes": 0.115,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.165588
+},
+{
+"market_id": "0xa4e87e0302d04e8999ca9177b7effdaf81dbdb63e033655355b39d1d8e7c869f",
+"question": "Exact Score: Chelsea FC 3 - 0 Tottenham Hotspur FC?",
+"price_yes": 0.042,
+"spread": 0.004,
+"action": "BUY_YES",
+"q_yes": 0.074543
+},
+{
+"market_id": "0xeb8122612faf6428b318564a0033400922a3afae087b9c26a50f5aee85bb9d73",
+"question": "Exact Score: Chelsea FC 2 - 2 Tottenham Hotspur FC?",
+"price_yes": 0.075,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.118299
+},
+{
+"market_id": "0xb01b78f1f43fc2f5e2c2dd1bac8c2285cbe1a5884fa987de0bafba31a2446a4f",
+"question": "Exact Score: Chelsea FC 3 - 1 Tottenham Hotspur FC?",
+"price_yes": 0.06,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.099108
+},
+{
+"market_id": "0x550bb7f78efd0cd4dc18bf2986d8e88aa025914804e623dc583ff5fd27ac36f8",
+"question": "Will Eintracht Frankfurt win on 2026-10-24?",
+"price_yes": 0.165,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.219366
+},
+{
+"market_id": "0xf0c8d06dceb21b7d91e04b4cb5df1af08f03cfe4b0e40a5fb069ef8bebbc2899",
+"question": "Will UD Las Palmas win on 2026-10-24?",
+"price_yes": 0.445,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.473268
+},
+{
+"market_id": "0x69846b888ef0b2119abcda8cd037029b7e1db00f7d9a54d659806909c434c7be",
+"question": "Will Real Sociedad de F\u00fatbol B win on 2026-10-24?",
+"price_yes": 0.285,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.334693
+},
+{
+"market_id": "0x67fc591dde0954d42e5858e4d3aae5cc6be2d7d993aa8c291c89380e8d1720b1",
+"question": "Will Valencia CF win on 2026-10-24?",
+"price_yes": 0.285,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.334693
+},
+{
+"market_id": "0xb6a8225eeed9588cbe8ff0c9367a7337cad512f0a63a9de5a7ab1edbb1306804",
+"question": "Will Villarreal CF win on 2026-10-24?",
+"price_yes": 0.445,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.473268
+},
+{
+"market_id": "0xc36caa714fc036cec5ad4e5719759327f3c908cf88303949871eb027eedad26e",
+"question": "Will Manta FC win on 2026-10-24?",
+"price_yes": 0.42,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.452252
+},
+{
+"market_id": "0x1d58b2765699c6724da854bb1092fec2dd31afff384e9a394a99b896a000ffd3",
+"question": "Will SC Cambuur-Leeuwarden win on 2026-10-24?",
+"price_yes": 0.365,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.405345
+},
+{
+"market_id": "0x93e1b3c82ffdced54cd4667b8bb4fe82c5f3b0669b1692478806249b85a0054c",
+"question": "Will FC Alverca vs. FC Arouca end in a draw?",
+"price_yes": 0.295,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.343727
+},
+{
+"market_id": "0x9991e1ec19ae1ac69788841817b4ef3eec7cfbcab62c4e0617e6608670bb42dc",
+"question": "Will Bangor FC win on 2026-10-24?",
+"price_yes": 0.105,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.154198
+},
+{
+"market_id": "0xe2c17d7df09c2f6d37a79e98b5dc77cb080bb1d6b54469cf3a44146d54314b5e",
+"question": "Will CA Banfield vs. CA Lan\u00fas end in a draw?",
+"price_yes": 0.295,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.343727
+},
+{
+"market_id": "0xa2b8568dcc0021ca5b73b1f69f892691ba95a39e7cecc103ff550d561266b1e9",
+"question": "Will CA Lan\u00fas win on 2026-10-24?",
+"price_yes": 0.455,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.481634
+},
+{
+"market_id": "0x82c891b58ac067b6cd06c835e2ff7bd0482faf8986baadb917f117332f46d2a2",
+"question": "Will Al Riyadh Saudi Club win on 2026-10-24?",
+"price_yes": 0.325,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.370455
+},
+{
+"market_id": "0x8364e13a995f847aa2c032632798b63e05e18c883c6e8a2e74b555af0d84a1a9",
+"question": "Will Al Taawoun Saudi Club win on 2026-10-24?",
+"price_yes": 0.405,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.43956
+},
+{
+"market_id": "0x51f8600be61259b0374c054d57f947bd92e5caee099b812d65310c854fdabdfc",
+"question": "Will FCSB win on 2026-10-26?",
+"price_yes": 0.39,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.426797
+},
+{
+"market_id": "0x0d74852d7f4837794df07d96046b3bb807c45cf6c19e93af5e721588b4372f4f",
+"question": "Will Club Almagro vs. CSD Tristan Suarez end in a draw?",
+"price_yes": 0.295,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.343727
+},
+{
+"market_id": "0x3bf6f6dd57c1e6eae9db08bb43e6aac568274dedf7685afdb70f06478ef795db",
+"question": "Will Parma Calcio 1913 win on 2026-10-24?",
+"price_yes": 0.125,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.176739
+},
+{
+"market_id": "0xd68949a2d016aa815f4e1d04b45fb7633bf2b6235d5d8f4472684f26c50effc6",
+"question": "Will Racing Club de Lens win on 2026-10-24?",
+"price_yes": 0.365,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.405345
+},
+{
+"market_id": "0x819f01971efc6a603a97a0eaf0429b0bc87ede9b0f080bad0fe7775171f96e05",
+"question": "Will Paris FC win on 2026-10-24?",
+"price_yes": 0.365,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.405345
+},
+{
+"market_id": "0x21759b67ccef4e335c797f59fe5c4a895f5a854be5cc76e6edbac3ad6b1cb219",
+"question": "Exact Score: Racing Club de Lens 2 - 1 Paris FC?",
+"price_yes": 0.085,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.13059
+},
+{
+"market_id": "0x757efd92589b050524410f041b79784ce681b3343b51d2945f50f51abc669eef",
+"question": "SS Lazio vs. Parma Calcio 1913: Both Teams to Score",
+"price_yes": 0.465,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.48998
+},
+{
+"market_id": "0xb6ce9288c7a1cde79f07f4a30d80ce9ad77882d933b0dc2fb77b9f65671efce2",
+"question": "Will Club Atl\u00e9tico de Madrid win on 2026-10-24?",
+"price_yes": 0.755,
+"spread": 0.01,
+"action": "BUY_NO",
+"q_yes": 0.733078
+},
+{
+"market_id": "0x31fd69afc16fc4bbd1882a95898366e3e24cb6b122e05161b8ce589a09abf17b",
+"question": "Will Club Atl\u00e9tico de Madrid vs. RC Deportivo A Coru\u00f1a end in a draw?",
+"price_yes": 0.155,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.208973
+},
+{
+"market_id": "0x51b7eb082e630838b0683693cad8090d6708f400856e9145345991a1c967809f",
+"question": "Will RC Deportivo A Coru\u00f1a win on 2026-10-24?",
+"price_yes": 0.085,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.13059
+},
+{
+"market_id": "0x126911d5bab7553337680b013b06b93b33be3c472dfbb154d6c510fbed9bd40d",
+"question": "Club Atl\u00e9tico de Madrid vs. RC Deportivo A Coru\u00f1a: Both Teams to Score",
+"price_yes": 0.475,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.498308
+},
+{
+"market_id": "0x60e90c5b6435ed9295330464b4be5af0ede9203feb0b0852752a6104d6b9d39a",
+"question": "Will Gil Vicente FC win on 2026-10-24?",
+"price_yes": 0.115,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.165588
+},
+{
+"market_id": "0xd1e74636964c316a4240c5f22007e910788ad2217e3ebed16a630f96ef001ee8",
+"question": "Will Mirassol FC vs. S\u00e3o Paulo FC end in a draw?",
+"price_yes": 0.285,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.334693
+},
+{
+"market_id": "0x298845f81e763c9ce16d0fd2751e95f3c16f0435854bb885a04ee2e84fcacfcc",
+"question": "Will AC Goianiense win on 2026-10-24?",
+"price_yes": 0.36,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.401024
+},
+{
+"market_id": "0x6c983b1deee3506c0afffe3a7a80832463afd887fa15a8cf53f34392ab89b4ba",
+"question": "Will Gr\u00eamio Novorizontino win on 2026-10-24?",
+"price_yes": 0.345,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.387996
+},
+{
+"market_id": "0x75febf55d16ca304b73e6c24597f7babe185bbcba620edd77d889c2702a78b74",
+"question": "Will CA Paranaense win on 2026-10-24?",
+"price_yes": 0.355,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.396693
+},
+{
+"market_id": "0x6f8738f065ddf129070a0aecd1330662cb07b1d94b5717893556d2ea5c132362",
+"question": "Will SC Internacional win on 2026-10-24?",
+"price_yes": 0.475,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.498308
+},
+{
+"market_id": "0xf83fa5c64ac9737f2d2d33fd50549c0a06308727684c2bd0d3c42bdf40b19ca5",
+"question": "Will New York Red Bulls win on 2026-10-24?",
+"price_yes": 0.265,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.316411
+},
+{
+"market_id": "0x8e98d858132f0665cedfdb874f97ac1b36ac887f890b87e25064c998a0b14eb1",
+"question": "Will Inter Miami CF win on 2026-10-24?",
+"price_yes": 0.515,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.531483
+},
+{
+"market_id": "0xcef57bbe75938eb7aa10d758ae1bc11322573a2bb5d913e2c156d2f4588ec6a5",
+"question": "Will SC Corinthians Paulista win on 2026-10-24?",
+"price_yes": 0.175,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.229607
+},
+{
+"market_id": "0xfaac1c1d557ae5dacbe867b9179db3f25f371cc0bd5116c482e5dcfabc40db2b",
+"question": "Will CA San Lorenzo de Almagro win on 2026-10-24?",
+"price_yes": 0.365,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.405345
+},
+{
+"market_id": "0xa4fb947e2a1b18cd30d11d4cb0798a4927140284680c7c827ac9ba660e7aa162",
+"question": "Will CA San Lorenzo de Almagro vs. CA Newell's Old Boys end in a draw?",
+"price_yes": 0.345,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.387996
+},
+{
+"market_id": "0xee930e781cb4857459f1b08a28d98adea0c9c3b86b8e21e424680482dee88691",
+"question": "Will Deportivo Toluca FC win on 2026-10-24?",
+"price_yes": 0.495,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.514918
+},
+{
+"market_id": "0xea2b7819f2f109636383f9f1b7d7fc70084add3c3c6e6554f44833d2d6e8efdb",
+"question": "Will Venados FC vs. Alacranes de Durango end in a draw?",
+"price_yes": 0.29,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.339218
+},
+{
+"market_id": "0x6b40e6214503694b199a13efe1cb27996cff72c4a835e6770cca6c958d074b34",
+"question": "Will Trump say \"Iran\" 5+ times during his Midterm Rally in Georgia?",
+"price_yes": 0.81,
+"spread": 0.02,
+"action": "BUY_NO",
+"q_yes": 0.782387
+},
+{
+"market_id": "0x91d3ae8e98602c28deff0b0d70a69888c943b5c193877e5a662333af6cb88bad",
+"question": "Will Trump say \"AI\" or \"Artificial Intelligence\" during his Midterm Rally in Georgia?",
+"price_yes": 0.245,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.297817
+},
+{
+"market_id": "0x99d4b336b45635daad57a5bfc79d3ca70eea72432bc7be9fc8c9a952579f9366",
+"question": "Will Trump say \"Ass\" during his Midterm Rally in Georgia?",
+"price_yes": 0.44,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.469077
+},
+{
+"market_id": "0xd3ea201e7c92973777f6d30f16e27899b16001d93db2ffb4a7f0ae282a2461e6",
+"question": "Will Trump say \"Drill Baby Drill\" during his Midterm Rally in Georgia?",
+"price_yes": 0.21,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.264395
+},
+{
+"market_id": "0x37f35287c380ea7a7dfd95cd653f3bbdb1642910a7a260275d948e59d18c6080",
+"question": "Will Trump say \"Russia\" or \"Ukraine\" during his Midterm Rally in Georgia?",
+"price_yes": 0.89,
+"spread": 0.02,
+"action": "BUY_NO",
+"q_yes": 0.859527
+},
+{
+"market_id": "0x0a257afb3a536d22d087d38aa21ef8ffaa4d110871fae07f2a32192b8a45fa0b",
+"question": "Will FC Cincinnati win on 2026-10-24?",
+"price_yes": 0.425,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.456468
+},
+{
+"market_id": "0x0e49cc0188033aa8f4d85a79b44ac7b7362d7ede7eb5cae3a413a56f7a75216b",
+"question": "Will Atlanta United FC vs. Chicago Fire FC end in a draw?",
+"price_yes": 0.245,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.297817
+},
+{
+"market_id": "0x6d849e014c79b223373cbfdd0ae03628895ebf328533724140e83db92bc0001c",
+"question": "Will Orlando City SC win on 2026-10-24?",
+"price_yes": 0.455,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.481634
+},
+{
+"market_id": "0x09166ddb37790be86667b0f561244dbb5dff2b0b1bfe424a8964501c549bbf3c",
+"question": "Will NDP win the most seats in the 2026 British Columbia general election?",
+"price_yes": 0.055,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.092475
+},
+{
+"market_id": "0xa28e14fa834a4ee76a9180a2e14dba6ee455fce33f112cefa7157411d61d443c",
+"question": "Will Conservative win the most seats in the 2026 British Columbia general election?",
+"price_yes": 0.95,
+"spread": 0.02,
+"action": "BUY_NO",
+"q_yes": 0.925521
+},
+{
+"market_id": "0x5a973df09e30d899042a40b5693625e631817919b6dcdb5c0acb56f53123f62c",
+"question": "Will David Eby be the next Premier of British Columbia?",
+"price_yes": 0.09,
+"spread": 0.034,
+"action": "BUY_YES",
+"q_yes": 0.136606
+},
+{
+"market_id": "0x4fe71adf78386d9951298231110c9ac427d006e6be5bd9f7550b52076256fdbd",
+"question": "Will Lorne Doerkson be the next Premier of British Columbia?",
+"price_yes": 0.895,
+"spread": 0.03,
+"action": "BUY_NO",
+"q_yes": 0.864669
+},
+{
+"market_id": "0x63bf0d57b4c53e1ede9b19762233767bd99eb1931ef1a11d6935a6f1c129963d",
+"question": "Will CF Monterrey vs. CD Guadalajara end in a draw?",
+"price_yes": 0.305,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.352697
+},
+{
+"market_id": "0x521f12b37bef92cf0e517e4ef8be1777249c16195a18cb4432d1be10fbcf37d3",
+"question": "Will Real Salt Lake win on 2026-10-24?",
+"price_yes": 0.445,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.473268
+},
+{
+"market_id": "0x839ddc6c3308c4be3b37d6d59d892b87d882c5f88c431ed82ef0d99cc395f93b",
+"question": "Will Real Salt Lake vs. St. Louis City SC end in a draw?",
+"price_yes": 0.235,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.288389
+},
+{
+"market_id": "0x52c58c816aeb0ef6be2307e5e06b215a22dde57fb4eaa6647619193717a712e8",
+"question": "Will St. Louis City SC win on 2026-10-24?",
+"price_yes": 0.325,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.370455
+},
+{
+"market_id": "0x7e43bb14f4a739e38af7d831c3e7d16ffd3bc55c5cf22e070adacce6262117b9",
+"question": "Will San Diego FC win on 2026-10-24?",
+"price_yes": 0.445,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.473268
+},
+{
+"market_id": "0x79eb6f3b1b4102056a13a124833cdfbc6c4c006517d7b5b05890e615b1fc27c9",
+"question": "Will Jozef Viskupi\u010d win the 2026 Trnava Region gubernatorial election?",
+"price_yes": 0.955,
+"spread": 0.03,
+"action": "BUY_NO",
+"q_yes": 0.931733
+},
+{
+"market_id": "0xf50d47cb9134ddd983dbf34272d6e80a35f2201cef29b0bb055dba2b195810f9",
+"question": "Will Henrich Varga win the 2026 Nitra Region gubernatorial election?",
+"price_yes": 0.07,
+"spread": 0.066,
+"action": "BUY_YES",
+"q_yes": 0.111742
+},
+{
+"market_id": "0x3d05725ec56f4d5fb2f76650189436947605793f5a85a4bcad2a5f76c421f347",
+"question": "Will Igor Choma win the 2026 \u017dilina Region gubernatorial election?",
+"price_yes": 0.1135,
+"spread": 0.051,
+"action": "BUY_YES",
+"q_yes": 0.163586
+},
+{
+"market_id": "0x764a3feeace70ea4a7cc2ce09bef28668922174b043ad8459e71e26e3daf750d",
+"question": "Will Milan Majersk\u00fd win the 2026 Pre\u0161ov Region gubernatorial election?",
+"price_yes": 0.895,
+"spread": 0.03,
+"action": "BUY_NO",
+"q_yes": 0.864813
+},
+{
+"market_id": "0x9b92d7f8aa36606d08099b3190f2fc862a112d6f4b825b3de7d3c50d9fdbe2cd",
+"question": "Will Milan Mazurek win the 2026 Pre\u0161ov Region gubernatorial election?",
+"price_yes": 0.056,
+"spread": 0.048,
+"action": "BUY_YES",
+"q_yes": 0.093566
+},
+{
+"market_id": "0x321678fff1cb945acd033a4c4ce18f15ae96ba644e91184a3e89ffd5cd1b8666",
+"question": "Will Mari\u00e1n Porva\u017en\u00edk win the 2026 Ko\u0161ice Region gubernatorial election?",
+"price_yes": 0.25,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.302189
+},
+{
+"market_id": "0xc5714247001eb365fb4913ac483a42698965310faecc6c2278cfe3fe799b7ea8",
+"question": "Will Mat\u00fa\u0161 Vallo win the 2026 Bratislava mayoral election?",
+"price_yes": 0.904,
+"spread": 0.006,
+"action": "BUY_NO",
+"q_yes": 0.874199
+},
+{
+"market_id": "0x24e179fa6acff20477d6f2885e19190f2bcf4a1e86fd42426cbb2b7dfd46d026",
+"question": "Will Jozef R\u00e1\u017e win the 2026 Bratislava mayoral election?",
+"price_yes": 0.094,
+"spread": 0.012,
+"action": "BUY_YES",
+"q_yes": 0.141067
+},
+{
+"market_id": "0xa8069a25ffaaa22ad74c19cb54c83261a017725cd102e09305472429893ee8ab",
+"question": "Will Jaroslav Pola\u010dek win the 2026 Ko\u0161ice mayoral election?",
+"price_yes": 0.1425,
+"spread": 0.089,
+"action": "BUY_YES",
+"q_yes": 0.195426
+},
+{
+"market_id": "0xecdcc7db3fc8145454f18c746acf957b673433ddc86ebbef6bb8e7fe139479a6",
+"question": "Will Rastislav Mochnack\u00fd win the 2026 Pre\u0161ov mayoral election?",
+"price_yes": 0.085,
+"spread": 0.054,
+"action": "BUY_YES",
+"q_yes": 0.130304
+},
+{
+"market_id": "0x29f7eae23cd6e6aaef0fd4725d0060f99e5d7403b3b45659eb1d5ccc83419a93",
+"question": "Will Igor Kr\u0161iak win the 2026 Nitra mayoral election?",
+"price_yes": 0.185,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.239381
+},
+{
+"market_id": "0x4bee1950e6ba77878d0200de536e6ed2ce5259ec49fb0935ddefb9677101400e",
+"question": "Will Milo\u0161 Mi\u010dega win the 2026 Tren\u010d\u00edn mayoral election?",
+"price_yes": 0.07,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.111742
+},
+{
+"market_id": "0xba72f5e5d4db7decb9501aecb7bfcb80e4e69f12fcd7b96bd5f3a40ba298cbc6",
+"question": "Will Anton Danko win the 2026 Poprad mayoral election?",
+"price_yes": 0.85,
+"spread": 0.04,
+"action": "BUY_NO",
+"q_yes": 0.820053
+},
+{
+"market_id": "0x141376e8a1023d55268afd9c61b085c97322a81e897df063d9f381560f345cf3",
+"question": "Will Mikul\u00e1\u0161 Bob\u00e1k win the 2026 Poprad mayoral election?",
+"price_yes": 0.098,
+"spread": 0.038,
+"action": "BUY_YES",
+"q_yes": 0.145771
+},
+{
+"market_id": "0xe363ff8c66d16d4f641d4b759f220e0ab93664548cf3102567609c4c90915876",
+"question": "Will Sunita Dhir win the next Vancouver-Langara British Columbia Legislative Assembly election?",
+"price_yes": 0.12,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.170879
+},
+{
+"market_id": "0xe3578494803b6360d53a99235938d7ae29c85d2c2bcda0197b8f7b280ad1c51b",
+"question": "Will Harwinder Sandhu win the next Vernon-Lumby British Columbia Legislative Assembly election?",
+"price_yes": 0.0365,
+"spread": 0.047,
+"action": "BUY_YES",
+"q_yes": 0.066396
+},
+{
+"market_id": "0xaff9fc478b0ad835ef0432e4a8448c810e2710786c8ba8fc220dda05501d7f6f",
+"question": "Will Kevin Acton win the next Vernon-Lumby British Columbia Legislative Assembly election?",
+"price_yes": 0.939,
+"spread": 0.034,
+"action": "BUY_NO",
+"q_yes": 0.912686
+},
+{
+"market_id": "0x79a1501912e51fe9ed2aef2c3284f59d06daa1d17a7a31f3119ce6645f2fc313",
+"question": "Will Gordon Zhang win the next Richmond-Steveston British Columbia Legislative Assembly election?",
+"price_yes": 0.94,
+"spread": 0.02,
+"action": "BUY_NO",
+"q_yes": 0.913843
+},
+{
+"market_id": "0xe9b0757174ea5da51a167f8e699db0ff71878c86a20560088f693f2d10f723ba",
+"question": "Will Garry Begg win the next Surrey-Guildford British Columbia Legislative Assembly election?",
+"price_yes": 0.07,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.111742
+},
+{
+"market_id": "0x10171cac295611bf52eaf4ae304b91b00a24ed6f6c56c62864dd9e42a1bb267a",
+"question": "Will Jessie Sunner win the next Surrey-Newton British Columbia Legislative Assembly election?",
+"price_yes": 0.38,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.418013
+},
+{
+"market_id": "0xcf8c2c3f2cb2f5478025bc649db3eba05fefa67c6a8900b793107c1ea4d416f4",
+"question": "Will Alexander Volkanovski win by KO or TKO?",
+"price_yes": 0.135,
+"spread": 0.09,
+"action": "BUY_YES",
+"q_yes": 0.187349
+},
+{
+"market_id": "0xa74850497657346a45fbfcb10816b9467b7556725b3b32bc297257b9c430ff4c",
+"question": "Will Movsar Evloev win by KO or TKO?",
+"price_yes": 0.12,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.170873
+},
+{
+"market_id": "0x4edc378df61716fecf3a6d8f9ede6285119bdb217e80140abddbfed416e81f42",
+"question": "Will Merab Dvalishvili win by KO or TKO?",
+"price_yes": 0.07,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.111736
+},
+{
+"market_id": "0x0de3b8e2280dc9dc081731d3ba9807cf748d95757cc9bf367dceeef970bf86e2",
+"question": "Will Petr Yan win by KO or TKO?",
+"price_yes": 0.185,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.239374
+},
+{
+"market_id": "0xcf2f3219083639240732c452f1fefca064f1ee29fdbe50871d6b6dccac4ce6d1",
+"question": "Will the fight be won by submission?",
+"price_yes": 0.05,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.085464
+},
+{
+"market_id": "0x1266dc0bc3f8be0b76fe7ba559ecd1bcf55c0208afe69d16167e0b2dc78cedf2",
+"question": "Will Ramazan Temirov win by KO or TKO?",
+"price_yes": 0.31,
+"spread": 0.08,
+"action": "BUY_YES",
+"q_yes": 0.356874
+},
+{
+"market_id": "0x13f96c06c8ba9566e5a22a4bbf71154667ce0e6ee2ee004b66ab4fb4d1fe0961",
+"question": "Will Alexander Volkov win by KO or TKO?",
+"price_yes": 0.165,
+"spread": 0.07,
+"action": "BUY_YES",
+"q_yes": 0.219035
+},
+{
+"market_id": "0x4a39faa08bbfc90310b2d1bd9e3632759e561fd54fa91b8264334871f4ce0ceb",
+"question": "Will Azamat Murzakanov win by KO or TKO?",
+"price_yes": 0.515,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.531356
+},
+{
+"market_id": "0xb385d3cb8aa57bcf8fed5adb9ea0368b76ab625629cf1b79cbc28b6ede5ae736",
+"question": "Fight to Go the Distance?",
+"price_yes": 0.365,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.405097
+},
+{
+"market_id": "0x469afefca8fc0d93b1eabec83c14317d4dc802da1b827e5b73465bcbce6eb9a7",
+"question": "Will Sydney FC win on 2026-10-25?",
+"price_yes": 0.425,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.456265
+},
+{
+"market_id": "0xf61144fc12ce7f98477cc961525cd325fe07bcc88295abd7386d5f5b212700cd",
+"question": "Will Adelaide United FC win on 2026-10-25?",
+"price_yes": 0.31,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.356874
+},
+{
+"market_id": "0xecc23cf4dd24785b04a3f10d0ad6c6577858109296851d6a7cde76dd88682577",
+"question": "Will Bitcoin reach $82,000 on October 24?",
+"price_yes": 0.055,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.092225
+},
+{
+"market_id": "0xd06611f4ddeced9a073ff3faa612888207245bc5a70c1be138910c3d87f2467b",
+"question": "Will Bitcoin dip to $79,000 on October 24?",
+"price_yes": 0.75,
+"spread": 0.008,
+"action": "BUY_NO",
+"q_yes": 0.728769
+},
+{
+"market_id": "0x9f3cbdb341df96c9fd10f3dbe69929edfaa93565e01cfe456a96385d3144cc01",
+"question": "Will Bitcoin dip to $78,000 on October 24?",
+"price_yes": 0.273,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.323455
+},
+{
+"market_id": "0xa1a32118c0270d28599d6dc50ec3057e2c3bbcbd7d25b8bbdad66b79432707f8",
+"question": "Will Bitcoin dip to $77,000 on October 24?",
+"price_yes": 0.0945,
+"spread": 0.001,
+"action": "BUY_YES",
+"q_yes": 0.141651
+},
+{
+"market_id": "0x0c8fc504e13bb219c2b8bc3c099a066816a2d3e06da542bf2ceec3f660f237ae",
+"question": "Will Bitcoin dip to $76,000 on October 24?",
+"price_yes": 0.0325,
+"spread": 0.001,
+"action": "BUY_YES",
+"q_yes": 0.060463
+},
+{
+"market_id": "0xe42a3aed13c959b36f46f16d6c5558b6115da8d46b1805bed517f976d03f4c0f",
+"question": "Will Ethereum reach $2,400 on October 24?",
+"price_yes": 0.07,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.111736
+},
+{
+"market_id": "0x6575236cd0c6ad30fc5961e7280b0ca2c814e7bbc2c8443803c6bcce779173fa",
+"question": "Will Ethereum dip to $2,200 on October 24?",
+"price_yes": 0.1415,
+"spread": 0.065,
+"action": "BUY_YES",
+"q_yes": 0.194349
+},
+{
+"market_id": "0x2048914d9ab5fb7c0e53a3376a85cd0aedcf962092612949ed3e5a34f10f7e8a",
+"question": "Will Ethereum dip to $2,150 on October 24?",
+"price_yes": 0.062,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.101464
+},
+{
+"market_id": "0xa54f98bc52b9763a6f1e58e3675d3674ad35d541c16006bc1a2a98bfb792aec2",
+"question": "Will Kawasaki Frontale vs. Fagiano Okayama end in a draw?",
+"price_yes": 0.265,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.314375
+},
+{
+"market_id": "0xff4094d80ca7ea975ac6cf525d2aa7347889120003304375b271a53082acfb06",
+"question": "Will Fortuna Sittard win on 2026-10-25?",
+"price_yes": 0.405,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.436734
+},
+{
+"market_id": "0x80c7b67a8fc54b9465b0e51071993754134e7dfd2b9c2ce99710fe1b4ff9f24c",
+"question": "Will \"Clayface\" Opening Weekend Box Office be less than 22m?",
+"price_yes": 0.275,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.321377
+},
+{
+"market_id": "0x50d2ea19955ab7ecbbcbbb5ed9d3e1ffdd23737d4871ddb0a9e72d13f3d412ac",
+"question": "Will \"Street Fighter\" 2nd Weekend Box Office be less than $8M?",
+"price_yes": 0.1485,
+"spread": 0.015,
+"action": "BUY_YES",
+"q_yes": 0.197584
+},
+{
+"market_id": "0x9b628d9d3e578fa5f10461e53657930b5a8e419bdf4e1e4f956aba74c93f5d35",
+"question": "Will \"Street Fighter\" 2nd Weekend Box Office be between $8M and $11M?",
+"price_yes": 0.845,
+"spread": 0.01,
+"action": "BUY_NO",
+"q_yes": 0.816967
+},
+{
+"market_id": "0x5aaf0e2a267d99d9f8417f2ba6a105b883009949407e12547e867808271f92ad",
+"question": "Will \"You Can See Everything\" 2nd Weekend Box Office be at least $21M?",
+"price_yes": 0.22,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.269567
+},
+{
+"market_id": "0x01363513ad445f2f8745a35b3ddc10c01be5f4f56e30f77f61e0d70e258b5385",
+"question": "Will the lowest temperature in Hong Kong be 23\u00b0C on October 25?",
+"price_yes": 0.146,
+"spread": 0.058,
+"action": "BUY_YES",
+"q_yes": 0.19494
+},
+{
+"market_id": "0xdf231e7e4282f9be6a7b87e51ea04e0f6c1b71185db8478b626dbbaeed1e3088",
+"question": "Will the lowest temperature in Hong Kong be 25\u00b0C on October 25?",
+"price_yes": 0.21,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.25986
+},
+{
+"market_id": "0xc2b3f2f4f8b5a52cf90002793b4ea9ea30ea2154169e6d0d84aeca2fb9cc1eb0",
+"question": "Will the lowest temperature in Hong Kong be 26\u00b0C on October 25?",
+"price_yes": 0.0345,
+"spread": 0.029,
+"action": "BUY_YES",
+"q_yes": 0.060895
+},
+{
+"market_id": "0x8fa5394dfc5e4eb58d5e6e4f4f76ae0c1b580f27966e3f67abd01ed421b78ffd",
+"question": "Will the lowest temperature in Madrid be 4\u00b0C on October 25?",
+"price_yes": 0.24,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.288698
+},
+{
+"market_id": "0xea33d85550212b6cb16fc554b98425bfeb47e0c6f7f7c1c7673a0b88ba98b372",
+"question": "Will the lowest temperature in Madrid be 5\u00b0C on October 25?",
+"price_yes": 0.42,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.449377
+},
+{
+"market_id": "0x7a20c5ec549d86837afc120a3b1b17305240be8656481de52f85668e483b67ab",
+"question": "Will the highest temperature in Paris be 15\u00b0C on October 25?",
+"price_yes": 0.14,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.188554
+},
+{
+"market_id": "0xc9cf6bbe1c2076c994b593bbe6272b2ae807599a5f799fb35ba42a0e226ccdaa",
+"question": "Will the highest temperature in Paris be 17\u00b0C on October 25?",
+"price_yes": 0.175,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.225021
+},
+{
+"market_id": "0xea68be7eb46612de4b34bcc6e246690eeee3135127b1f97c748eaac09936f7ba",
+"question": "Will the highest temperature in Seoul (Incheon) be 22\u00b0C on October 25?",
+"price_yes": 0.36,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.397524
+},
+{
+"market_id": "0x5b2d5b31529848311ceb0c3562f80a2d2d61b7bb25927b72ffb31bac5b514c74",
+"question": "Will the highest temperature in Seoul (Incheon) be 23\u00b0C on October 25?",
+"price_yes": 0.335,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.375516
+},
+{
+"market_id": "0x9b93b803be7e2fb67e76e54aa37b915775f30d992bc903faa7c2da39660bfe81",
+"question": "Will the highest temperature in Seoul (Incheon) be 24\u00b0C on October 25?",
+"price_yes": 0.16,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.209617
+},
+{
+"market_id": "0x58a8d1ae9513d03800f74ae49abc7fcedba64d5fb61e4c7cfa24cb4692c43806",
+"question": "Will the highest temperature in Ankara be 21\u00b0C on October 25?",
+"price_yes": 0.39,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.4236
+},
+{
+"market_id": "0x6e386df3208d7ab6521469edb1ea25ff5e2dcf48ef9f10e7d6e67a4cc214aaf2",
+"question": "Will the highest temperature in Wellington be 17\u00b0C on October 25?",
+"price_yes": 0.175,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.225021
+},
+{
+"market_id": "0xff6e847befe934cc14a043155dee7281cfef0b7601158bab80ec554f4b0500cb",
+"question": "Will the highest temperature in Wellington be 19\u00b0C on October 25?",
+"price_yes": 0.165,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.214786
+},
+{
+"market_id": "0x87bdc5212d8f70c80747a216444f08a8168c5333e5477bf2ee08fb088f8a0cf5",
+"question": "Will the highest temperature in Lucknow be 31\u00b0C on October 25?",
+"price_yes": 0.23,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.279178
+},
+{
+"market_id": "0x1825fc1f16e95579619b5a2cc0840a257712e6a39af4f2abc92cc3e35096183e",
+"question": "Will the highest temperature in Lucknow be 33\u00b0C on October 25?",
+"price_yes": 0.179,
+"spread": 0.042,
+"action": "BUY_YES",
+"q_yes": 0.229077
+},
+{
+"market_id": "0xf8ca065a85497d3259db111ad407ad31dee86d53b93dc3d84301f50cad96cdb2",
+"question": "Will the highest temperature in Munich be 11\u00b0C on October 25?",
+"price_yes": 0.032,
+"spread": 0.012,
+"action": "BUY_YES",
+"q_yes": 0.057255
+},
+{
+"market_id": "0xd898ebe6274d09e77749a5091347b887f5d8ad266aa4bf7eeaf9d207f1bbb056",
+"question": "Will the highest temperature in Munich be 12\u00b0C on October 25?",
+"price_yes": 0.135,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.183184
+},
+{
+"market_id": "0x7696deac2ea61f9355b371b16bde8bd102f01e99d0fa8397565eca6512e474bb",
+"question": "Will the highest temperature in Munich be 13\u00b0C on October 25?",
+"price_yes": 0.33,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.37108
+},
+{
+"market_id": "0x94b1ecd2c39046d86a69f9949c4a60b4531a2f25cc2522bb24af61444a00c484",
+"question": "Will the highest temperature in Munich be 14\u00b0C on October 25?",
+"price_yes": 0.395,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.427915
+},
+{
+"market_id": "0x8594b746ab9684397ffe639c518aea5babcd08dfe49698c260f2f5984dde154e",
+"question": "Will the highest temperature in Munich be 15\u00b0C on October 25?",
+"price_yes": 0.1195,
+"spread": 0.035,
+"action": "BUY_YES",
+"q_yes": 0.166238
+},
+{
+"market_id": "0x4e2f9c6c47ec2ffa8f7b12dfaa3a3e76781f295db74039f10d2917da520d17d4",
+"question": "Will the highest temperature in Tel Aviv be 28\u00b0C on October 25?",
+"price_yes": 0.39,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.4236
+},
+{
+"market_id": "0xce5201b9335137f2a8aca41c5f7d17368dccfad5ea48f2c3151d6ac3b07d6cd1",
+"question": "Will the highest temperature in Tel Aviv be 30\u00b0C on October 25?",
+"price_yes": 0.055,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.089059
+},
+{
+"market_id": "0xe76d34d241a849fdc1c472e7fecbae3cf3916fc0e99e74a981efe7c1b2ff500c",
+"question": "Will the highest temperature in Tokyo be 24\u00b0C on October 25?",
+"price_yes": 0.115,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.161227
+},
+{
+"market_id": "0xdc724b79a42e4269f8370e0a5f72aaf9597b0441c890a385460e9430db584c74",
+"question": "Will the highest temperature in Tokyo be 25\u00b0C on October 25?",
+"price_yes": 0.225,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.274384
+},
+{
+"market_id": "0xc1379638cbfb9af308a0a734702cfdf234ce0aeb5f047a0a60cb97cabeecd58d",
+"question": "Will the highest temperature in Tokyo be 26\u00b0C on October 25?",
+"price_yes": 0.334,
+"spread": 0.038,
+"action": "BUY_YES",
+"q_yes": 0.374629
+},
+{
+"market_id": "0x390d00eb74221139b1a74fe08bbddb4569c48411bb2f3bf8907667527d6e183a",
+"question": "Will the highest temperature in Tokyo be 27\u00b0C or higher on October 25?",
+"price_yes": 0.3405,
+"spread": 0.039,
+"action": "BUY_YES",
+"q_yes": 0.380382
+},
+{
+"market_id": "0xd1190a24c5cbfb838eb004b43d0d4c3d548f9bfa2cf5f42ac845de9a8ef2c5ed",
+"question": "Will the highest temperature in Hong Kong be 29\u00b0C on October 25?",
+"price_yes": 0.155,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.20441
+},
+{
+"market_id": "0x23519bb47ab4ca081ca0a83d78d8b8d02a18047c755a57ae81e01c4b1de1a5bb",
+"question": "Will the highest temperature in Hong Kong be 31\u00b0C on October 25?",
+"price_yes": 0.305,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.348706
+},
+{
+"market_id": "0x935caca9a19a10375ac1624d5b40cf0ce887bca7157c9353b166b79944c276fe",
+"question": "Will the highest temperature in Shanghai be 21\u00b0C on October 25?",
+"price_yes": 0.0305,
+"spread": 0.013,
+"action": "BUY_YES",
+"q_yes": 0.055045
+},
+{
+"market_id": "0x81ad69b402d1a22f6ca844f14e4dc16af414efd47217f127376683ef4b624279",
+"question": "Will the highest temperature in Shanghai be 22\u00b0C on October 25?",
+"price_yes": 0.345,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.384352
+},
+{
+"market_id": "0x08bfa6e758d8039387e543ad4621a0e54d115e6c5650078cb7d0201104bf1bde",
+"question": "Will the highest temperature in Shanghai be 24\u00b0C on October 25?",
+"price_yes": 0.132,
+"spread": 0.024,
+"action": "BUY_YES",
+"q_yes": 0.17994
+},
+{
+"market_id": "0x283721bcb71379907f46970fc5086f07dab04f8279d681c26bb8bb57f0599347",
+"question": "Will the highest temperature in Singapore be 30\u00b0C on October 25?",
+"price_yes": 0.31,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.353208
+},
+{
+"market_id": "0x2027f79de2145f174af6386a0ae7bf9c2048a69338a469cef59f146aa8d42dcf",
+"question": "Will the highest temperature in Singapore be 31\u00b0C on October 25?",
+"price_yes": 0.34,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.37994
+},
+{
+"market_id": "0x7192af1e88b1b215ba37651a530ba8496be2e26ae1ec447c44209d58efab07b9",
+"question": "Will the highest temperature in Singapore be 32\u00b0C on October 25?",
+"price_yes": 0.135,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.183184
+},
+{
+"market_id": "0xc8fb128ee9fb6c2833cbf68cb29dc18ade790cd12b11b9139eaa99b078d5d2b8",
+"question": "Will the highest temperature in Milan be 14\u00b0C on October 25?",
+"price_yes": 0.455,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.479155
+},
+{
+"market_id": "0xce806ae1551e49682732ef0a1d12a3008bf59576b00b89df3c1fbd38fa6820f4",
+"question": "Will the highest temperature in Milan be 15\u00b0C on October 25?",
+"price_yes": 0.37,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.406253
+},
+{
+"market_id": "0xe550019862946ea7d752210975af46fc4b2e14501030ece0ebb4437bc2a4ea84",
+"question": "Will the highest temperature in Madrid be 21\u00b0C on October 25?",
+"price_yes": 0.155,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.20441
+},
+{
+"market_id": "0xe85b5fa333b370a8f2c0b6b218e1b355e1f0b69f5fde8eb1360db8732729887c",
+"question": "Will the highest temperature in Madrid be 22\u00b0C on October 25?",
+"price_yes": 0.49,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.508703
+},
+{
+"market_id": "0x1b487ff417d6f34d0b55e346a4de7b4175839e95522ef3ee1469dd835393f416",
+"question": "Will the highest temperature in Madrid be 23\u00b0C on October 25?",
+"price_yes": 0.32,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.36217
+},
+{
+"market_id": "0x4e1c828bc6aeda835a1e62dff4cc2162759b44b1835fcd682a731c97ea802118",
+"question": "Will the highest temperature in Warsaw be 12\u00b0C on October 25?",
+"price_yes": 0.15,
+"spread": 0.076,
+"action": "BUY_YES",
+"q_yes": 0.199165
+},
+{
+"market_id": "0xec8cd86d6a201b55cf8e18bdd3a0ee4b104a543b11784320deaebd7cee1e91e0",
+"question": "Will the highest temperature in Warsaw be 14\u00b0C on October 25?",
+"price_yes": 0.3,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.34419
+},
+{
+"market_id": "0x9226f24a72856344b4261b88454efa1d1813cb07089a7efc41bddbad268fcfbb",
+"question": "Will the highest temperature in Taipei be 26\u00b0C on October 25?",
+"price_yes": 0.1165,
+"spread": 0.033,
+"action": "BUY_YES",
+"q_yes": 0.162902
+},
+{
+"market_id": "0x068e43d4f13455388a86a4c4073dd7175a1d4ca8ff54ee9f0ff0fc3f2431f912",
+"question": "Will the highest temperature in Taipei be 27\u00b0C on October 25?",
+"price_yes": 0.335,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.375516
+},
+{
+"market_id": "0x5a21006ef014ae187210bea17eb4c97cb2489e06f4042463cf4af85c25b0eb2a",
+"question": "Will the highest temperature in Taipei be 29\u00b0C on October 25?",
+"price_yes": 0.16,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.209617
+},
+{
+"market_id": "0xbe96dad38e8b85e3e8c0babf2555dd7ad03c33d958325592274a78173d775b97",
+"question": "Will the highest temperature in Chongqing be 19\u00b0C on October 25?",
+"price_yes": 0.095,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.138388
+},
+{
+"market_id": "0x9e2c7ae75af533a5e2a538e378edf116ab4ab7d7ff911e341a4e07dfac3cfa5a",
+"question": "Will the highest temperature in Chongqing be 21\u00b0C on October 25?",
+"price_yes": 0.315,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.357696
+},
+{
+"market_id": "0x6f4db5435269f85d5c12827b31634f19adf09cb40520afbe9afb6989db7b74a4",
+"question": "Will the highest temperature in Beijing be 13\u00b0C on October 25?",
+"price_yes": 0.25,
+"spread": 0.06,
+"action": "BUY_YES",
+"q_yes": 0.298132
+},
+{
+"market_id": "0xe3cc1cb617fa4b737e651e8af89c1a80609f9ecf99ceb80ac5d03adb9657e8cc",
+"question": "Will the highest temperature in Wuhan be 24\u00b0C on October 25?",
+"price_yes": 0.345,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.384352
+},
+{
+"market_id": "0xaa20917772015de3728a804a2684db2074fc5fc696353de6b2eb967016ac14e4",
+"question": "Will the highest temperature in Wuhan be 25\u00b0C on October 25?",
+"price_yes": 0.425,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.453649
+},
+{
+"market_id": "0x008167ea495c5be97c45c46f746229b316b8aea4007e81341e8137ba683cf9a7",
+"question": "Will the highest temperature in Wuhan be 26\u00b0C on October 25?",
+"price_yes": 0.175,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.225021
+},
+{
+"market_id": "0x2c4842ae47839ffe0d5c20bfb9cc72ee1b73ade9d7b11e9d578946e82ac5c1d1",
+"question": "Will the highest temperature in Chengdu be 22\u00b0C on October 25?",
+"price_yes": 0.23,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.279178
+},
+{
+"market_id": "0x908feab0aede2a7a42fa423acf3eb32aab7f176b058252503f0a33f3aa1f2b31",
+"question": "Will the highest temperature in Chengdu be 23\u00b0C on October 25?",
+"price_yes": 0.33,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.37108
+},
+{
+"market_id": "0x8a72c663e8ec084c3f37dfc953fc09e608fd8fb3bed95a7a0e306156df7be7aa",
+"question": "Will the highest temperature in Chengdu be 24\u00b0C on October 25?",
+"price_yes": 0.265,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.312134
+},
+{
+"market_id": "0x7db1455375e70607c0dba66567048738db593537996c8df69a818d623952b019",
+"question": "Will the highest temperature in Shenzhen be 30\u00b0C on October 25?",
+"price_yes": 0.31,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.353208
+},
+{
+"market_id": "0xcc8226e0a0e974462cab54fbfe095be035801db7a4d2241067684d670905d5f1",
+"question": "Will the highest temperature in Shenzhen be 32\u00b0C on October 25?",
+"price_yes": 0.195,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.245102
+},
+{
+"market_id": "0xe78d704e9cf7b80098f090b0c70244796566243b4b2ee76b7a3ba4158358600f",
+"question": "Will the highest temperature in Istanbul be 17\u00b0C on October 25?",
+"price_yes": 0.48,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.500279
+},
+{
+"market_id": "0x9c1ed4cc7d3d1e07c9da5a5b30e7091fc108372de1f555e6443d822797c8211e",
+"question": "Will the highest temperature in Istanbul be 18\u00b0C on October 25?",
+"price_yes": 0.325,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.366631
+},
+{
+"market_id": "0x8870096317fbe3030f541be86311591168141a7873d6488d32f1630e104119dc",
+"question": "Will the highest temperature in Busan be 18\u00b0C or below on October 25?",
+"price_yes": 0.0345,
+"spread": 0.025,
+"action": "BUY_YES",
+"q_yes": 0.060895
+},
+{
+"market_id": "0x680aa61ee477893a153ea60c5a452754645b9a45a6cd91277e8c05a53af2b425",
+"question": "Will the highest temperature in Busan be 19\u00b0C on October 25?",
+"price_yes": 0.35,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.388754
+},
+{
+"market_id": "0xf7de71e6e2bf546031e50bb9d92e2f7f3cd1a51d3ca3924a46ad8282dc29258b",
+"question": "Will the highest temperature in Busan be 21\u00b0C on October 25?",
+"price_yes": 0.14,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.188554
+},
+{
+"market_id": "0xeab164a680007d8b0cd01a5937f131d0c4b7e7aa5d10140214f3dbf3e86a60f5",
+"question": "Will the highest temperature in Helsinki be 12\u00b0C on October 25?",
+"price_yes": 0.32,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.36217
+},
+{
+"market_id": "0xe2a2bc9098465c2644e9ba471690b4c022e6c334db026982acbeb205d5cde6df",
+"question": "Will the highest temperature in Kuala Lumpur be 30\u00b0C on October 25?",
+"price_yes": 0.35,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.388754
+},
+{
+"market_id": "0x225432f6fa776465f45518aa159c84079c8c146752d484fbdae94b0de9160c7c",
+"question": "Will the highest temperature in Kuala Lumpur be 31\u00b0C on October 25?",
+"price_yes": 0.325,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.366631
+},
+{
+"market_id": "0xfd0fdd1bad502fd65e11087da3d989adce7e6cee9441fbffb0ccead83f64326b",
+"question": "Will the highest temperature in Kuala Lumpur be 32\u00b0C on October 25?",
+"price_yes": 0.12,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.166792
+},
+{
+"market_id": "0x2e86e97c0359b7292528aee1fce61cdd41676d610810c3af9b437743f5de2662",
+"question": "Will the highest temperature in Jeddah be 35\u00b0C on October 25?",
+"price_yes": 0.145,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.19388
+},
+{
+"market_id": "0xf5ec8b4ac013c30e7cd81b4ae40b1e1a03c04c27fa9247b489ea3cc916481d04",
+"question": "Will the highest temperature in Jeddah be 36\u00b0C on October 25?",
+"price_yes": 0.4,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.432222
+},
+{
+"market_id": "0x3ceaaadf9d0e2d207272c09bd9c75a2f7461caaa7db45dc27637a95cd47efa63",
+"question": "Will the highest temperature in Jeddah be 37\u00b0C on October 25?",
+"price_yes": 0.385,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.419277
+},
+{
+"market_id": "0x4da7f7d4630abde4861c14aee75ccad24fe893f6ed5a3f0c11fac325890ab130",
+"question": "Will the highest temperature in Jeddah be 38\u00b0C on October 25?",
+"price_yes": 0.039,
+"spread": 0.016,
+"action": "BUY_YES",
+"q_yes": 0.067317
+},
+{
+"market_id": "0xcb118b086bd3adf090f434bc65bd969c83bcfafe44b79a7f60a88068751b1150",
+"question": "Will the highest temperature in Cape Town be 22\u00b0C on October 25?",
+"price_yes": 0.385,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.419277
+},
+{
+"market_id": "0xad976ac16b492612709e22ef86030c283ccf72ded008fe446edc5b05065bff30",
+"question": "Will the highest temperature in Cape Town be 23\u00b0C on October 25?",
+"price_yes": 0.18,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.230088
+},
+{
+"market_id": "0x2cdc7c1a1ceaaae4238e52b295c693ba1bdd62faa5d1abd213bc6199eb31d675",
+"question": "Will the highest temperature in Guangzhou be 31\u00b0C on October 25?",
+"price_yes": 0.505,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.521318
+},
+{
+"market_id": "0x93276acd28b6f5530a76ba468d1bf41739a94302e5b5203b8f1982f1baa05e91",
+"question": "Will the highest temperature in Guangzhou be 32\u00b0C on October 25?",
+"price_yes": 0.34,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.37994
+},
+{
+"market_id": "0x02be2270b3b7a68abe5bc06f0c70a211b6e2f8fc4cca29039d945e4d60b9a3ab",
+"question": "Will the highest temperature in Karachi be 36\u00b0C on October 25?",
+"price_yes": 0.455,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.479155
+},
+{
+"market_id": "0x0e00e30111c8ee4087fb96640e5b7d53cd80345abd9a513c050336cf71d95263",
+"question": "Will the highest temperature in Karachi be 37\u00b0C on October 25?",
+"price_yes": 0.41,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.440814
+},
+{
+"market_id": "0x2e799907cb96cdc37856e8fcc633f6a3edb0963afb59b2cdaacbd02ac3cb627b",
+"question": "Will the highest temperature in Karachi be 38\u00b0C on October 25?",
+"price_yes": 0.085,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.126572
+},
+{
+"market_id": "0xb409e9db59f462eca3999bb5ba828cd419178407f220cac79217214b13b13d6f",
+"question": "Will the highest temperature in Manila be 32\u00b0C on October 25?",
+"price_yes": 0.49,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.508703
+},
+{
+"market_id": "0xfbf82362975ff52fce6842e4404be2ff1ae39b39d7f99032d2c894e2bd9db386",
+"question": "Will the highest temperature in Manila be 33\u00b0C on October 25?",
+"price_yes": 0.38,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.414944
+},
+{
+"market_id": "0xf9b931fc2c316812b5b6e31c0f9f05353747595a63cfdd34ee3cc3c406023206",
+"question": "Will the highest temperature in Manila be 34\u00b0C on October 25?",
+"price_yes": 0.055,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.089059
+},
+{
+"market_id": "0x76b51c978d49e8782bb4672d928a515a8e62e43ce9548877372fb91abc389261",
+"question": "Will the highest temperature in London be 13\u00b0C on October 25?",
+"price_yes": 0.15,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.199165
+},
+{
+"market_id": "0x5006c8c5f3b682f0b62a40b149a27ed55f86fa0772a6ebbda6e6134b9cd83595",
+"question": "Will the highest temperature in London be 15\u00b0C on October 25?",
+"price_yes": 0.24,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.288698
+},
+{
+"market_id": "0x731741207576e20d9282f7ef6fab3d24bef60a14cebcd6872b14c9891c7b4356",
+"question": "Will the highest temperature in London be 16\u00b0C on October 25?",
+"price_yes": 0.044,
+"spread": 0.016,
+"action": "BUY_YES",
+"q_yes": 0.07428
+},
+{
+"market_id": "0x0804793098adc3e65afbb83e1c05b9e737ce1ee5eb99595efb6810acaa2a7df5",
+"question": "Will the highest temperature in Miami be between 78-79\u00b0F on October 25?",
+"price_yes": 0.0925,
+"spread": 0.019,
+"action": "BUY_YES",
+"q_yes": 0.135461
+},
+{
+"market_id": "0xb41809aedc1adfec05aec3d1857bfa6c5b371fd1802d95229247cee91fecdad2",
+"question": "Will the highest temperature in Miami be between 80-81\u00b0F on October 25?",
+"price_yes": 0.375,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.410603
+},
+{
+"market_id": "0x49673b1e260017283a47a2594d3fbb8a9f58bda0251b8a6e727d179ad7418c26",
+"question": "Will the highest temperature in Miami be between 82-83\u00b0F on October 25?",
+"price_yes": 0.435,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.462173
+},
+{
+"market_id": "0xab9ab139919c8c646323a964ff0de24a1864d59b0fbfde4cc1940f229c31e911",
+"question": "Will the highest temperature in Miami be between 84-85\u00b0F on October 25?",
+"price_yes": 0.1,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.144191
+},
+{
+"market_id": "0xbfff72a6fdc39c05453967265ac4278b3bb21600e8920d3a1a5b37ff201279ad",
+"question": "Will the lowest temperature in New York City be between 46-47\u00b0F on October 25?",
+"price_yes": 0.395,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.427915
+},
+{
+"market_id": "0xb88a79bf1e5756abc5bc7bc6dc0ae9fa3964ed82a8f18d17a1f8e5ca35023b21",
+"question": "Will the lowest temperature in New York City be between 48-49\u00b0F on October 25?",
+"price_yes": 0.33,
+"spread": 0.02,
+"action": "BUY_YES",
+"q_yes": 0.37108
+},
+{
+"market_id": "0xf16c4636c10ea60713230a27a9165c86084b44a89e9dba0d73a01326e15c464e",
+"question": "Will the highest temperature in New York City be between 64-65\u00b0F on October 25?",
+"price_yes": 0.105,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.14993
+},
+{
+"market_id": "0xa3caa54d1e5b47a952b32aa7b1c03d29b2af39d32ea8f0e71fc1d2161e3d19c1",
+"question": "Will the highest temperature in New York City be between 68-69\u00b0F on October 25?",
+"price_yes": 0.31,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.353208
+},
+{
+"market_id": "0xbd31aec1eb08d2ac0baa9fe4b8913dd296dd984695196d29a9414385469bb604",
+"question": "Will the highest temperature in Dallas be between 78-79\u00b0F on October 25?",
+"price_yes": 0.18,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.230088
+},
+{
+"market_id": "0x802aa12e3292cde892460f95077afd3b8717701ff1b6f9a0e317a85d9e4c4fd4",
+"question": "Will the highest temperature in Dallas be between 82-83\u00b0F on October 25?",
+"price_yes": 0.2,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.250049
+},
+{
+"market_id": "0x7217282b025d3f08fd77801ab49532fb906443baf43acc3d8db7014a0b49c145",
+"question": "Will the highest temperature in Atlanta be between 70-71\u00b0F on October 25?",
+"price_yes": 0.455,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.479155
+},
+{
+"market_id": "0x7d53623b1f053538922617fcfb77f5283cd7441945716312427009ad5be23e2a",
+"question": "Will the highest temperature in Atlanta be between 72-73\u00b0F on October 25?",
+"price_yes": 0.0435,
+"spread": 0.021,
+"action": "BUY_YES",
+"q_yes": 0.073591
+},
+{
+"market_id": "0xd909140a5a9b9312d60047634ae7a6a560f7801a3b12ae0a260fdeee85790516",
+"question": "Will the highest temperature in Chicago be between 72-73\u00b0F on October 25?",
+"price_yes": 0.345,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.384352
+},
+{
+"market_id": "0x0df600ac4e836a8b6c21d11b1299550e92c263ac739b46955b977437fc1f5241",
+"question": "Will the highest temperature in Chicago be between 76-77\u00b0F on October 25?",
+"price_yes": 0.105,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.14993
+},
+{
+"market_id": "0x3da8f865adead033b9355d29eaa2ba331b48fee89b0e4d99234150a305c56d28",
+"question": "Will the highest temperature in Austin be between 80-81\u00b0F on October 25?",
+"price_yes": 0.355,
+"spread": 0.05,
+"action": "BUY_YES",
+"q_yes": 0.393144
+},
+{
+"market_id": "0x679aa3e9b4a69990072aacd7fb3d85045a2845d0513d40bcbc1d99731e3a3ca1",
+"question": "Will the highest temperature in Austin be between 84-85\u00b0F on October 25?",
+"price_yes": 0.155,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.20441
+},
+{
+"market_id": "0xd48658c6c2f8f7398048bcd61547d48ad38d790dd4b15805681d0f0bb9bf3749",
+"question": "Will the highest temperature in Houston be between 82-83\u00b0F on October 25?",
+"price_yes": 0.175,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.225021
+},
+{
+"market_id": "0xfc24a21748ad5bd3e2afe54bbc1a30b129d697b0ad173132b079fc169c15adc7",
+"question": "Will the highest temperature in Seattle be between 52-53\u00b0F on October 25?",
+"price_yes": 0.375,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.410603
+},
+{
+"market_id": "0xfea961d93d7ef7aa0539149ff0da1a684e2dc51529f53ea82b01659ed8a8e93c",
+"question": "Will the highest temperature in Seattle be between 54-55\u00b0F on October 25?",
+"price_yes": 0.33,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.37108
+},
+{
+"market_id": "0x134d70a73d744569ff920029a2ef8396283118974a0c8726c9212990f356cbf5",
+"question": "Will the highest temperature in Seattle be between 56-57\u00b0F on October 25?",
+"price_yes": 0.125,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.172305
+},
+{
+"market_id": "0x78fd0fbecbe53003a372a38a4fa106630def29e3119efa911a584465dc496068",
+"question": "Will the highest temperature in Buenos Aires be 16\u00b0C on October 25?",
+"price_yes": 0.415,
+"spread": 0.01,
+"action": "BUY_YES",
+"q_yes": 0.445099
+},
+{
+"market_id": "0x5032f712012b7cf3ae8aaca1e7973ec4bae0008fe4cbe4029fec66ecddbb00f4",
+"question": "Will the highest temperature in Buenos Aires be 17\u00b0C on October 25?",
+"price_yes": 0.315,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.357696
+},
+{
+"market_id": "0x370357da69b016f3837ad29791f89ccaaabb232f21339241c72a6ac4c700fbf9",
+"question": "Will the highest temperature in Toronto be 18\u00b0C on October 25?",
+"price_yes": 0.42,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.449377
+},
+{
+"market_id": "0x9ee107983b04f6a42fe7d69d4dfc5e0e6b446bbd57251285bd0b0aa10201f1ee",
+"question": "Will the highest temperature in Toronto be 19\u00b0C on October 25?",
+"price_yes": 0.435,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.462173
+},
+{
+"market_id": "0x9c95a7939de1bd0b549708e4345e08ddd23f4835a9a737c938b2d8fd1052bd41",
+"question": "Will the highest temperature in Mexico City be 19\u00b0C on October 25?",
+"price_yes": 0.275,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.321377
+},
+{
+"market_id": "0x0e14a5feb663590e15954d40476116fcaacddc888e7845501c080e528f6832f7",
+"question": "Will the highest temperature in Mexico City be 20\u00b0C on October 25?",
+"price_yes": 0.24,
+"spread": 0.04,
+"action": "BUY_YES",
+"q_yes": 0.288698
+},
+{
+"market_id": "0xf544e48e14732f393ac30a793a8fbc4c85c1d1f5719cd7763efe02ab444702c6",
+"question": "Will the highest temperature in Panama City be 31\u00b0C on October 25?",
+"price_yes": 0.225,
+"spread": 0.03,
+"action": "BUY_YES",
+"q_yes": 0.274384
+}
+]
+}

@@ -28,12 +28,12 @@ KELLY_SCALE = 0.25
 KELLY_CAP = 0.05
 N_BOOT = 40
 MIN_DOMAIN_ROWS = 50
-# Policy V3 (integrations/playoff: chosen on validation, test opened once): trade only if the net edge after
+# Policy V3 (integrations/playoff: chosen on validation only): trade only if the net edge after
 # cost and model uncertainty is at least 1¢, and never earlier than 24 h before the scheduled end.
 MIN_EDGE = 0.01
 ENTER_FROM_H = 24
 POLICY = {"name": "V3", "min_edge": MIN_EDGE, "enter_from_hours": ENTER_FROM_H,
-          "note": "rule chosen on validation, test opened once (integrations/playoff)"}
+          "note": "rule chosen on validation only; test results for all variants shown side by side (integrations/playoff)"}
 # Polymarket taker fee per share = rate * (p * (1 - p)) ** exponent (docs.polymarket.com/trading/fees; makers pay
 # nothing, we assume taker fills). Each market's own schedule (Gamma feeSchedule) wins; this domain table is the
 # fallback for a market with fees enabled but no schedule. Geopolitics markets are fee-free.
@@ -382,12 +382,38 @@ def capped_report(trades, rng):
                          "hit_rate": s["hit_rate"], "max_drawdown": s["max_drawdown"],
                          "peak_open_stake": round(capped_peak, 3),
                          "note": "Policy V3, Polymarket taker fees, open stake <= 1 starting bankroll, test trades entered "
-                                 "on/after the cutoff. Rule chosen on validation, test opened once."},
+                                 "on/after the cutoff. " + "The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only."},
             "capped_exposure": {**s, "cap": 1.0, "return_ci": capped_ci,
                                 "return_per_dollar_staked": capped_pd,
                                 "return_per_dollar_ci": capped_pd_ci,
                                 "note": "Same trades in entry order; a trade is cut to whatever is left when open stakes "
                                         "would exceed 1 starting bankroll, skipped when nothing is left."}}
+
+
+def capped_stats(trades):
+    """Headline-style numbers for a set of policy trades: open stake <= 1 bankroll, seed-0 event-bootstrap CIs."""
+    if not len(trades):
+        return {"n_trades": 0}
+    _, capped = exposure(trades, trades["kelly"].to_numpy())
+    t = trades.assign(kelly=capped)[capped > 0]
+    s = equity_stats(t, t["kelly"].to_numpy())
+    return {"n_trades": s["n_trades"], "per_dollar": round(float((t["kelly"] * t["ret"]).sum() / t["kelly"].sum()), 4),
+            "per_dollar_ci": per_dollar_ci(t, t["kelly"].to_numpy(), np.random.default_rng(0)),
+            "return": s["return"], "return_ci": return_ci(t, np.random.default_rng(0)), "max_drawdown": s["max_drawdown"]}
+
+
+def robustness(trades):
+    """The stale-price and event-already-over checks on the headline trades: (a) the price print is at most 1 h
+    before the target time; (b) the market closed at least 12 h after that print; (c) both."""
+    target = pd.to_datetime(trades["end_date"], utc=True, format="ISO8601") - pd.to_timedelta(trades["horizon_hours"], unit="h")
+    printed = pd.to_datetime(trades["price_ts"], utc=True, format="ISO8601")
+    fresh = ((target - printed) <= pd.Timedelta(hours=1)).to_numpy()
+    alive = ((trades["resolved_at"] - printed) >= pd.Timedelta(hours=12)).to_numpy()
+    return {"note": "Headline policy and caps re-run on subsets of its own trades.",
+            "price_le_1h": {"label": "price print <= 1 h before the target", **capped_stats(trades[fresh])},
+            "closed_ge_12h": {"label": "market closed >= 12 h after the price", **capped_stats(trades[alive])},
+            "both": {"label": "both", **capped_stats(trades[fresh & alive])},
+            "share_fresh": round(float(fresh.mean()), 4), "share_alive": round(float(alive.mean()), 4)}
 
 
 def policy_comparison():
@@ -400,7 +426,7 @@ def policy_comparison():
     rows = [{"variant": v, "label": meta["label"], "picked_by_validation": v == r["selected_by_validation"]["winner"],
              "validation": {k: r["validation"][v]["ours"][k] for k in keep},
              "test": {k: r["test"][v]["ours"][k] for k in keep}} for v, meta in r["variants"].items()]
-    return {"note": "rule chosen on validation, test opened once", "rows": rows}
+    return {"note": "The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only.", "rows": rows}
 
 
 def naive_favourite(test, cost, stake=0.02):
@@ -504,6 +530,7 @@ def evaluate(df, cutoff=None, fee=0.0, min_half_spread=0.01, seed=0, model=None,
         **capped_report(with_c, rng),
         "naive_favourite": naive_favourite(tp, cp),
         "policy": POLICY,
+        "robustness": robustness(with_c),
         "policy_comparison": policy_comparison(),
         "overall": {"brier_market": round(brier(test["price_yes"], y), 4), "brier_model": round(brier(q, y), 4),
                     "logloss_market": round(log_loss(test["price_yes"], y), 4), "logloss_model": round(log_loss(q, y), 4)},
@@ -514,11 +541,12 @@ def evaluate(df, cutoff=None, fee=0.0, min_half_spread=0.01, seed=0, model=None,
             (f"Cost per contract = max(spread / 2, {min_half_spread}) + Polymarket taker fee (rate x p(1-p), each market's own "
              f"fee schedule from Gamma; {'fees on' if use_fees else 'fees OFF'}) + flat fee {fee}; historical spreads are unknown, so the 1¢ floor applies."),
             "Stakes are fractions of the starting bankroll and positions overlap: peak_open_stake is the most staked at once; capped_exposure re-runs the same trades with total open stake capped at 1 bankroll.",
-            f"Policy V3: one trade per market, at the earliest horizon within {ENTER_FROM_H} h of the scheduled end whose net edge is at least {MIN_EDGE * 100:.0f}¢, held to resolution. Chosen on validation among V0-V3 (integrations/playoff); test opened once.",
+            f"Policy V3: one trade per market, at the earliest horizon within {ENTER_FROM_H} h of the scheduled end whose net edge is at least {MIN_EDGE * 100:.0f}¢, held to resolution. Chosen on validation only among V0-V3 (integrations/playoff); test results for all four are reported side by side.",
             "Embargo: a test trade counts only if it was entered on/after the cutoff.",
             f"Only prices in {TRADABLE[0]:.0%}–{TRADABLE[1]:.0%} are modelled or traded; edge must survive the model's 10–90% bootstrap interval (resampled by event).",
             f"Stake = {KELLY_SCALE} Kelly on the conservative q, capped at {KELLY_CAP:.0%} of the starting bankroll; P&L is additive (no compounding) because positions overlap.",
-            "Prices are Polymarket price history at each horizon; fills at that price are assumed.",
+            "Entry price = the last print at or before the target time in Polymarket's hourly price history (prior prints only, at most 6 h old; 98.9% of headline trades use a print at most 1 h old, see robustness); fills at that price are assumed.",
+            "Costs = max(the market's quoted half-spread, 1¢) + Polymarket's taker fee. Historical spreads are not available, so the 1¢ floor stands in for them: a stated limitation.",
         ],
     }
     return model, cal, backtest

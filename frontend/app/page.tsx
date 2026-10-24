@@ -293,7 +293,7 @@ function BacktestSection({ b }: { b: Backtest }) {
       title={b.headline
         ? `After fees, every $1 staked returned ${perDollar(b.headline.per_dollar)}`
         : `After fees and spread, the test made ${bankroll(b.with_costs.return)} of its starting bankroll`}
-      lead={`Out-of-time test on ${int(b.n_test_markets)} markets. The rule: trade only when the net edge after fees and the model's uncertainty is at least 1¢, and only within 24 hours of the end (it was picked on validation; the test was opened once). One trade per market at ¼ Kelly, at most one bankroll staked at once, P&L summed as a share of the starting bankroll${b.headline ? `: ${bankroll(b.headline.return)}, 90% CI ${bankroll(b.headline.return_ci[0])} to ${bankroll(b.headline.return_ci[1])}, mostly from sports` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
+      lead={`Out-of-time test on ${int(b.n_test_markets)} markets. The rule: trade only when the net edge after fees and the model's uncertainty is at least 1¢, and only within 24 hours of the end (picked on validation only). One trade per market at ¼ Kelly, at most one bankroll staked at once, P&L summed as a share of the starting bankroll${b.headline ? `: ${bankroll(b.headline.return)}, 90% CI ${bankroll(b.headline.return_ci[0])} to ${bankroll(b.headline.return_ci[1])}, mostly from sports` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
     >
       <FramedCard title="Equity, test period, uncapped stakes" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
         <EquityChart withCosts={b.with_costs.equity} withoutCosts={b.without_costs.equity} />
@@ -314,6 +314,11 @@ function BacktestSection({ b }: { b: Backtest }) {
         </div>
         {b.by_domain?.length ? <DomainReturns rows={b.by_domain} /> : null}
         {b.policy_comparison?.rows.length ? <PolicyTable pc={b.policy_comparison} /> : null}
+        {b.robustness?.both?.per_dollar_ci ? (
+          <p className="mt-1.5 text-[12px] text-ink-faint tabular-nums">
+            Same result using only prices ≤1h old and excluding markets that closed within 12h: {perDollar(b.robustness.both.per_dollar)} per $1 [{perDollar(b.robustness.both.per_dollar_ci[0])}, {perDollar(b.robustness.both.per_dollar_ci[1])}], {int(b.robustness.both.n_trades)} trades.
+          </p>
+        ) : null}
       </FramedCard>
     </Section>
   );
@@ -351,7 +356,7 @@ function PolicyTable({ pc }: { pc: NonNullable<Backtest["policy_comparison"]> })
           </tbody>
         </table>
       </div>
-      <p className="mt-1.5 text-[12px] text-ink-faint">The rule was chosen on validation (the last 20% of the training period); the test was opened once. Same model, fees and stake caps for every row.</p>
+      <p className="mt-1.5 text-[12px] text-ink-faint">The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only. Same model, fees and stake caps for every row.</p>
     </div>
   );
 }

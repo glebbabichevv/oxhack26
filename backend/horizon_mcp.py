@@ -178,7 +178,7 @@ def _best_window_note():
         return "Out-of-time results are in /api/backtest."
     ci = h.get("per_dollar_ci") or [None, None]
     return (f"Horizon only enters within {pol.get('enter_from_hours', 24)}h of the scheduled end and only with a net edge of at "
-            f"least {pol.get('min_edge', 0.01) * 100:.0f}¢ (rule chosen on validation, test opened once). Out of time "
+            f"least {pol.get('min_edge', 0.01) * 100:.0f}¢ (rule chosen on validation only; test results for all variants shown side by side). Out of time "
             f"({n_test:,} markets after {MODEL['train_cutoff']}) that earned {h['per_dollar'] * 100:+.1f}¢ per $1 staked after "
             f"fees (90% CI {ci[0] * 100:+.1f}¢ to {ci[1] * 100:+.1f}¢) over {h['n_trades']:,} trades. An average over many "
             "markets, not a forecast for this one; the edge is solid mainly in sports.")
