@@ -84,6 +84,7 @@ class BlobStore:
         self.token = token
         self.cache = {}  # pathname -> record (records are immutable)
         self.listed_at, self.paths = 0.0, []
+        self.recent = {}  # pathname -> put time; kept until the listing shows it (listing can lag a write)
 
     def _req(self, method, url, data=None, headers=None):
         h = {"authorization": f"Bearer {self.token}", "x-api-version": "11", **(headers or {})}
@@ -95,6 +96,7 @@ class BlobStore:
         self._req("PUT", f"{BLOB_API}/?pathname={urllib.parse.quote(path)}", json.dumps(rec).encode(),
                   {"x-content-type": "application/json", "x-add-random-suffix": "0", "x-vercel-blob-access": "private"})
         self.cache[path] = rec
+        self.recent[path] = time.time()
         self.paths.append((path, None))
 
     def all(self):
@@ -107,7 +109,11 @@ class BlobStore:
                 cursor = page.get("cursor")
                 if not page.get("hasMore") or not cursor:
                     break
-            self.paths, self.listed_at = paths, time.time()
+            listed = {p for p, _ in paths}
+            self.recent = {p: t for p, t in self.recent.items() if p not in listed and time.time() - t < 120}
+            keep = listed | set(self.recent)
+            self.cache = {p: r for p, r in self.cache.items() if p in keep}  # deleted blobs drop out
+            self.paths, self.listed_at = paths + [(p, None) for p in self.recent], time.time()
         missing = [(p, u) for p, u in self.paths if p not in self.cache and u]
 
         def fetch(pu):
