@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
 import { HorizonCurve } from "@/components/HorizonCurve";
+import { Capsule, type CapsuleData } from "@/components/Capsule";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
@@ -40,10 +41,12 @@ export default function Home() {
   const [horizon, setHorizon] = useState<string>("24");
   const [domain, setDomain] = useState<Domain>("all");
   const [showAll, setShowAll] = useState(false);
+  const [capsule, setCapsule] = useState<CapsuleData>();
 
   useEffect(() => {
     getJSON<Backtest>("/api/backtest").then(setBacktest).catch((e) => setError(String(e)));
     getJSON<LiveMarket[]>("/api/live").then(setLive).catch((e) => setError(String(e)));
+    getJSON<CapsuleData>("/api/capsule").then(setCapsule).catch(() => undefined); // optional section
   }, []);
 
   useEffect(() => {
@@ -61,7 +64,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
@@ -130,6 +133,17 @@ export default function Home() {
             </FramedCard>
           </Section>
         </div>
+
+        {capsule?.seals.length ? (
+          <div id="sealed">
+            <Section
+              title="Sealed before the outcomes"
+              lead="A backtest can always be tuned after the fact. So on Saturday afternoon we hashed Horizon's probabilities for every market that ends before judging, after writing down how they would be scored and what we expected. It opens on Sunday, whatever it says."
+            >
+              <Capsule data={capsule} />
+            </Section>
+          </div>
+        ) : null}
 
         <div id="backtest">{backtest ? <BacktestSection b={backtest} /> : null}</div>
         {backtest ? <Failures b={backtest} /> : null}

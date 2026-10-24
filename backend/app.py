@@ -7,15 +7,18 @@ so the frontend works before the model does.
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+import horizon_mcp
 
 HERE = Path(__file__).parent
 RESULTS = HERE / "results"
 EXAMPLES = HERE / "examples"
 
 app = FastAPI(title="Horizon API", version="1")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 
 
 def load(name: str):
@@ -62,3 +65,26 @@ def model():
 def capsule():
     """Sealed predictions: each seal's hash and counts, its opening once scored, and C's forward test."""
     return load("capsule")[0]
+
+
+# MCP server for browser agents (Argos): stateless Streamable HTTP, JSON responses, no sessions.
+@app.post("/mcp")
+@app.post("/api/mcp")
+async def mcp(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}, status_code=400)
+    status, payload = horizon_mcp.handle_body(body)
+    if payload is None:
+        return Response(status_code=status)
+    return JSONResponse(payload, status_code=status)
+
+
+@app.get("/mcp")
+@app.get("/api/mcp")
+@app.delete("/mcp")
+@app.delete("/api/mcp")
+def mcp_no_stream():
+    """No server-initiated SSE stream and no sessions; the MCP client treats 405 as 'not offered'."""
+    return Response(status_code=405, headers={"Allow": "POST"})
