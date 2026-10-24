@@ -1,7 +1,7 @@
 # OxHack '26 — team brain
 
 Every Claude Code session on this team reads this file. Keep it short and current.
-Update it whenever a decision changes; it is how our four agents stay in sync.
+Update it whenever a decision changes; it is how our three agents stay in sync.
 
 ## Event
 - OxHack '26, Mathematical Institute, Oxford. Sat 24 Oct 09:00 → Sun 25 Oct ~16:30.
@@ -18,19 +18,42 @@ TBA — one paragraph, written after the idea is locked (after /office-hours).
 - Backend / agent: TBA (FastAPI or Next.js API routes). AI: Gemini API. Voice: ElevenLabs.
 - Secrets live in `.env.local` (never committed). Template: `.env.example`.
 
-## Roles (who owns what)
-| Role | Person | Owns |
-| --- | --- | --- |
-| Tech lead / agent & backend | Gleb | architecture, agent logic, API, cut/keep decisions |
-| Frontend / demo UI | TBA | the one demo screen, design preset |
-| Integrations & data | TBA | ElevenLabs, Presage, Tiger Data/Vultr, demo data |
-| Product & pitch | TBA | testing as a user, Devpost, sponsors, pitch |
+## Roles — who you are
+At the start of every session, ask the human which role they have (if not obvious from the branch name), then act only as that role.
+
+### Role A — Tech lead: agent & backend (Gleb)
+- Folder: `backend/` (or `app/api/` if we go full Next.js). Branches: `gleb/<feature>`.
+- Owns: architecture, agent logic on Gemini, API endpoints, wiring everything together, cut/keep decisions, merging PRs.
+- Writes and keeps the **API contract** section below up to date — other roles build against it.
+- gstack flow: `/office-hours` → `/plan-ceo-review` (Reduction / Hold Scope) → `/plan-eng-review` at the start; `/investigate` when something breaks; `/review` on the whole repo before feature freeze.
+
+### Role B — Frontend & demo screen
+- Folder: `frontend/`. Branches: `front/<feature>`. First command in a session: `/freeze frontend/`.
+- Owns: the one main demo screen, styled strictly by `docs/DESIGN.md`, calling the API exactly as the contract says.
+- gstack flow: `/design-shotgun` → pick one → `/design-html`; `/design-review` in the evening. The frontend-design skill applies to every screen.
+- Until the backend exists, use the contract's example responses — but replace them with real calls before the 14:00 gate.
+
+### Role C — Integrations, demo data, then pitch
+- Folder: `integrations/`. Branches: `int/<feature>`. First command in a session: `/freeze integrations/`.
+- Owns: thin wrappers around sponsor APIs (ElevenLabs voice, Presage, others as needed), real demo data, and running the demo as a user.
+- gstack flow: `/qa` at every gate, walking the exact demo script.
+- From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
+
+## API contract (Role A maintains this)
+TBA after `/plan-eng-review` — list each endpoint: method, path, request body, example response.
+
+## Order of work after the task is announced
+1. Opening → fill Event section above (theme, tracks, deadline).
+2. All together, one laptop: `/office-hours` → `/plan-ceo-review` → `/plan-eng-review` (or `/autoplan`). Write "What we are building" and the API contract here. Everyone `git pull`.
+3. Parallel build in own folders. Gate ~14:00 Sat: skeleton works end-to-end on a public URL (`/qa`).
+4. Evening: polish + wow moment, `/design-review`. ~03:00 Sun: `/review`, then feature freeze.
+5. Sunday morning: final `/qa` on the exact demo script, backup video, Devpost, pitch rehearsal.
 
 ## Rules for agents and humans
-1. Work only inside your own area (folder) unless the task in `TASKS.md` says otherwise.
+1. Work only inside your own role's folder unless the task in `TASKS.md` says otherwise. Never edit another role's folder — ask instead.
 2. Before starting: `git pull`, read `TASKS.md`, claim a task by putting your name on it.
 3. One branch per person/feature → pull request → someone else glances at it → merge. (Judges score "best practices".)
-4. Small commits, often. Never commit secrets.
+4. Small commits, often. Never commit secrets. `git pull` at least every hour.
 5. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
 6. Feature freeze ~03:00 Sunday. After that: bugs, backup video, Devpost, pitch only.
 
