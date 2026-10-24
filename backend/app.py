@@ -105,3 +105,6 @@ from journal import router as journal_router; app.include_router(journal_router)
 
 # Live track record: cumulative result per $1 of resolved journal decisions and Seal 1 calls (track.py).
 from track import router as track_router; app.include_router(track_router)  # noqa: E402
+
+# My results: journal P&L for an install + optional read-only Polymarket wallet positions (me.py).
+from me import router as me_router; app.include_router(me_router)  # noqa: E402
