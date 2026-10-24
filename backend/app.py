@@ -88,3 +88,7 @@ async def mcp(request: Request):
 def mcp_no_stream():
     """No server-initiated SSE stream and no sessions; the MCP client treats 405 as 'not offered'."""
     return Response(status_code=405, headers={"Allow": "POST"})
+
+
+# Agent for the extension command box (Gemini function-calling; 503 without GEMINI_API_KEY).
+from agent_router import router as agent_router; app.include_router(agent_router)  # noqa: E402

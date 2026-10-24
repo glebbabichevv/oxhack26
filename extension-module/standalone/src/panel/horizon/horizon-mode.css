@@ -47,3 +47,7 @@
 
 .hz-row-link { transition: background-color 120ms ease; }
 .hz-row-link:hover { background: rgba(17, 17, 19, 0.03); }
+
+/* Agent step in progress */
+@keyframes pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .hz-mode li span[style*='pulse'] { animation: none !important; } }
