@@ -36,8 +36,9 @@ after it. All markets of one event stay on the same side of the split.
   win less than priced and 10–35¢ contracts win more (a day out, 15¢ contracts win 20%).
 - The model beats the market price: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940.
 - Backtest after the spread **and Polymarket's own taker fees** (each market's fee schedule), never more than one
-  bankroll staked at once: 6,013 trades, **+190% of the starting bankroll** (¼ Kelly, summed, no compounding), 90% CI
-  [+94%, +285%] from an event-level bootstrap. +11.9% per dollar staked. Max drawdown 31%. Hit rate 21%.
+  bankroll staked at once: **+12.7¢ per $1 staked**, 90% CI [+7.0¢, +19.1¢] from an event-level bootstrap, 6,102
+  trades. As a bankroll (¼ Kelly, summed, no compounding): +199%, CI [+106%, +289%], mostly from sports. Max drawdown
+  29%. Hit rate 21%.
 - **When:** after costs, a trade a month out loses 19%; a week out +2.3%; a day out +12.6%; 12 hours out +14.8%.
   The edge is a last-week effect.
 - **Where:** only sports is solid on its own (+132%, CI +77% to +192%); every other market type's interval includes

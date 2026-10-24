@@ -15,10 +15,10 @@ Golden rule: if you don't know, say "we didn't measure that", then say what we w
 | Brier, model vs market (test) | **0.1297 vs 0.1305** (log loss 0.3917 vs 0.3940) |
 | validation log loss, market / simple / full | 0.5688 / 0.5645 / 0.5672 → "simple" chosen |
 | cost | max(spread / 2, 1¢) + Polymarket taker fee rate × p(1−p), each market's own schedule (93.5% of test rows fee-on) |
-| **profit, headline** | **+190% of starting bankroll**, 90% CI [+94%, +285%], 6,013 trades, open stakes capped at 1 bankroll |
+| **headline** | **+12.7¢ per $1 staked after fees**, 90% CI [+7.0¢, +19.1¢] (event bootstrap), 6,102 trades |
+| bankroll view (Q&A only) | +199% of starting bankroll, CI [+106%, +289%], 6,083 trades, open stakes capped at 1 bankroll (pro rata, order-free); mostly sports |
 | uncapped | +205% [+115%, +306%], 6,102 trades, open stakes peak at 1.20 bankrolls |
-| per $1 actually staked | **+11.9%** capped · +12.7% uncapped |
-| max drawdown / hit rate | 31% capped (29% uncapped) / 21% (longshot-heavy) |
+| max drawdown / hit rate | 29% / 21% (longshot-heavy) |
 | before any costs | +759% (8,054 trades) |
 | naive "always back the favourite" | **−908%** (2% flat stakes, 8,372 trades, 73% hit rate, same markets) |
 | return per $1 trade by entry horizon | 30d **−19.0%** (313 trades) · 7d +2.3% · 3d +5.0% · 1d +12.6% · 12h +14.8% |
@@ -35,7 +35,7 @@ logit(price) × log(horizon). It learns how much to move each price, and how tha
 0.5672 vs 0.5645), so it overfit. We picked on validation (last 20% of train by time) and never touched test while choosing.
 
 **Q: Brier 0.1297 vs 0.1305 is tiny. Is that significant?** The market is a very strong baseline, so a small gain is
-expected. Significance is in the money test: the 90% CI on profit, bootstrapped by event, is [+94%, +285%] and excludes
+expected. Significance is in the money test: the 90% CI on return per $1 staked, bootstrapped by event, is [+7.0¢, +19.1¢] and excludes
 zero. And we only trade where the edge clears costs *and* the model's own 10–90% interval.
 
 **Q: Why does the bias exist?** We measure it, we don't explain it. Plausible stories: demand for cheap lottery-ticket
@@ -51,8 +51,8 @@ spread with a 1¢ floor. Makers pay no fee, so we assume we always take. Caveat:
 Without fees it was +304%; Ayaz on our team audited the model and caught it.
 
 **Q: Stakes are fractions of the starting bankroll, but positions overlap. Leverage?** Uncapped, open stakes peaked at
-1.20 bankrolls. The headline re-runs the same trades with total open stake capped at one bankroll: +190%. Per dollar
-actually staked: +11.9%.
+1.20 bankrolls. That's why the headline is per dollar staked (+12.7¢), which doesn't depend on leverage. Capped at one
+bankroll at once (simultaneous entries share what's left pro rata): +199%.
 
 **Q: Fills?** Assumed at the historical last-trade price plus the cost. Real fills at the ask could be worse. Next step:
 on-chain fills for true historical spreads.
@@ -87,7 +87,7 @@ calls are real and made before the answer existed. The evidence for the edge is 
 **Q: How is P&L computed?** One trade per market, at the earliest horizon where the net edge is positive, held to
 resolution. Return per $1 = payout / (price + cost) − 1. Stake ¼ Kelly. P&L is added up, not compounded.
 
-**Q: Drawdown?** 31% of the starting bankroll with the cap. A longshot strategy loses often and wins big.
+**Q: Drawdown?** 29% of the starting bankroll. A longshot strategy loses often and wins big.
 
 **Q: The per-horizon numbers don't add up to 6,102 trades.** Each is its own backtest: "if you could only trade at this
 horizon". The main backtest enters at the *earliest* horizon with an edge, once per market.
@@ -110,7 +110,7 @@ liquidity data. Say short trades tie up capital ~30× less time.
 1. Our first 3,100-market sample said "politics, a month out". On 34,677 markets it didn't replicate: the small sample
    was top-volume and politics-heavy. The direction held; the location didn't.
 2. 260 test markets had resolved before the cutoff. Dropped, rerun.
-3. Fees were missing: +304% became +190% with Polymarket's real fees and an exposure cap. The edge survived.
+3. Fees were missing: +304% became +199% (capped) / +12.7¢ per $ with Polymarket's real fees. The edge survived.
 
 ## Team / process
 Three roles with Claude Code agents. Agents message each other through per-role inbox files in the repo and review each
