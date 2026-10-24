@@ -65,7 +65,7 @@ export function bestTime(hours: number) {
   if (hours <= 24) return 'Best time: now';
   const end = Date.now() + hours * 3.6e6;
   const a = new Date(end - 24 * 3.6e6), b = new Date(end - 12 * 3.6e6);
-  const hm = (d: Date) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const hm = (d: Date) => { const r = new Date(Math.round(d.getTime() / 3.6e6) * 3.6e6); return r.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }); };
   const today = new Date(); const tmr = new Date(Date.now() + 864e5);
   const same = (x: Date, y: Date) => x.toDateString() === y.toDateString();
   const day = same(a, today) ? (a.getHours() >= 18 ? 'tonight' : 'today') : same(a, tmr) ? (a.getHours() >= 18 ? 'tomorrow night' : 'tomorrow')
@@ -320,7 +320,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
     <article className="hz-card hz-enter rounded-panel p-4">
       <h2 className="hz-display text-[27px] leading-[1.1] [overflow-wrap:anywhere]">{clean(title)}</h2>
       <p className="mt-2.5 text-subhead text-[#475569]">
-        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side ? UP : MUTED }}>{priceWord(d)}</b>
+        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{priceWord(d)}</b>
       </p>
       {d.domain === 'crypto' ? <p className="mt-1 text-caption text-[#94a3b8]">Crypto: our tests show no edge here. Polymarket prices these well.</p> : null}
       {side && verdict === 'BET' ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
@@ -335,7 +335,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
           <div className="mt-4 flex items-stretch gap-2">
             <AmountControl value={amount} onChange={setChosen} max={a?.bankroll ?? 1000} />
             <button type="button" onClick={() => void start()} className="hz-cta h-12 flex-1 rounded-control px-2 text-subhead font-semibold text-white" style={{ background: UP }}>
-              Set up {money(amount)} bet on {side === 'YES' ? 'Yes' : 'No'}
+              Set up {money(amount)} on {side === 'YES' && !/\?\s*$/.test(title) && clean(title).length <= 16 ? clean(title) : side === 'YES' ? 'Yes' : 'No'}
             </button>
           </div>
           <p className="mt-1.5 text-caption text-[#94a3b8]">
@@ -347,6 +347,26 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
       {doing ? <Doer model={model} tabId={tabId} items={doing} source="card" onFinish={(n) => { setDoing(undefined); setMsg({ ok: true, text: n ? 'Saved in My decisions.' : 'Skipped. Saved in My decisions.' }); }} /> : null}
       {onDetails ? <button type="button" onClick={onDetails} className="mt-3 text-footnote font-medium text-[#64748b] underline decoration-[rgba(15,23,42,0.15)] underline-offset-[3px] hover:text-[#0f172a]">Details</button> : null}
     </article>
+  );
+}
+
+/** The test result in one line under the card, from /api/backtest's headline (fallback: the shipped V3 numbers). */
+let trustCache: Promise<{ c: number; lo: number; hi: number; n: number } | undefined> | undefined;
+function TrustLine() {
+  const [t, setT] = useState({ c: 0.172, lo: 0.118, hi: 0.235, n: 10579 });
+  useEffect(() => {
+    trustCache ??= fetch(`${API}/api/backtest`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).then((b) => {
+      const h = b?.headline;
+      return typeof h?.per_dollar === 'number' ? { c: h.per_dollar, lo: h.per_dollar_ci?.[0] ?? h.per_dollar, hi: h.per_dollar_ci?.[1] ?? h.per_dollar, n: b.n_test_markets ?? 10579 } : undefined;
+    }).catch(() => undefined);
+    void trustCache.then((x) => { if (x) setT(x); });
+  }, []);
+  const c = (x: number) => `${x >= 0 ? '+' : '−'}${Math.round(Math.abs(x) * 100)}¢`;
+  return (
+    <p className="mt-6 border-t border-[rgba(15,23,42,0.06)] pt-3 text-caption leading-relaxed text-[#94a3b8]">
+      On {t.n.toLocaleString()} past markets it never saw, this rule made <b className="font-semibold text-[#475569]">{c(t.c)} per $1</b> after fees (likely {c(t.lo)} to {c(t.hi)}), mostly on sports. Most single bets lose; it adds up over many.{' '}
+      <a href="https://web-production-c7376.up.railway.app" target="_blank" rel="noreferrer" className="text-[#64748b] underline decoration-[rgba(15,23,42,0.15)] underline-offset-2">How we know</a>
+    </p>
   );
 }
 
@@ -406,6 +426,7 @@ export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; 
           {legs.map((l, k) => <Row key={l.marketSlug} title={titleOf(l)} d={l.decision!} active={k === pick} onClick={() => setPick(k)} />)}
         </Collapsible>
       ) : null}
+      <TrustLine />
     </div>
   );
 }
@@ -448,6 +469,7 @@ export function Tonight({ model, a, tabId, url, title, onDetails }: { model: Mod
           {about.rows.map((r) => <Row key={r.question + r.slug} title={r.question} d={r.decision} onClick={() => open(r.url)} />)}
         </Collapsible>
       ) : null}
+      <TrustLine />
     </div>
   );
 }
@@ -710,7 +732,7 @@ export function Composer({ busy, ready, onSend, onStop, showChips }: { busy: boo
   return (
     <div className="px-3 pb-3 pt-2">
       {showChips ? (
-        <div className="-mx-3 mb-2 flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none]">
+        <div className="-mx-3 mb-2 flex gap-1.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [mask-image:linear-gradient(to_right,#000_85%,transparent)]">
           {CHIPS.map((c) => <button key={c} type="button" onClick={() => send(c)} className="hz-chip shrink-0 rounded-full px-3 py-[6px] text-footnote font-medium text-[#334155]">{c}</button>)}
         </div>
       ) : null}

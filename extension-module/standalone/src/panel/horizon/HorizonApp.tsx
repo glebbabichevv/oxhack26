@@ -269,8 +269,8 @@ function TimeCurve({ model, d }: { model: Model; d: Decision }) {
 
 // ---------- f. credentials ----------
 
-type Creds = { ret: number; ci: [number, number]; brierModel: number; brierMarket: number; nTest: number; sha: string; sealedAt: string };
-const FALLBACK_CREDS: Creds = { ret: 2.0536, ci: [1.15, 3.06], brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
+type Creds = { ret: number; ci: [number, number]; nTrades: number; brierModel: number; brierMarket: number; nTest: number; sha: string; sealedAt: string };
+const FALLBACK_CREDS: Creds = { ret: 0.172, ci: [0.118, 0.235], nTrades: 3653, brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
   sha: '31d2510c13ee29c0a4c9ac26aa498b7ca1cffca58d4bf553f6d5bfd5acb73326', sealedAt: '2026-10-24T15:31:30+00:00' };
 let credsCache: Creds | undefined;
 
@@ -283,8 +283,9 @@ function Credentials() {
       const next = { ...FALLBACK_CREDS };
       if (bt.status === 'fulfilled') {
         const b = bt.value;
-        if (typeof b?.with_costs?.return === 'number') next.ret = b.with_costs.return;
-        if (Array.isArray(b?.return_ci)) next.ci = b.return_ci;
+        const h = b?.headline;
+        if (typeof h?.per_dollar === 'number') { next.ret = h.per_dollar; if (Array.isArray(h.per_dollar_ci)) next.ci = h.per_dollar_ci; }
+        if (typeof h?.n_trades === 'number') next.nTrades = h.n_trades;
         if (typeof b?.overall?.brier_model === 'number') { next.brierModel = b.overall.brier_model; next.brierMarket = b.overall.brier_market; }
         if (typeof b?.n_test_markets === 'number') next.nTest = b.n_test_markets;
       }
@@ -296,14 +297,14 @@ function Credentials() {
       setC(next);
     });
   }, []);
-  const p = (x: number) => `+${Math.round(x * 100)}%`;
+  const p = (x: number) => `${x >= 0 ? '+' : '−'}${Math.round(Math.abs(x) * 100)}¢`;
   const sealed = new Date(c.sealedAt).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', hour: '2-digit', minute: '2-digit' });
   return (
     <footer className="hz-rule mt-6 pt-4 text-footnote text-[#475569]">
       <h2 className="mb-1 text-body font-semibold text-[#0f172a]">How we know it works</h2>
       <p>
         Tested on <b className="font-semibold text-[#0f172a]">{c.nTest.toLocaleString()}</b> past markets it had never seen: it predicted them better than the market price,
-        and betting its way would have made <b className="font-semibold" style={{ color: UP }}>{p(c.ret)}</b> of the starting money after costs and fees (likely range {p(c.ci[0])} to {p(c.ci[1])}).
+        and its rule made <b className="font-semibold" style={{ color: UP }}>{p(c.ret)} per $1</b> staked after spreads and Polymarket's fees over {c.nTrades.toLocaleString()} bets (90% range {p(c.ci[0])} to {p(c.ci[1])}), mostly on sports. Crypto and markets a month out showed no edge.
       </p>
       <p className="mt-1 text-caption text-[#64748b]">
         Brier {c.brierModel.toFixed(4)} vs market {c.brierMarket.toFixed(4)}. Predictions sealed before the results: <a href={`${SITE_URL}/#sealed`} target="_blank" rel="noreferrer" className="font-mono text-[#0f172a] underline decoration-black/20 underline-offset-2">{c.sha.slice(0, 8)}…{c.sha.slice(-4)}</a> (Seal 1, {sealed} London).
