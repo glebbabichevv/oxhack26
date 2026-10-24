@@ -9,7 +9,7 @@ const seal = JSON.parse(readFileSync(process.argv[2]));
 let worst = 0, mismatched = 0;
 for (const r of seal.markets) {
   // Seals predate fees (fee_rate absent -> 0); fee fixtures (backend/parity_fees.py) carry each market's schedule.
-  const d = decide(model, r.price_yes, r.hours_to_resolution, r.domain, r.spread ?? NaN, { rate: r.fee_rate ?? 0, exponent: r.fee_exponent ?? 1 });
+  const d = decide(model, r.price_yes, r.hours_to_resolution, r.domain, r.spread ?? NaN, { rate: r.fee_rate ?? 0, exponent: r.fee_exponent ?? 1 }, r.policy ?? false);  // seals: no fee, no policy
   worst = Math.max(worst, Math.abs(d.q - r.q_yes), Math.abs(d.lo - r.q_low), Math.abs(d.hi - r.q_high), Math.abs(d.netEdge - r.net_edge));
   if (d.action !== r.action) mismatched++;
 }

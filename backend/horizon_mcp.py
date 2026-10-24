@@ -118,16 +118,23 @@ def fee_of(mk, domain, m=None):
     return float(rate), float(sched.get("exponent") or 1)
 
 
-def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponent=1.0):
+WAIT_REASON = "Wait: best time is within 24h of the end"
+
+
+def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponent=1.0, policy=None):
     """price = order-book mid, spread = ask - bid (None if unknown), hours = to the scheduled end.
-    Taker fee per share = fee_rate * (p(1-p))**fee_exponent (fee_of(market)); fee_rate None = the domain's rate."""
+    Taker fee per share = fee_rate * (p(1-p))**fee_exponent (fee_of(market)); fee_rate None = the domain's rate.
+    policy: None = the model file's `policy` (V3: min net edge, enter only within enter_from_hours of the end);
+    False = no policy filter (the pre-V3 rule, used to check old seals)."""
     m = m or MODEL
+    pol = (m.get("policy") or {}) if policy is None else (policy or {})
     has_spread = spread is not None and math.isfinite(spread)
     if fee_rate is None:
         fee_rate = (m.get("fee_rates") or {}).get(domain, (m.get("fee_rates") or {}).get("other", 0.0))
     fee = fee_rate * (price * (1 - price)) ** fee_exponent
     cost = (max(spread / 2, m["min_half_spread"]) if has_spread else m["min_half_spread"]) + fee
-    base = {"price": price, "hours": hours, "domain": domain, "cost": cost}
+    base = {"price": price, "hours": hours, "domain": domain, "cost": cost,
+            "wait": False, "would_be": None, "check_back_in_hours": None}
     if not (m["tradable"][0] <= price <= m["tradable"][1]):
         return {**base, "q": price, "lo": price, "hi": price, "action": "NO_TRADE", "kelly": 0.0, "net_edge": 0.0,
                 "reason": f"Market at {price * 100:.1f}%: too close to certain, a {round(cost * 100)}¢ cost exceeds any edge"}
@@ -153,18 +160,28 @@ def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponen
     else:
         reason = (f"{_horizon_label(hours)} out, {domain}: model {_pct(q)} vs market {_pct(price)}, "
                   f"net edge {net_edge * 100:.1f}¢")
-    return {**base, "q": q, "lo": lo, "hi": hi, "action": action, "kelly": kelly, "net_edge": net_edge, "reason": reason}
+    out = {**base, "q": q, "lo": lo, "hi": hi, "action": action, "kelly": kelly, "net_edge": net_edge, "reason": reason}
+    if action != "NO_TRADE" and net_edge < pol.get("min_edge", 0.0):
+        out.update(action="NO_TRADE", kelly=0.0,
+                   reason=f"Net edge {net_edge * 100:.1f}¢ is under the {pol['min_edge'] * 100:.0f}¢ minimum: not worth the risk")
+    elif action != "NO_TRADE" and pol.get("enter_from_hours") is not None and hours > pol["enter_from_hours"]:
+        out.update(action="NO_TRADE", kelly=0.0, wait=True, would_be=action, reason=WAIT_REASON,
+                   check_back_in_hours=round(hours - pol["enter_from_hours"], 1))
+    return out
 
 
 def _best_window_note():
-    r = {h["horizon_hours"]: h["mean_return_per_trade"] for h in MODEL["by_horizon"]}
-    near = sorted([r[12], r[24]])
-    far = sorted([r[168], r[720]])
+    h = MODEL.get("headline") or {}
+    pol = MODEL.get("policy") or {}
     n_test = (MODEL.get("metrics") or {}).get("n_test_markets", 10579)
-    return (f"In the out-of-time backtest ({n_test:,} markets resolved after {MODEL['train_cutoff']}), return per $1 trade "
-            f"was highest 12–24h before the end (≈{near[0] * 100:.0f}–{near[1] * 100:.0f}%), vs ≈{r[72] * 100:.0f}% at 3d "
-            f"and ≈{far[0] * 100:.0f}–{far[1] * 100:.0f}% at 7d–30d. That is an average over many markets, not a forecast "
-            "for this one. The edge was solid only in sports.")
+    if not h:
+        return "Out-of-time results are in /api/backtest."
+    ci = h.get("per_dollar_ci") or [None, None]
+    return (f"Horizon only enters within {pol.get('enter_from_hours', 24)}h of the scheduled end and only with a net edge of at "
+            f"least {pol.get('min_edge', 0.01) * 100:.0f}¢ (rule chosen on validation, test opened once). Out of time "
+            f"({n_test:,} markets after {MODEL['train_cutoff']}) that earned {h['per_dollar'] * 100:+.1f}¢ per $1 staked after "
+            f"fees (90% CI {ci[0] * 100:+.1f}¢ to {ci[1] * 100:+.1f}¢) over {h['n_trades']:,} trades. An average over many "
+            "markets, not a forecast for this one; the edge is solid mainly in sports.")
 
 
 # ---------- Gamma ----------
@@ -229,6 +246,7 @@ def _leg(mk, event, now):
         "net_edge_after_spread": round(d["net_edge"], 4),
         "cost_per_share": round(d["cost"], 4),
         "quarter_kelly_stake_of_bankroll": round(d["kelly"], 4),
+        "wait": d["wait"], "would_be": d["would_be"], "check_back_in_hours": d["check_back_in_hours"],
         "hours_to_end": round(hours, 1),
         "reason": d["reason"],
     }
@@ -260,7 +278,8 @@ def horizon_check(slug):
         "best_window": _best_window_note(),
         "method": ("Horizon recalibrates the order-book mid with a 4-coefficient logistic model fitted on 23,838 resolved "
                    "Polymarket markets; it trades only if the model's 10–90% bootstrap interval clears price ± cost "
-                   "(cost = max(spread/2, 1¢) + Polymarket's taker fee for that market), sizes by quarter-Kelly capped at 5%, and skips prices outside 3–97%."),
+                   "(cost = max(spread/2, 1¢) + Polymarket's taker fee for that market), sizes by quarter-Kelly capped at 5%, and skips prices outside 3–97%. Policy V3: only a net edge of at least 1¢, "
+                   "and only within 24h of the scheduled end (earlier = WAIT)."),
     }
 
 
@@ -411,8 +430,9 @@ if __name__ == "__main__" and len(sys.argv) == 3 and sys.argv[1] == "parity":
     seal = json.loads(Path(sys.argv[2]).read_text())
     worst, mismatched = 0.0, 0
     for r in seal["markets"]:
+        # Seals predate fees and V3: no fee, no policy. Fee fixtures carry fee_rate and their policy.
         d = decide(r["price_yes"], r["hours_to_resolution"], r["domain"], r.get("spread"),
-                   fee_rate=r.get("fee_rate", 0.0), fee_exponent=r.get("fee_exponent", 1.0))  # seals predate fees
+                   fee_rate=r.get("fee_rate", 0.0), fee_exponent=r.get("fee_exponent", 1.0), policy=r.get("policy", False))
         worst = max(worst, abs(d["q"] - r["q_yes"]), abs(d["lo"] - r["q_low"]), abs(d["hi"] - r["q_high"]),
                     abs(d["net_edge"] - r["net_edge"]))
         mismatched += d["action"] != r["action"]

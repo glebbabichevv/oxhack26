@@ -34,7 +34,7 @@ import export_model  # noqa: E402
 import fetch_horizons  # noqa: E402
 import horizon_mcp  # noqa: E402
 from common import GAMMA, get  # noqa: E402
-from model import FEE_RATES, brier, evaluate, in_band, load_horizons, log_loss, split_by_time  # noqa: E402
+from model import FEE_RATES, POLICY, brier, evaluate, in_band, load_horizons, log_loss, split_by_time  # noqa: E402
 
 DATA = ROOT / "data" / "horizons.csv"
 RESULTS = HERE / "results"
@@ -193,6 +193,8 @@ def publish(model_json, cal, backtest, now):
                                 for h in backtest["by_horizon"]]
     model_json["metrics"] = export_model.metrics_of(backtest, cal)
     model_json["fee_rates"] = FEE_RATES
+    model_json["policy"] = {k: v for k, v in POLICY.items() if k != "note"}
+    model_json["headline"] = {k: backtest["headline"][k] for k in ("per_dollar", "per_dollar_ci", "return", "return_ci", "n_trades")}
     (RESULTS / "model.json").write_text(json.dumps(model_json, indent=1))
     (RESULTS / "backtest.json").write_text(json.dumps(stamp(backtest, model_json["version"], now), indent=1, default=str))
     (RESULTS / "calibration.json").write_text(json.dumps(

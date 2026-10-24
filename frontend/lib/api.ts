@@ -22,6 +22,9 @@ export type LiveMarket = {
   url: string;
   volume_usd: number;
   fee?: number;
+  wait?: boolean; // edge now, but policy V3 enters only within 24 h of the end
+  would_be?: Action | null;
+  check_back_in_hours?: number | null;
 };
 
 // /api/live (contract v1.3): computed from live Polymarket prices on request; "fallback" = saved snapshot.
@@ -47,7 +50,8 @@ export type Calibration = { horizons: CalibrationHorizon[] };
 
 export type EquityPoint = { t: string; value: number };
 export type Run = { n_trades: number; return: number; hit_rate: number; max_drawdown: number; avg_edge?: number; equity: EquityPoint[] };
-export type HorizonRun = { n_trades: number; mean_return_per_trade: number; hit_rate: number };
+export type HorizonRun = { n_trades: number; mean_return_per_trade: number | null; hit_rate: number | null };
+export type PolicyStats = { per_dollar: number; per_dollar_ci: [number, number]; return: number; return_ci: [number, number]; n_trades: number; max_drawdown: number };
 export type Failure = { kind: "losing_domain" | "no_lift" | "thin_data"; domain?: string; horizon_hours?: number; n?: number; text: string };
 export type WorstTrade = { question: string; action: Action; price_yes: number; q_yes: number; outcome: number; horizon_hours: number; ret: number };
 
@@ -71,6 +75,9 @@ export type Backtest = {
   peak_open_stake?: number;
   return_per_dollar_staked?: number;
   return_per_dollar_ci?: [number, number];
+  headline?: PolicyStats & { policy: string; hit_rate: number; peak_open_stake: number; note: string };
+  policy?: { name: string; min_edge: number; enter_from_hours: number; note: string };
+  policy_comparison?: { note: string; rows: { variant: string; label: string; picked_by_validation: boolean; validation: PolicyStats; test: PolicyStats }[] } | null;
   capped_exposure?: Run & { return_ci?: [number, number]; cap: number; return_per_dollar_staked?: number };
   by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };

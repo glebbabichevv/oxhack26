@@ -28,6 +28,12 @@ KELLY_SCALE = 0.25
 KELLY_CAP = 0.05
 N_BOOT = 40
 MIN_DOMAIN_ROWS = 50
+# Policy V3 (integrations/playoff: chosen on validation, test opened once): trade only if the net edge after
+# cost and model uncertainty is at least 1¢, and never earlier than 24 h before the scheduled end.
+MIN_EDGE = 0.01
+ENTER_FROM_H = 24
+POLICY = {"name": "V3", "min_edge": MIN_EDGE, "enter_from_hours": ENTER_FROM_H,
+          "note": "rule chosen on validation, test opened once (integrations/playoff)"}
 # Polymarket taker fee per share = rate * (p * (1 - p)) ** exponent (docs.polymarket.com/trading/fees; makers pay
 # nothing, we assume taker fills). Each market's own schedule (Gamma feeSchedule) wins; this domain table is the
 # fallback for a market with fees enabled but no schedule. Geopolitics markets are fee-free.
@@ -217,10 +223,12 @@ def trade_cost(spread, fee, min_half_spread):
     return half + fee
 
 
-def decide(p, q, cost, lo=None, hi=None):
+def decide(p, q, cost, lo=None, hi=None, hours=None, min_edge=0.0, enter_from=None):
     """Net edge per $1 contract, required to survive the model's own uncertainty: buy YES only if the
     low end of the q interval beats price + cost, buy NO only if the high end is below price - cost.
-    Quarter Kelly on the conservative q. Outside the tradable band: NO_TRADE."""
+    Quarter Kelly on the conservative q. Outside the tradable band: NO_TRADE.
+    Policy filters (V3 passes min_edge=MIN_EDGE, enter_from=ENTER_FROM_H with hours): a net edge under
+    min_edge, or more than enter_from hours to the end, is NO_TRADE (the edge is still returned)."""
     lo = q if lo is None else lo
     hi = q if hi is None else hi
     buy_yes = lo - (p + cost)         # pay p + cost for a contract worth at least lo
@@ -233,6 +241,11 @@ def decide(p, q, cost, lo=None, hi=None):
                      np.where(action == "BUY_NO", ((1 - q) - pn) / (1 - pn), 0.0))
     kelly = np.clip(kelly * KELLY_SCALE, 0, KELLY_CAP)
     edge = np.where(action == "BUY_NO", buy_no, buy_yes)
+    blocked = (action != "NO_TRADE") & (edge < min_edge)
+    if enter_from is not None and hours is not None:
+        blocked |= (action != "NO_TRADE") & (np.asarray(hours, float) > enter_from)
+    action = np.where(blocked, "NO_TRADE", action)
+    kelly = np.where(blocked, 0.0, kelly)
     return action, kelly, edge
 
 
@@ -242,10 +255,11 @@ def payoff(action, p, cost, y):
                     np.where(action == "BUY_NO", (1 - y) / np.clip(1 - p + cost, EPS, 1) - 1, 0.0))
 
 
-def run_policy(test, q, cost, lo, hi):
-    """One trade per market: the earliest horizon (furthest from resolution) where the net edge is positive."""
+def run_policy(test, q, cost, lo, hi, min_edge=MIN_EDGE, enter_from=ENTER_FROM_H):
+    """One trade per market: the earliest horizon (furthest from resolution) that the policy allows (V3 by default)."""
     t = test.assign(q=q, cost=cost)
-    t["action"], t["kelly"], t["edge"] = decide(t["price_yes"].to_numpy(), q, cost, lo, hi)
+    t["action"], t["kelly"], t["edge"] = decide(t["price_yes"].to_numpy(), q, cost, lo, hi,
+                                                t["horizon_hours"].to_numpy(), min_edge, enter_from)
     t = t[t["action"] != "NO_TRADE"].sort_values("horizon_hours", ascending=False)
     trades = t.groupby("market_id").head(1).copy()
     trades["ret"] = payoff(trades["action"].to_numpy(), trades["price_yes"].to_numpy(),
@@ -297,7 +311,7 @@ def by_horizon(test, q, cost, lo, hi):
         p, y = test["price_yes"].to_numpy()[m], test["outcome"].to_numpy()[m]
         out = {"horizon_hours": int(h), "n_markets": int(m.sum())}
         for name, c in (("with_costs", cost[m]), ("without_costs", np.zeros(m.sum()))):
-            action, kelly, edge = decide(p, q[m], c, lo[m], hi[m])
+            action, kelly, edge = decide(p, q[m], c, lo[m], hi[m], min_edge=MIN_EDGE)  # no 24 h rule: the evidence for it
             traded = action != "NO_TRADE"
             r = payoff(action, p, c, y)[traded]
             out[name] = {"n_trades": int(traded.sum()),
@@ -350,20 +364,43 @@ def per_dollar_ci(trades, stake, rng, n=1000, level=90):
 
 
 def capped_report(trades, rng):
+    # CIs use fresh seed-0 generators, exactly as integrations/playoff, so the headline equals the playoff table.
     peak, capped = exposure(trades, trades["kelly"].to_numpy())
     pnl = trades["kelly"].to_numpy() * trades["ret"].to_numpy()
     t = trades.assign(kelly=capped)[capped > 0]
     s = equity_stats(t, t["kelly"].to_numpy())
     staked = float(trades["kelly"].sum())
-    capped_ci = return_ci(t, rng)
+    capped_ci = return_ci(t, np.random.default_rng(0))
+    capped_pd = round(float((t["kelly"] * t["ret"]).sum() / t["kelly"].sum()), 4) if len(t) else None
+    capped_pd_ci = per_dollar_ci(t, t["kelly"].to_numpy(), np.random.default_rng(0))
+    capped_peak, _ = exposure(t, t["kelly"].to_numpy())
     return {"peak_open_stake": round(peak, 3),
             "return_per_dollar_staked": round(float(pnl.sum()) / staked, 4) if staked else None,
-            "return_per_dollar_ci": per_dollar_ci(trades, trades["kelly"].to_numpy(), rng),
+            "return_per_dollar_ci": per_dollar_ci(trades, trades["kelly"].to_numpy(), np.random.default_rng(0)),
+            "headline": {"policy": POLICY["name"], "per_dollar": capped_pd, "per_dollar_ci": capped_pd_ci,
+                         "return": s["return"], "return_ci": capped_ci, "n_trades": s["n_trades"],
+                         "hit_rate": s["hit_rate"], "max_drawdown": s["max_drawdown"],
+                         "peak_open_stake": round(capped_peak, 3),
+                         "note": "Policy V3, Polymarket taker fees, open stake <= 1 starting bankroll, test trades entered "
+                                 "on/after the cutoff. Rule chosen on validation, test opened once."},
             "capped_exposure": {**s, "cap": 1.0, "return_ci": capped_ci,
-                                "return_per_dollar_staked": round(float((t["kelly"] * t["ret"]).sum() / t["kelly"].sum()), 4) if len(t) else None,
-                                "return_per_dollar_ci": per_dollar_ci(t, t["kelly"].to_numpy(), rng),
+                                "return_per_dollar_staked": capped_pd,
+                                "return_per_dollar_ci": capped_pd_ci,
                                 "note": "Same trades in entry order; a trade is cut to whatever is left when open stakes "
                                         "would exceed 1 starting bankroll, skipped when nothing is left."}}
+
+
+def policy_comparison():
+    """V0-V3 from integrations/playoff/results.json (validation picks, test reported once), if present."""
+    path = HERE.parent / "integrations" / "playoff" / "results.json"
+    if not path.exists():
+        return None
+    r = json.loads(path.read_text())
+    keep = ("per_dollar", "per_dollar_ci", "return", "return_ci", "n_trades", "max_drawdown")
+    rows = [{"variant": v, "label": meta["label"], "picked_by_validation": v == r["selected_by_validation"]["winner"],
+             "validation": {k: r["validation"][v]["ours"][k] for k in keep},
+             "test": {k: r["test"][v]["ours"][k] for k in keep}} for v, meta in r["variants"].items()]
+    return {"note": "rule chosen on validation, test opened once", "rows": rows}
 
 
 def naive_favourite(test, cost, stake=0.02):
@@ -446,8 +483,14 @@ def evaluate(df, cutoff=None, fee=0.0, min_half_spread=0.01, seed=0, model=None,
     y = test["outcome"].to_numpy()
     cost = trade_cost(test["spread"].to_numpy(dtype=float), fee + fee_per_share(test, use_fees), min_half_spread)
     cal = calibration_report(test, q)
-    with_c = run_policy(test, q, cost, lo, hi)
-    without_c = run_policy(test, q, np.zeros(len(test)), lo, hi)
+    # Embargo (playoff): a test position counts only if it was opened on/after the cutoff. Calibration and
+    # Brier above use every test row; trading uses the embargoed rows.
+    entry = (pd.to_datetime(test["end_date"], utc=True, format="ISO8601")
+             - pd.to_timedelta(test["horizon_hours"], unit="h"))
+    emb = (entry >= cutoff).to_numpy()
+    tp, qp, lop, hip, cp = test[emb], q[emb], lo[emb], hi[emb], cost[emb]
+    with_c = run_policy(tp, qp, cp, lop, hip)
+    without_c = run_policy(tp, qp, np.zeros(len(tp)), lop, hip)
     fails, worst = failures(test, q, cal, with_c)
     backtest = {
         "cutoff": str(cutoff.date()),
@@ -459,17 +502,20 @@ def evaluate(df, cutoff=None, fee=0.0, min_half_spread=0.01, seed=0, model=None,
         "by_domain": by_domain(with_c, rng),
         "without_costs": equity_stats(without_c, without_c["kelly"].to_numpy()),
         **capped_report(with_c, rng),
-        "naive_favourite": naive_favourite(test, cost),
+        "naive_favourite": naive_favourite(tp, cp),
+        "policy": POLICY,
+        "policy_comparison": policy_comparison(),
         "overall": {"brier_market": round(brier(test["price_yes"], y), 4), "brier_model": round(brier(q, y), 4),
                     "logloss_market": round(log_loss(test["price_yes"], y), 4), "logloss_model": round(log_loss(q, y), 4)},
-        "by_horizon": by_horizon(test, q, cost, lo, hi),
+        "by_horizon": by_horizon(tp, qp, cp, lop, hip),
         "failures": fails, "worst_trades": worst,
         "assumptions": [
             "Split by time: train on events that ended before the cutoff; test on markets of the remaining events that resolved after it (legs resolved earlier are dropped). Legs of one event never straddle the split.",
             (f"Cost per contract = max(spread / 2, {min_half_spread}) + Polymarket taker fee (rate x p(1-p), each market's own "
              f"fee schedule from Gamma; {'fees on' if use_fees else 'fees OFF'}) + flat fee {fee}; historical spreads are unknown, so the 1¢ floor applies."),
             "Stakes are fractions of the starting bankroll and positions overlap: peak_open_stake is the most staked at once; capped_exposure re-runs the same trades with total open stake capped at 1 bankroll.",
-            "One trade per market, at the earliest horizon with positive net edge, held to resolution.",
+            f"Policy V3: one trade per market, at the earliest horizon within {ENTER_FROM_H} h of the scheduled end whose net edge is at least {MIN_EDGE * 100:.0f}¢, held to resolution. Chosen on validation among V0-V3 (integrations/playoff); test opened once.",
+            "Embargo: a test trade counts only if it was entered on/after the cutoff.",
             f"Only prices in {TRADABLE[0]:.0%}–{TRADABLE[1]:.0%} are modelled or traded; edge must survive the model's 10–90% bootstrap interval (resampled by event).",
             f"Stake = {KELLY_SCALE} Kelly on the conservative q, capped at {KELLY_CAP:.0%} of the starting bankroll; P&L is additive (no compounding) because positions overlap.",
             "Prices are Polymarket price history at each horizon; fills at that price are assumed.",

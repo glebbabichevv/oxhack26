@@ -199,7 +199,7 @@ export default function Home() {
   );
 }
 
-// +0.127 per $1 staked → "+12.7¢"
+// per $1 staked as cents: 0.172 → "+17.2¢"
 const perDollar = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)}¢`;
 
 const MIN_DOMAIN_TRADES = 100; // below this a domain's CI is too wide to headline
@@ -221,15 +221,15 @@ function Kpis({ b }: { b: Backtest }) {
   const where = whereItPays(b);
   const brier = brierVerdict(b.overall.brier_model, b.overall.brier_market);
   // Headline = the honest variant: fees on, and never more than one bankroll staked at once.
-  const head = b.capped_exposure ?? { ...b.with_costs, return_ci: b.return_ci };
+  const head = b.headline ?? { ...b.with_costs, return_ci: b.return_ci };
   return (
     <KpiRow
       items={[
-        ...(b.return_per_dollar_staked != null && b.return_per_dollar_ci ? [{
+        ...(b.headline ? [{
           label: "Per $1 staked, after fees",
-          value: perDollar(b.return_per_dollar_staked),
-          note: `90% CI ${perDollar(b.return_per_dollar_ci[0])} to ${perDollar(b.return_per_dollar_ci[1])} · ${int(b.n_trades)} trades, ${pct(b.with_costs.hit_rate)} hit rate`,
-          tone: (b.return_per_dollar_ci[0] > 0 ? "up" : "down") as "up" | "down",
+          value: perDollar(b.headline.per_dollar),
+          note: `90% CI ${perDollar(b.headline.per_dollar_ci[0])} to ${perDollar(b.headline.per_dollar_ci[1])} · ${int(b.headline.n_trades)} trades, ${pct(b.headline.hit_rate)} hit rate`,
+          tone: (b.headline.per_dollar_ci[0] > 0 ? "up" : "down") as "up" | "down",
         }] : []),
         {
           label: "Bankroll, ≤1 at risk",
@@ -247,13 +247,18 @@ function Kpis({ b }: { b: Backtest }) {
 function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: boolean; onToggle: () => void }) {
   if (!live.length) return <Empty>No open markets in the modelled price band right now.</Empty>;
   const trades = live.filter((m) => m.action !== "NO_TRADE");
-  const passes = live.filter((m) => m.action === "NO_TRADE");
-  const rows = showAll ? [...trades, ...passes] : [...trades.slice(0, 6), ...passes.slice(0, 3)];
+  const waits = live.filter((m) => m.wait);
+  const passes = live.filter((m) => m.action === "NO_TRADE" && !m.wait);
+  const rows = showAll ? [...trades, ...waits, ...passes] : [...trades.slice(0, 6), ...waits.slice(0, 3), ...passes.slice(0, 2)];
   const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
+  const metaOf = (m: LiveMarket) =>
+    m.wait && m.check_back_in_hours != null
+      ? `${m.domain} · ${when(m.hours_to_resolution)} · wait: ${m.would_be === "BUY_NO" ? "NO" : "YES"} looks good, enter in ${when(m.check_back_in_hours)}`
+      : `${m.domain} · ${when(m.hours_to_resolution)}${m.action !== "NO_TRADE" ? ` · stake ${pct(m.kelly_fraction, 1)}` : ""}`;
   return (
     <>
       <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint md:grid-cols-[1fr_auto_120px_auto_auto]">
-        <span>{trades.length} trades · {passes.length} passes</span>
+        <span>{trades.length} trades · {waits.length} waits · {passes.length} passes</span>
         <span className="hidden text-right md:block">market</span>
         <span className="hidden text-center md:block">price → model</span>
         <span className="hidden text-right md:block">model</span>
@@ -263,7 +268,7 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
         <DecisionRow
           key={m.market_id}
           question={m.question}
-          meta={`${m.domain} · ${when(m.hours_to_resolution)}${m.action !== "NO_TRADE" ? ` · stake ${pct(m.kelly_fraction, 1)}` : ""}`}
+          meta={metaOf(m)}
           price={cents(m.price_yes)}
           q={pct(m.q_yes)}
           action={m.action}
@@ -272,7 +277,7 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
           track={<EdgeTrack price={m.price_yes} q={m.q_yes} lo={m.q_low} hi={m.q_high} action={m.action} />}
         />
       ))}
-      {live.length > 9 ? (
+      {live.length > rows.length || showAll ? (
         <button type="button" onClick={onToggle} aria-expanded={showAll} className="mt-2 min-h-9 w-full rounded-full bg-fill-soft py-2 text-[13px] font-medium text-ink-strong transition-colors duration-150 hover:bg-black/[0.08]">
           {showAll ? "Show fewer" : `Show all ${live.length}`}
         </button>
@@ -282,18 +287,20 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
 }
 
 function BacktestSection({ b }: { b: Backtest }) {
-  const best = Math.max(...b.by_horizon.map((h) => Math.abs(h.with_costs.mean_return_per_trade)), 0.0001);
+  const best = Math.max(...b.by_horizon.map((h) => Math.abs(h.with_costs.mean_return_per_trade ?? 0)), 0.0001);
   return (
     <Section
-      title={`After fees and spread, the test made ${bankroll((b.capped_exposure ?? b.with_costs).return)} of its starting bankroll`}
-      lead={`Out-of-time test on ${int(b.n_test_markets)} markets, one trade per market at ¼ Kelly, P&L as a share of the starting bankroll, summed (no compounding)${b.capped_exposure ? `, with at most one bankroll staked at once. Uncapped, open stakes peaked at ${b.peak_open_stake?.toFixed(2)} bankrolls and it made ${bankroll(b.with_costs.return)}; per $1 staked, ${bankroll(b.return_per_dollar_staked ?? 0)}` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
+      title={b.headline
+        ? `After fees, every $1 staked returned ${perDollar(b.headline.per_dollar)}`
+        : `After fees and spread, the test made ${bankroll(b.with_costs.return)} of its starting bankroll`}
+      lead={`Out-of-time test on ${int(b.n_test_markets)} markets. The rule: trade only when the net edge after fees and the model's uncertainty is at least 1¢, and only within 24 hours of the end (it was picked on validation; the test was opened once). One trade per market at ¼ Kelly, at most one bankroll staked at once, P&L summed as a share of the starting bankroll${b.headline ? `: ${bankroll(b.headline.return)}, 90% CI ${bankroll(b.headline.return_ci[0])} to ${bankroll(b.headline.return_ci[1])}, mostly from sports` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
     >
       <FramedCard title="Equity, test period, uncapped stakes" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
         <EquityChart withCosts={b.with_costs.equity} withoutCosts={b.without_costs.equity} />
         <div className="mt-5 border-t border-hairline-soft pt-3">
-          <div className="mb-2 text-[13px] font-semibold text-ink-strong">When to act: mean return per trade after costs</div>
-          {[...b.by_horizon].sort((x, y) => y.horizon_hours - x.horizon_hours).map((h) => {
-            const r = h.with_costs.mean_return_per_trade;
+          <div className="mb-2 text-[13px] font-semibold text-ink-strong">Why within 24 hours: mean return per trade after costs, if you entered at each horizon</div>
+          {[...b.by_horizon].filter((h) => h.with_costs.mean_return_per_trade != null).sort((x, y) => y.horizon_hours - x.horizon_hours).map((h) => {
+            const r = h.with_costs.mean_return_per_trade as number;
             return (
               <div key={h.horizon_hours} className="grid grid-cols-[44px_1fr_64px] items-center gap-3 py-1 text-[13px] tabular-nums">
                 <span className="text-ink-muted">{horizonShort(h.horizon_hours)}</span>
@@ -306,8 +313,46 @@ function BacktestSection({ b }: { b: Backtest }) {
           })}
         </div>
         {b.by_domain?.length ? <DomainReturns rows={b.by_domain} /> : null}
+        {b.policy_comparison?.rows.length ? <PolicyTable pc={b.policy_comparison} /> : null}
       </FramedCard>
     </Section>
+  );
+}
+
+// How we chose the rule: V0 (main as it was), V2 (enter from 24 h), V3 (+ min edge 1¢); validation picked, test shown once.
+function PolicyTable({ pc }: { pc: NonNullable<Backtest["policy_comparison"]> }) {
+  const rows = pc.rows.filter((r) => ["V0", "V2", "V3"].includes(r.variant));
+  const ci = (c: [number, number]) => `${perDollar(c[0])} to ${perDollar(c[1])}`;
+  return (
+    <div className="mt-5 border-t border-hairline-soft pt-3">
+      <div className="mb-2 text-[13px] font-semibold text-ink-strong">How we chose the rule: per $1 staked after fees</div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[460px] text-[13px] tabular-nums">
+          <thead>
+            <tr className="text-left text-[12px] text-ink-faint">
+              <th className="py-1 pr-3 font-normal">Rule</th>
+              <th className="py-1 pr-3 text-right font-normal">Validation</th>
+              <th className="py-1 pr-3 text-right font-normal">Test</th>
+              <th className="py-1 text-right font-normal">Test trades</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.variant} className="border-t border-hairline-soft">
+                <td className="py-1.5 pr-3">
+                  <span className={r.picked_by_validation ? "font-semibold text-ink-strong" : "text-ink-muted"}>{r.variant === "V0" ? "First edge, any horizon" : r.variant === "V2" ? "Only within 24 h" : "Within 24 h, edge ≥ 1¢"}</span>
+                  {r.picked_by_validation ? <span className="ml-2 rounded-full bg-up-tint px-2 py-[2px] text-[11px] font-semibold text-up">picked on validation</span> : null}
+                </td>
+                <td className="py-1.5 pr-3 text-right" title={`90% CI ${ci(r.validation.per_dollar_ci)}`}>{perDollar(r.validation.per_dollar)}</td>
+                <td className="py-1.5 pr-3 text-right" title={`90% CI ${ci(r.test.per_dollar_ci)}`}><b className="font-semibold text-ink-strong">{perDollar(r.test.per_dollar)}</b> <span className="text-ink-faint">{ci(r.test.per_dollar_ci)}</span></td>
+                <td className="py-1.5 text-right text-ink-muted">{int(r.test.n_trades)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-1.5 text-[12px] text-ink-faint">The rule was chosen on validation (the last 20% of the training period); the test was opened once. Same model, fees and stake caps for every row.</p>
+    </div>
   );
 }
 
@@ -350,6 +395,13 @@ function Failures({ b }: { b: Backtest }) {
       lead={`${b.failures.length} domain × horizon cells where the model does not beat the market or the sample is too small to say. Reported as plainly as the wins.`}
     >
       <FramedCard title="No edge here" meta={`${failures.length} cells`}>
+        <div className="mb-3 flex items-start justify-between gap-3 border-b border-hairline-soft pb-3">
+          <span className="min-w-0 text-[13px]">
+            <span className="font-medium">Crypto, priced as options</span>
+            <span className="ml-2 text-ink-muted">We priced 1,106 crypto markets as options from Binance: the formula was worse than the market (Brier 0.1471 vs 0.1399) and lost 16.5¢ per $1 — Polymarket already prices crypto well.</span>
+          </span>
+          <span className="shrink-0 rounded-full bg-down-tint px-2.5 py-[3px] text-[12px] font-semibold text-down">Loses money</span>
+        </div>
         <div className="max-h-[300px] overflow-y-auto">
           {failures.map((f, i) => (
             <div key={i} className="flex items-center justify-between gap-3 border-t border-hairline-soft py-2.5 first:border-t-0">
