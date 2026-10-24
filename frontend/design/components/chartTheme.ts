@@ -1,7 +1,7 @@
-// Recharts styling for "The Ledger" (DESIGN.md → Components → charts). Spread these into Recharts props.
+// Recharts styling for "The Ledger" (DESIGN.md → Components → Charts). Spread these into Recharts props.
 
-export const SEAM = "rgba(9,9,11,0.08)";
-export const INK = "#18181b"; // primary series: model, with-costs equity
+export const SEAM = "rgba(9,9,11,0.07)"; // hairline
+export const INK = "#111113"; // primary series: model, with-costs equity
 export const ASH = "#a1a1aa"; // secondary series: market, without-costs equity, baseline
 export const UP = "#16a34a";
 export const DOWN = "#e11d48";
