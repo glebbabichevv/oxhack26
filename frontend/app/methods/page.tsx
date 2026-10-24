@@ -11,6 +11,10 @@ import { getJSON, int } from "@/lib/api";
 type Row = { block: string; name: string; value: number | null; lo?: number | null; hi?: number | null; n?: number | null; split?: string | null; note?: string | null };
 
 const BLOCKS: { key: string; title: string; lead: string }[] = [
+  { key: "monthly_coh", title: "The shipped rule, month by month", lead: "COH (one bet per event, outcome probabilities summing to 100%), refitted each month on events that ended before it. Months with fewer than 30 bets are hidden." },
+  { key: "placebo_coh", title: "Placebo: if prices were right", lead: "The same 1,899 test bets, with outcomes drawn as if Polymarket's prices were exactly right, 1,000 times." },
+  { key: "dsr_coh", title: "Deflated Sharpe, shipped rule", lead: "Sharpe per bet, deflated for the 12 rules we tried." },
+  { key: "leg_choice", title: "Where the gain comes from", lead: "Descriptive, not used to choose: one bet per event, or which outcome within the event?" },
   { key: "tournament", title: "The rule tournament", lead: "Candidate rules, compared on the same trades, fees and caps. The rule was picked on validation; test is shown once." },
   { key: "errcorr", title: "Correcting for many tries", lead: "Trying many rules makes one look good by luck. These numbers account for that." },
   { key: "monthly", title: "Month by month", lead: "The same rule, one month at a time: does the result hold, or is it one lucky stretch?" },
@@ -132,14 +136,14 @@ export default function MethodsPage() {
         {present.map((b) => {
           const all = rows!.filter((r) => r.block === b.key);
           const take = all.find((r) => r.name === "takeaway");
-          const chart = all.filter((r) => r.name !== "takeaway");
+          const chart = all.filter((r) => r.name !== "takeaway" && (b.key !== "monthly_coh" || (/COH$/.test(r.name) && (r.n ?? 0) >= 30)));
           const takeaway = take?.note ?? chart[0]?.note ?? "";
           const splits = [...new Set(chart.map((r) => r.split).filter(Boolean))].join(", ");
           return (
             <div key={b.key} id={b.key}>
               <Section title={b.title} lead={b.lead}>
                 <FramedCard title={takeaway || undefined} meta={splits ? `split: ${splits}` : undefined}>
-                  {chart.length ? (b.key === "monthly" ? <Line rows={chart} /> : <Dots rows={chart} />) : null}
+                  {chart.length ? (b.key === "monthly" || b.key === "monthly_coh" ? <Line rows={chart} /> : <Dots rows={chart} />) : null}
                 </FramedCard>
               </Section>
             </div>
