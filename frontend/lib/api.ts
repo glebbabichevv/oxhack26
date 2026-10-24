@@ -78,7 +78,7 @@ export type Backtest = {
   headline?: PolicyStats & { policy: string; hit_rate: number; peak_open_stake: number; note: string };
   policy?: { name: string; min_edge: number; enter_from_hours: number; note: string };
   robustness?: { both?: PolicyStats; price_le_1h?: PolicyStats; closed_ge_12h?: PolicyStats };
-  policy_comparison?: { note: string; rows: { variant: string; label: string; picked_by_validation: boolean; validation: PolicyStats; test: PolicyStats }[] } | null;
+  policy_comparison?: { note: string; rows: { variant: string; label: string; picked_by_validation: boolean; validation: PolicyStats; test: PolicyStats }[]; round2?: { variant: string; picked_by_validation: boolean; validation: PolicyStats; test: PolicyStats }[] } | null;
   capped_exposure?: Run & { return_ci?: [number, number]; cap: number; return_per_dollar_staked?: number };
   by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };
