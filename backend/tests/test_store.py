@@ -33,3 +33,28 @@ def test_equity_appends(tmp_path):
     s = Store(tmp_path)
     s.add_equity(NOW, 1000, 1010)
     assert s.equity() == [{"t": NOW, "invested": 1000, "value": 1010}]
+
+
+def test_env_var_sets_default_folder(tmp_path, monkeypatch):
+    monkeypatch.setenv("INVEST_DATA_DIR", str(tmp_path))
+    s = Store()
+    s.new_plan(500, 10, 50, NOW)
+    assert (tmp_path / "plans.json").exists()
+
+
+def test_reads_on_empty_folder_return_empty(tmp_path):
+    s = Store(tmp_path)
+    assert s.plans() == [] and s.events() == [] and s.equity() == []
+
+
+def test_plan_read_back_by_fresh_store(tmp_path):
+    p = Store(tmp_path).new_plan(1000, 25, 100, NOW)
+    assert Store(tmp_path).plan(p["id"])["budget"] == 1000
+
+
+def test_no_tmp_file_left_after_writes(tmp_path):
+    s = Store(tmp_path)
+    s.new_plan(1000, 25, 100, NOW)
+    s.log("a", "buy", NOW)
+    s.add_equity(NOW, 1000, 1010)
+    assert list(tmp_path.glob("*.tmp")) == []

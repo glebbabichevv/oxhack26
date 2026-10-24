@@ -58,7 +58,8 @@ class Store:
         return event
 
     def events(self, plan_id=None, limit=None):
-        rows = [e for e in reversed(self._read("orders.json", [])) if plan_id is None or e["plan_id"] == plan_id]
+        with _lock:
+            rows = [e for e in reversed(self._read("orders.json", [])) if plan_id is None or e["plan_id"] == plan_id]
         return rows[:limit] if limit else rows
 
     def add_equity(self, t, invested, value):
@@ -66,4 +67,5 @@ class Store:
             self._write("equity.json", self._read("equity.json", []) + [{"t": t, "invested": invested, "value": value}])
 
     def equity(self):
-        return self._read("equity.json", [])
+        with _lock:
+            return self._read("equity.json", [])
