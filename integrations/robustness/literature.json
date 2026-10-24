@@ -1,0 +1,407 @@
+{
+ "note": "Reconcile 2026 papers a judge may cite (A's 01:20) -> integrations/robustness/literature.json\n\n  python integrations/robustness/literature.py\n\nDescriptive, TRAIN only (test untouched). A \"buy\" = taking the cheap side of a (market, horizon) row at its price:\nYES if price < 50¢, else NO at 1 - price. Return per $1 = payout / price - 1, before fees and spread (the papers'\nheadline is gross), and after our cost model (max(spread/2, 1¢) + the market's taker fee) as a second column.\n  equal-weight   mean over buys\n  event-grouped  mean over parent events of each event's mean (Cardozo & Rivero-Wildemauwe's grouping)\nCIs: 90%, event bootstrap (1,000 draws, seed 0).\n(1) Cardozo & Rivero-Wildemauwe, arXiv 2609.12878: buys < 10¢ lose 6.3¢/$ equal-weighted, gain +4.1¢/$ event-grouped,\n    absent in sports. Reproduced with their definition (all < 10¢ buys, no horizon filter), then conditioned on\n    <= 24 h and the 10–35¢ band we trade.\n(2) Qiu & Qiu, arXiv 2610.13593 (Polymarket weather): favourites overpriced most 1–12 h before the end, longshots\n    slightly underpriced 3–9 h: cited only (we don't model weather separately).",
+ "split": "train only (events ended before the 2026-05-18 cutoff)",
+ "cells": [
+  {
+   "cell": "their definition: all buys < 10¢, any horizon",
+   "domain": "all",
+   "gross": {
+    "n_buys": 24120,
+    "n_events": 4998,
+    "equal_weight_c_per_dollar": 21.1,
+    "equal_weight_ci": [
+     7.5,
+     34.4
+    ],
+    "event_grouped_c_per_dollar": 48.9,
+    "event_grouped_ci": [
+     31.5,
+     67.5
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 24120,
+    "n_events": 4998,
+    "equal_weight_c_per_dollar": -16.6,
+    "equal_weight_ci": [
+     -24.4,
+     -8.5
+    ],
+    "event_grouped_c_per_dollar": 6.3,
+    "event_grouped_ci": [
+     -4.8,
+     17.1
+    ]
+   }
+  },
+  {
+   "cell": "their definition: all buys < 10¢, any horizon",
+   "domain": "sports",
+   "gross": {
+    "n_buys": 2220,
+    "n_events": 516,
+    "equal_weight_c_per_dollar": 30.3,
+    "equal_weight_ci": [
+     -1.2,
+     64.0
+    ],
+    "event_grouped_c_per_dollar": 108.6,
+    "event_grouped_ci": [
+     48.7,
+     180.5
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 2220,
+    "n_events": 516,
+    "equal_weight_c_per_dollar": 2.5,
+    "equal_weight_ci": [
+     -21.3,
+     27.0
+    ],
+    "event_grouped_c_per_dollar": 54.1,
+    "event_grouped_ci": [
+     18.9,
+     92.5
+    ]
+   }
+  },
+  {
+   "cell": "their definition: all buys < 10¢, any horizon",
+   "domain": "non-sports",
+   "gross": {
+    "n_buys": 21900,
+    "n_events": 4482,
+    "equal_weight_c_per_dollar": 20.2,
+    "equal_weight_ci": [
+     6.6,
+     33.7
+    ],
+    "event_grouped_c_per_dollar": 42.0,
+    "event_grouped_ci": [
+     24.7,
+     59.3
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 21900,
+    "n_events": 4482,
+    "equal_weight_c_per_dollar": -18.5,
+    "equal_weight_ci": [
+     -26.5,
+     -10.6
+    ],
+    "event_grouped_c_per_dollar": 0.8,
+    "event_grouped_ci": [
+     -9.7,
+     10.9
+    ]
+   }
+  },
+  {
+   "cell": "< 10¢, within 24 h",
+   "domain": "all",
+   "gross": {
+    "n_buys": 10333,
+    "n_events": 3583,
+    "equal_weight_c_per_dollar": 31.3,
+    "equal_weight_ci": [
+     14.1,
+     49.4
+    ],
+    "event_grouped_c_per_dollar": 53.5,
+    "event_grouped_ci": [
+     32.4,
+     75.9
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 10333,
+    "n_events": 3583,
+    "equal_weight_c_per_dollar": -10.8,
+    "equal_weight_ci": [
+     -21.3,
+     -0.8
+    ],
+    "event_grouped_c_per_dollar": 5.4,
+    "event_grouped_ci": [
+     -6.8,
+     18.8
+    ]
+   }
+  },
+  {
+   "cell": "< 10¢, within 24 h",
+   "domain": "sports",
+   "gross": {
+    "n_buys": 841,
+    "n_events": 350,
+    "equal_weight_c_per_dollar": 56.0,
+    "equal_weight_ci": [
+     13.6,
+     101.7
+    ],
+    "event_grouped_c_per_dollar": 88.3,
+    "event_grouped_ci": [
+     39.2,
+     142.3
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 841,
+    "n_events": 350,
+    "equal_weight_c_per_dollar": 28.0,
+    "equal_weight_ci": [
+     -5.6,
+     64.5
+    ],
+    "event_grouped_c_per_dollar": 55.9,
+    "event_grouped_ci": [
+     15.9,
+     97.2
+    ]
+   }
+  },
+  {
+   "cell": "< 10¢, within 24 h",
+   "domain": "non-sports",
+   "gross": {
+    "n_buys": 9492,
+    "n_events": 3233,
+    "equal_weight_c_per_dollar": 29.1,
+    "equal_weight_ci": [
+     9.7,
+     49.0
+    ],
+    "event_grouped_c_per_dollar": 49.8,
+    "event_grouped_ci": [
+     25.8,
+     74.8
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 9492,
+    "n_events": 3233,
+    "equal_weight_c_per_dollar": -14.2,
+    "equal_weight_ci": [
+     -25.3,
+     -2.9
+    ],
+    "event_grouped_c_per_dollar": -0.1,
+    "event_grouped_ci": [
+     -13.8,
+     13.5
+    ]
+   }
+  },
+  {
+   "cell": "10–35¢, any horizon",
+   "domain": "all",
+   "gross": {
+    "n_buys": 22653,
+    "n_events": 5721,
+    "equal_weight_c_per_dollar": 20.0,
+    "equal_weight_ci": [
+     16.2,
+     23.9
+    ],
+    "event_grouped_c_per_dollar": 20.0,
+    "event_grouped_ci": [
+     15.7,
+     24.2
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 22653,
+    "n_events": 5721,
+    "equal_weight_c_per_dollar": 13.7,
+    "equal_weight_ci": [
+     10.1,
+     17.4
+    ],
+    "event_grouped_c_per_dollar": 13.7,
+    "event_grouped_ci": [
+     9.6,
+     17.6
+    ]
+   }
+  },
+  {
+   "cell": "10–35¢, any horizon",
+   "domain": "sports",
+   "gross": {
+    "n_buys": 10580,
+    "n_events": 2284,
+    "equal_weight_c_per_dollar": 20.5,
+    "equal_weight_ci": [
+     13.8,
+     26.5
+    ],
+    "event_grouped_c_per_dollar": 17.7,
+    "event_grouped_ci": [
+     11.2,
+     23.9
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 10580,
+    "n_events": 2284,
+    "equal_weight_c_per_dollar": 14.6,
+    "equal_weight_ci": [
+     8.4,
+     20.4
+    ],
+    "event_grouped_c_per_dollar": 12.1,
+    "event_grouped_ci": [
+     6.1,
+     18.0
+    ]
+   }
+  },
+  {
+   "cell": "10–35¢, any horizon",
+   "domain": "non-sports",
+   "gross": {
+    "n_buys": 12073,
+    "n_events": 3437,
+    "equal_weight_c_per_dollar": 19.7,
+    "equal_weight_ci": [
+     14.9,
+     24.2
+    ],
+    "event_grouped_c_per_dollar": 21.6,
+    "event_grouped_ci": [
+     16.3,
+     27.0
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 12073,
+    "n_events": 3437,
+    "equal_weight_c_per_dollar": 12.9,
+    "equal_weight_ci": [
+     8.5,
+     17.2
+    ],
+    "event_grouped_c_per_dollar": 14.7,
+    "event_grouped_ci": [
+     9.8,
+     19.7
+    ]
+   }
+  },
+  {
+   "cell": "10–35¢, within 24 h (what we trade)",
+   "domain": "all",
+   "gross": {
+    "n_buys": 10748,
+    "n_events": 4173,
+    "equal_weight_c_per_dollar": 22.1,
+    "equal_weight_ci": [
+     17.6,
+     26.6
+    ],
+    "event_grouped_c_per_dollar": 24.4,
+    "event_grouped_ci": [
+     19.3,
+     29.3
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 10748,
+    "n_events": 4173,
+    "equal_weight_c_per_dollar": 15.7,
+    "equal_weight_ci": [
+     11.4,
+     19.9
+    ],
+    "event_grouped_c_per_dollar": 17.8,
+    "event_grouped_ci": [
+     13.0,
+     22.3
+    ]
+   }
+  },
+  {
+   "cell": "10–35¢, within 24 h (what we trade)",
+   "domain": "sports",
+   "gross": {
+    "n_buys": 5409,
+    "n_events": 2037,
+    "equal_weight_c_per_dollar": 20.9,
+    "equal_weight_ci": [
+     14.9,
+     27.5
+    ],
+    "event_grouped_c_per_dollar": 19.0,
+    "event_grouped_ci": [
+     12.8,
+     25.8
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 5409,
+    "n_events": 2037,
+    "equal_weight_c_per_dollar": 15.0,
+    "equal_weight_ci": [
+     9.4,
+     21.3
+    ],
+    "event_grouped_c_per_dollar": 13.3,
+    "event_grouped_ci": [
+     7.5,
+     19.7
+    ]
+   }
+  },
+  {
+   "cell": "10–35¢, within 24 h (what we trade)",
+   "domain": "non-sports",
+   "gross": {
+    "n_buys": 5339,
+    "n_events": 2136,
+    "equal_weight_c_per_dollar": 23.5,
+    "equal_weight_ci": [
+     17.7,
+     29.7
+    ],
+    "event_grouped_c_per_dollar": 29.6,
+    "event_grouped_ci": [
+     23.1,
+     36.8
+    ]
+   },
+   "after_our_costs": {
+    "n_buys": 5339,
+    "n_events": 2136,
+    "equal_weight_c_per_dollar": 16.4,
+    "equal_weight_ci": [
+     11.0,
+     22.2
+    ],
+    "event_grouped_c_per_dollar": 22.1,
+    "event_grouped_ci": [
+     16.0,
+     28.7
+    ]
+   }
+  }
+ ],
+ "cited": [
+  {
+   "paper": "Cardozo & Rivero-Wildemauwe, arXiv 2609.12878 (Sep 2026)",
+   "claim": "Polymarket buys < 10¢ lose 6.3¢/$ equal-weighted, gain +4.1¢/$ grouped by parent event; absent in sports",
+   "status": "reproduced above"
+  },
+  {
+   "paper": "Qiu & Qiu, arXiv 2610.13593 (Oct 2026)",
+   "claim": "Polymarket weather: favourites overpriced most in the final 1–12 h (−11 pp at 6 h), longshots slightly underpriced at 3–9 h",
+   "status": "cited: independent replication of near-resolution overconfidence in a domain we don't trade"
+  },
+  {
+   "paper": "hrishi-tailor/prediction-market-calibration (GitHub, 2026)",
+   "claim": "Polymarket slope 0.91–0.93 near resolution; Kalshi the opposite",
+   "status": "cited; our slope ≈ 0.85 near resolution, same direction"
+  }
+ ]
+}

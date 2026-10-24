@@ -80,6 +80,15 @@ def main():
             rows.append(row("shin_time", f"{h['horizon_hours']}h", h["z"], *h["ci"], split="train",
                             note="Shin insider share z fitted per horizon (ML), 90% CI from 200 event-bootstrap refits; "
                                  "z<0 = longshots under-priced (opposite of Shin)"))
+    if (rb / "literature.json").exists():
+        for c in json.loads((rb / "literature.json").read_text(encoding="utf-8"))["cells"]:
+            for kind in ("gross", "after_our_costs"):
+                g = c[kind]
+                for w in ("equal_weight", "event_grouped"):
+                    lo, hi = g[f"{w}_ci"]
+                    rows.append(row("literature", f"{c['cell']} | {c['domain']} | {kind} | {w}", g[f"{w}_c_per_dollar"] / 100,
+                                    lo / 100, hi / 100, g["n_buys"], "train",
+                                    "cheap-side buys at fixed-horizon snapshots, ¢ per $1; reconciles arXiv 2609.12878"))
     old = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else []
     keep = [r for r in old if r.get("source") != "C"]
     OUT.parent.mkdir(parents=True, exist_ok=True)

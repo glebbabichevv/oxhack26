@@ -57,3 +57,21 @@ For each market, we walk the CLOB asks of the side bought at $10 / $100 / $1k / 
   - many go negative at $10k (Brazil/Serbia elections, BTC, Bank of Canada);
   - sum of positive-edge sizes ≈ $70k.
 - Headline: "edge survives up to ~$10k per market on liquid football books, ~$1k on typical ones; tonight's eligible trades take ~$30k". One snapshot, small n.
+
+## 7. Reconciling 2026 papers (`literature.py`, `literature.json`) — TRAIN only, descriptive
+A "buy" is taking the cheap side of a (market, horizon) snapshot. Returns are per $1, equal-weighted vs grouped by parent event, with event-bootstrap CIs.
+
+| cell | buys | gross, equal-weight | gross, event-grouped | after our costs, equal-weight |
+|---|---|---|---|---|
+| all buys < 10¢, any horizon (Cardozo & Rivero-Wildemauwe's definition) | 24,120 | +21.1¢ [+7.5, +34.4] | +48.9¢ [+31.5, +67.5] | **−16.6¢** |
+| < 10¢, within 24 h | 10,333 | +31.3¢ [+14.1, +49.4] | +53.5¢ | −10.8¢ |
+| 10–35¢, any horizon | 22,653 | +20.0¢ [+16.2, +23.9] | +20.0¢ | +13.7¢ |
+| **10–35¢, within 24 h (what we trade)** | 10,748 | **+22.1¢ [+17.6, +26.6]** | +24.4¢ [+19.3, +29.3] | **+15.7¢** |
+
+How to read it:
+- Under 10¢, our snapshots show longshots winning more often than priced before costs: 3–10¢ contracts win 8.0% vs 5.9% priced.
+- After realistic costs those buys lose 16.6¢ per $1, because a 1¢ half-spread on a 3¢ contract is a 33% haircut. That is the sign of Cardozo & Rivero-Wildemauwe's −6.3¢: their unit is executed trades (588M), which pay the spread. We do not trade under 10¢ for exactly this reason.
+- Event-grouping raises the sub-10¢ return (+21 → +49¢): one cheap leg of a many-legged event wins big. That is the same mechanism as their grouped +4.1¢ and as our one-bet-per-event rule (COH).
+- In the 10–35¢ band within 24 h, the edge does not depend on the weighting (+22.1 vs +24.4¢) and survives costs (+15.7¢).
+- On their "absent in sports": in our data, sports 10–35¢ ≤ 24 h makes +15.0¢ after costs. We disagree there; our sample is markets ≥ $50k at fixed horizons, not all trades.
+- **Qiu & Qiu (arXiv 2610.13593)**, Polymarket weather: favourites are overpriced most in the final 1–12 h (−11 pp at 6 h) and longshots slightly underpriced at 3–9 h. Cited as independent replication of near-resolution overconfidence in a domain we don't trade.
