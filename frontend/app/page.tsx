@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
 import { HorizonCurve } from "@/components/HorizonCurve";
+import { LongRun } from "@/components/LongRun";
 import { Capsule, type CapsuleData } from "@/components/Capsule";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
@@ -126,6 +127,7 @@ export default function Home() {
           <HorizonCurve horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
         ) : <div className="mt-14 h-[400px]" />}
         {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
+        <LongRun />
 
         <div id="calibration">
           <Section
