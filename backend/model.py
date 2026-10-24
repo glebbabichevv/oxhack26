@@ -243,6 +243,16 @@ def equity_stats(trades, stake):
             "equity": curve}
 
 
+def return_ci(trades, rng, n=1000, level=90):
+    """CI on the with-costs return (additive P&L), resampling whole events: legs of one event move together."""
+    if not len(trades):
+        return None
+    pnl = (trades["kelly"] * trades["ret"]).groupby(trades[event_key(trades)]).sum().to_numpy()
+    sums = [pnl[rng.integers(0, len(pnl), len(pnl))].sum() for _ in range(n)]
+    tail = (100 - level) / 2
+    return [round(float(np.percentile(sums, tail)), 2), round(float(np.percentile(sums, 100 - tail)), 2)]
+
+
 def by_horizon(test, q, cost, lo, hi):
     """If you could only act at one fixed horizon: is the edge tradable there?"""
     rows = []
@@ -363,6 +373,7 @@ def main():
         "n_trades": int(len(with_c)),
         "model_selection": selection,
         "with_costs": equity_stats(with_c, with_c["kelly"].to_numpy()),
+        "return_ci": return_ci(with_c, rng),
         "without_costs": equity_stats(without_c, without_c["kelly"].to_numpy()),
         "naive_favourite": naive_favourite(test, cost),
         "overall": {"brier_market": round(brier(test["price_yes"], y), 4), "brier_model": round(brier(q, y), 4),
