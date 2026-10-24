@@ -83,12 +83,12 @@ export function decide(m: Model, price: number, hours: number, domain: string, s
 
 // ---------- Gamma ----------
 
-export type Leg = { question: string; decision?: Decision; skip?: string };
+export type Leg = { question: string; label: string; marketSlug?: string; bid?: number; ask?: number; decision?: Decision; skip?: string };
 
 const GAMMA = "https://gamma-api.polymarket.com";
 
 /** All binary legs of a Polymarket event page, each with Horizon's decision (or why it is skipped). */
-export async function decideEvent(m: Model, slug: string, now = new Date()): Promise<{ title: string; legs: Leg[] }> {
+export async function decideEvent(m: Model, slug: string, now = new Date()): Promise<{ title: string; legs: Leg[]; tags: string[]; endDate?: string }> {
   const res = await fetch(`${GAMMA}/events?slug=${encodeURIComponent(slug)}`);
   if (!res.ok) throw new Error(`Gamma ${res.status}`);
   const [event] = await res.json();
@@ -96,22 +96,118 @@ export async function decideEvent(m: Model, slug: string, now = new Date()): Pro
   const eventTags = (event.tags ?? []).map((t: { slug: string }) => t.slug);
   const legs: Leg[] = (event.markets ?? []).map((mk: Record<string, any>) => {
     const question = mk.question as string;
+    const label = (mk.groupItemTitle as string) || question;
     let outcomes: string[] = [];
     try { outcomes = JSON.parse(mk.outcomes ?? "[]").map((o: string) => o.toLowerCase()); } catch { /* not binary */ }
-    if (outcomes.join() !== "yes,no") return { question, skip: "not a yes/no market" };
-    if (mk.closed || !mk.acceptingOrders) return { question, skip: "closed" };
+    if (outcomes.join() !== "yes,no") return { question, label, skip: "not a yes/no market" };
+    if (mk.closed || !mk.acceptingOrders) return { question, label, skip: "closed" };
     const bid = Number(mk.bestBid), ask = Number(mk.bestAsk);
-    if (!(bid > 0 && bid < ask && ask < 1)) return { question, skip: "no two-sided order book" };
+    if (!(bid > 0 && bid < ask && ask < 1)) return { question, label, skip: "no two-sided order book" };
     const end = new Date(mk.endDate ?? event.endDate);
     const hours = (end.getTime() - now.getTime()) / 3.6e6;
-    if (!(hours > 0)) return { question, skip: "past its end date" };
+    if (!(hours > 0)) return { question, label, skip: "past its end date" };
     const tags = [...(mk.tags ?? []).map((t: { slug: string }) => t.slug), ...eventTags];
-    return { question, decision: decide(m, (bid + ask) / 2, hours, domainOf(m, tags), ask - bid) };
+    return { question, label, marketSlug: mk.slug as string, bid, ask, decision: decide(m, (bid + ask) / 2, hours, domainOf(m, tags), ask - bid) };
   });
-  return { title: event.title, legs };
+  return { title: event.title, legs, tags: eventTags, endDate: event.endDate };
 }
 
 /** "Edge per trade is largest at 12h" from the backtest, for the card's "when" line. */
 export function bestHorizon(m: Model) {
   return [...m.by_horizon].sort((a, b) => b.mean_return_per_trade - a.mean_return_per_trade)[0];
+}
+
+// ---------- scan (same filters as backend/horizon_mcp.py horizon_scan) ----------
+
+export type ScanRow = { question: string; slug: string; url: string; decision: Decision };
+
+/** Open yes/no markets with a tag, ending within `withinHours`, two-sided book, in the band, ranked by net edge. */
+export async function scanTag(m: Model, tag: string, withinHours = 24, top = 5, pages = 10, now = new Date()):
+  Promise<{ rows: ScanRow[]; scanned: number; priced: number; trades: number }> {
+  const t = await fetch(`${GAMMA}/tags/slug/${encodeURIComponent(tag)}`);
+  if (!t.ok) throw new Error(`unknown tag ${tag}`);
+  const { id } = await t.json();
+  const end = new Date(now.getTime() + withinHours * 3.6e6);
+  const base = new URLSearchParams({
+    tag_id: String(id), related_tags: "true", closed: "false", include_tag: "true", limit: "100",
+    order: "volume24hr", ascending: "false", end_date_min: now.toISOString(), end_date_max: end.toISOString(),
+  });
+  const batches = await Promise.all(Array.from({ length: pages }, (_, i) =>
+    fetch(`${GAMMA}/markets?${base}&offset=${i * 100}`).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
+  const seen = new Set<string>();
+  const rows: ScanRow[] = [];
+  for (const mk of batches.flat() as Record<string, any>[]) {
+    if (seen.has(mk.id)) continue;
+    seen.add(mk.id);
+    let outcomes: string[] = [];
+    try { outcomes = JSON.parse(mk.outcomes ?? "[]").map((o: string) => o.toLowerCase()); } catch { /* skip */ }
+    if (outcomes.join() !== "yes,no" || mk.closed || !mk.acceptingOrders) continue;
+    const bid = Number(mk.bestBid), ask = Number(mk.bestAsk);
+    if (!(bid > 0 && bid < ask && ask < 1)) continue;
+    const hours = (new Date(mk.endDate).getTime() - now.getTime()) / 3.6e6;
+    const price = (bid + ask) / 2;
+    if (!(hours > 0 && hours <= withinHours) || price < m.tradable[0] || price > m.tradable[1]) continue;
+    const tags = (mk.tags ?? []).map((x: { slug: string }) => x.slug);
+    const slug = mk.events?.[0]?.slug ?? mk.slug;
+    rows.push({ question: mk.question, slug, url: `https://polymarket.com/event/${slug}`,
+      decision: decide(m, price, hours, domainOf(m, tags), ask - bid) });
+  }
+  rows.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
+  const trades = rows.filter((r) => r.decision.action !== "NO_TRADE");
+  return { rows: (trades.length ? trades : rows).slice(0, top), scanned: seen.size, priced: rows.length, trades: trades.length };
+}
+
+// ---------- bridge: prediction markets about any page ----------
+
+const CRYPTO: Record<string, string> = {
+  btc: "bitcoin", xbt: "bitcoin", bitcoin: "bitcoin", eth: "ethereum", ether: "ethereum", ethereum: "ethereum",
+  sol: "solana", solana: "solana", xrp: "xrp", ripple: "xrp", doge: "dogecoin", dogecoin: "dogecoin",
+  bnb: "bnb", ada: "cardano", cardano: "cardano", hype: "hyperliquid", hyperliquid: "hyperliquid",
+};
+const STOP = new Set(("a an the and or of to in on for at by with from as is are was were be been it its this that these those " +
+  "news live latest today update updates video watch price prices chart charts market markets usd usdt live-score score " +
+  "vs v how why what when who will would could should can may new after over under into about says say said report").split(" "));
+const SITE = /\b(bbc|reuters|cnn|guardian|nytimes|new york times|bloomberg|coingecko|coinmarketcap|binance|tradingview|espn|sky sports|the athletic|ap news|associated press|politico|fox news|yahoo|google)\b/i;
+
+/** The page's subject as a search query: a crypto name from tickers/pairs, else the title's distinctive words. */
+export function subjectOf(title = "", url = ""): { query: string; crypto: boolean } | undefined {
+  const text = `${url} ${title}`.toLowerCase();
+  for (const tok of text.split(/[^a-z0-9]+/)) {
+    const base = tok.replace(/(usdt|usdc|busd|usd|perp|eur|gbp)$/, "");
+    if (CRYPTO[tok] || (base !== tok && CRYPTO[base])) return { query: CRYPTO[tok] ?? CRYPTO[base], crypto: true };
+  }
+  const segs = title.split(/\s+[-|–—:·]\s+/).filter((s) => !SITE.test(s) || s.split(/\s+/).length > 3);
+  const main = (segs.sort((a, b) => b.length - a.length)[0] ?? title).replace(/[“”"'‘’?!.,()]/g, " ");
+  const words = main.split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w.toLowerCase()) && !/^\d+$/.test(w));
+  const capital = words.filter((w) => /^[A-Z]/.test(w));
+  const pick = (capital.length >= 2 ? capital : words).slice(0, 3);
+  return pick.length ? { query: pick.join(" "), crypto: false } : undefined;
+}
+
+/** Open yes/no Polymarket legs matching a query (Gamma public-search), with Horizon's decision, best first. */
+export async function searchMarkets(m: Model, query: string, top = 6, now = new Date()): Promise<ScanRow[]> {
+  const res = await fetch(`${GAMMA}/public-search?${new URLSearchParams({ q: query, limit_per_type: "12", events_status: "active" })}`);
+  if (!res.ok) throw new Error(`Gamma ${res.status}`);
+  const { events = [] } = await res.json();
+  const rows: (ScanRow & { volume: number })[] = [];
+  const seen = new Set<string>();
+  for (const ev of events as Record<string, any>[]) {
+    const tags = (ev.tags ?? []).map((t: { slug: string }) => t.slug);
+    for (const mk of (ev.markets ?? []) as Record<string, any>[]) {
+      let outcomes: string[] = [];
+      try { outcomes = JSON.parse(mk.outcomes ?? "[]").map((o: string) => o.toLowerCase()); } catch { /* skip */ }
+      if (outcomes.join() !== "yes,no" || mk.closed || mk.acceptingOrders === false || seen.has(mk.id)) continue;
+      seen.add(mk.id);
+      const bid = Number(mk.bestBid), ask = Number(mk.bestAsk);
+      if (!(bid > 0 && bid < ask && ask < 1)) continue;
+      const hours = (new Date(mk.endDate ?? ev.endDate).getTime() - now.getTime()) / 3.6e6;
+      const price = (bid + ask) / 2;
+      if (!(hours > 0) || price < m.tradable[0] || price > m.tradable[1]) continue;
+      const domain = tags.length ? domainOf(m, tags) : (/bitcoin|ethereum|solana|xrp|crypto/i.test(ev.title) ? "crypto" : "other");
+      rows.push({ question: mk.question, slug: ev.slug, url: `https://polymarket.com/event/${ev.slug}`,
+        decision: decide(m, price, hours, domain, ask - bid), volume: Number(mk.volume24hr ?? mk.volumeNum ?? 0) });
+    }
+  }
+  rows.sort((a, b) => b.decision.netEdge - a.decision.netEdge || b.volume - a.volume);
+  return rows.slice(0, top);
 }

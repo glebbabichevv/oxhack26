@@ -40,3 +40,26 @@ notifications get 202; `GET`/`DELETE` are 405 (no SSE stream, no sessions). No a
 
 Local fallback (only if Argos's backend runs on the same machine; production Argos blocks localhost URLs):
 `cd backend && .venv/bin/uvicorn app:app --port 8000` → `http://localhost:8000/mcp`.
+
+## Standalone Horizon extension ("Horizon — prediction-market analyst")
+
+`standalone/` holds every Horizon-authored file of the standalone extension. The build also includes the
+browser-use layer of our earlier product (content script: page reading, `find`, `click`, `fill_input`), which stays in
+the private repo and is not mirrored here. There is no chat, login, account or backend: the extension's only network
+calls go to `gamma-api.polymarket.com` (prices) and `horizon-api-iota.vercel.app` (model, backtest, capsule).
+`scripts/finish.mjs` fails the build if the bundle mentions any other product's servers.
+
+The side panel is the analysis tool:
+- **On a Polymarket event** (`/event/<slug>` or `/sports/<league>/<slug>`): a verdict line; every yes/no leg with
+  market price vs Horizon's q, the 10–90% interval on a zoomed scale, the call, the edge after the spread and the ¼-Kelly
+  stake in dollars (editable bankroll); a time curve showing Horizon's q at 30d…12h if the price holds, with "now" and
+  the 12–24h best window; tonight's edges (top markets in the same domain ending within 24h); backtest and
+  sealed-capsule credentials.
+- **Prepare order** (BUY legs): drives the open page through the content script. It selects the leg (a sports
+  moneyline button, or the row's "Buy Yes/No <price>" button when exactly one matches), selects the Yes/No outcome
+  in the order ticket and types the stake. It never clicks Trade and never touches a wallet. Verified live on
+  `lal-bar-rea-2026-10-25` (Draw, Yes, $9.48) and `nba-2027-champion` (San Antonio Spurs, Yes, $1.43). On pages where
+  the leg sits behind a tab (NBA player props), it says so, copies the amount and highlights the leg.
+- **Any other page**: finds Polymarket markets about the page's subject (crypto tickers/pairs → coin name, otherwise
+  the title's distinctive words; Gamma `public-search`) and ranks them by net edge. Tapping a market opens it, and the
+  full analysis view takes over. On crypto it says plainly that our backtest shows no lift there.

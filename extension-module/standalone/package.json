@@ -1,0 +1,11 @@
+{
+  "name": "horizon-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Horizon: prediction-market analyst. Standalone Chrome extension; keeps only the browser-use layer of the base extension.",
+  "scripts": {
+    "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts && node scripts/finish.mjs",
+    "icons": "node scripts/icons.mjs"
+  }
+}
