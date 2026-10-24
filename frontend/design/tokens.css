@@ -76,3 +76,19 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .hz-cta-wrap, .hz-cta-wrap:hover, .hz-cta-shadow { transition: none; transform: none; }
 }
+
+/* The one authored moment (HorizonCurve): the line draws left → right, then intervals, the gap and the notes appear. */
+@keyframes hz-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes hz-in { from { opacity: 0; } to { opacity: 1; } }
+.hz-curve .hz-line { stroke-dasharray: 1; animation: hz-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both; }
+.hz-curve .hz-fade { animation: hz-in 0.8s ease-out 1s both; }
+.hz-curve .hz-dot { animation: hz-in 0.3s ease-out 0.9s both; transition: r 0.2s ease, fill 0.2s ease; }
+.hz-curve .hz-note { animation: hz-in 0.7s ease-out var(--d, 1.2s) both; }
+
+/* Browser surfaces in the palette. */
+* { scrollbar-width: thin; scrollbar-color: rgba(9, 9, 11, 0.18) transparent; }
+.tabular-nums, table { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hz-curve .hz-line, .hz-curve .hz-fade, .hz-curve .hz-dot, .hz-curve .hz-note { animation: none; }
+}
