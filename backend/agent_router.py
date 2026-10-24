@@ -1,11 +1,12 @@
 """Horizon agent: Gemini function-calling for the extension's plain-language command box.
 
 Stateless. The panel owns the conversation (Gemini `contents`), executes every tool itself
-(demo account, Gamma prices, page actions) and posts the results back; this endpoint only adds
-the system rules + tool schemas and asks Gemini for the next step. No key -> 503, and the panel
-falls back to its deterministic command parser.
+(Gamma prices, the user's Horizon bets, page actions) and posts the results back; this endpoint
+only adds the system rules + tool schemas and asks Gemini for the next step. No key -> 503, and
+the panel falls back to its deterministic command parser.
 
-Money is simulated (demo account on live Polymarket prices). The tools never place a real order.
+Bet/sell tools only build a plan list. The panel sets up Polymarket's order ticket in the user's
+tab for the top few and stops; the human presses Trade. Nothing here places an order.
 """
 import json
 import os
@@ -20,19 +21,19 @@ API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateC
 # Current stable Flash per ai.google.dev/gemini-api/docs/models (Oct 2026); 2.5 kept as a fallback.
 MODELS = [m for m in (os.environ.get("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-2.5-flash") if m]
 
-SYSTEM = """You are Horizon's agent inside a Chrome side panel. You manage a DEMO account (simulated money)
-priced on live Polymarket prices. You act only by calling tools; the panel executes them and shows each
-step to the user. Rules:
+SYSTEM = """You are Horizon's agent inside a Chrome side panel next to Polymarket. You turn the user's request into a
+plan of bets by calling tools; the panel executes them. Rules:
+- place_bet, adjust_stake, close_position and close_all only ADD TO THE PLAN LIST. The panel then sets up
+  Polymarket's order ticket (outcome + amount) in the user's tab for the top 2-3 items and stops: the user
+  presses Trade. Never say a bet is placed; say it is set up or in the plan.
 - Every bet goes through Horizon's model: place_bet refuses sides the model does not back and caps the
-  amount at Horizon's suggested bet (quarter Kelly, max 5% of balance). Only pass override=true if the
-  user explicitly asked to exceed the suggestion or bet against the model in their own words.
-- Respect the daily loss limit; if a tool says it is reached, stop placing bets and say so.
-- For plans with several bets, call scan_markets first, then place_bet for each pick, then
-  summarize_portfolio and report the expected profit and the chance of ending down it returns.
-  Never promise profit. Never invent prices or probabilities: quote tool results only.
-- prepare_ticket_on_page only fills Polymarket's order ticket for show; it never confirms a trade.
-- Keep the final answer to 1-3 short plain sentences for a non-expert (say "advantage", not "edge";
-  "suggested bet", not "Kelly"). This is play money; never use the word gamble."""
+  amount at Horizon's suggested bet (a quarter of the Kelly stake, max 5% of the user's budget, at least $1).
+  Only pass override=true if the user explicitly asked to exceed the suggestion or bet against the model.
+- Respect the daily loss limit; if a tool says it is reached, stop adding bets and say so.
+- For several bets: call scan_markets, then place_bet for each pick, best first. Never invent prices or
+  probabilities.
+- End with ONE short plain sentence for a non-expert (say "good bet" or "price too low", not "edge" or
+  "Kelly"). Never promise profit. Never use the word gamble."""
 
 S, N, B = {"type": "string"}, {"type": "number"}, {"type": "boolean"}
 SIDE = {"type": "string", "enum": ["YES", "NO"]}
@@ -52,21 +53,21 @@ TOOLS = [{"functionDeclarations": [
          "top": {**N, "description": "How many to return (default 10, max 40)."}}),
     _fn("get_decision", "Horizon's call on one market (by market slug) or all legs of an event (by event slug).",
         {"slug": S}, ["slug"]),
-    _fn("place_bet", "Open a demo position at the live ask. amount in dollars; omit to use the suggested bet.",
+    _fn("place_bet", "Add a bet to the plan: Horizon sets up the ticket on Polymarket and the human presses Trade. amount in dollars; omit to use the suggested bet.",
         {"market": {**S, "description": "market slug from scan_markets/get_decision"}, "side": SIDE, "amount": N,
          "override": {**B, "description": "true only if the user explicitly asked to exceed the suggestion"}},
         ["market", "side"]),
-    _fn("adjust_stake", "Raise or lower an open position: new_amount in dollars, or factor (0.5 halves, 2 doubles).",
+    _fn("adjust_stake", "Plan raising or lowering a bet placed through Horizon: new_amount in dollars, or factor (0.5 halves, 2 doubles). Lowering = selling part on Polymarket.",
         {"position": {**S, "description": "position id or market slug"}, "new_amount": N, "factor": N}, ["position"]),
-    _fn("close_position", "Sell an open demo position at the live bid.", {"position": S}, ["position"]),
-    _fn("close_all", "Close several positions.",
+    _fn("close_position", "Plan selling a whole bet placed through Horizon.", {"position": S}, ["position"]),
+    _fn("close_all", "Plan selling several bets placed through Horizon.",
         {"filter": {"type": "string", "enum": ["all", "losing", "winning", "no_edge"],
                     "description": "no_edge = Horizon no longer backs the side"}}),
     _fn("open_market_in_tab", "Open a Polymarket event page in the user's tab.", {"slug": {**S, "description": "event slug"}}, ["slug"]),
-    _fn("prepare_ticket_on_page", "Show the bet on Polymarket: select the leg and outcome, type the amount. Never confirms.",
+    _fn("prepare_ticket_on_page", "Fill Polymarket's ticket in the user's tab (outcome + amount) without pressing Trade.",
         {"market": S, "side": SIDE, "amount": N}, ["market", "side"]),
-    _fn("set_bankroll", "Reset the demo account to a new starting balance (closes everything).", {"amount": N}, ["amount"]),
-    _fn("summarize_portfolio", "Balance, open bets, P&L, and for open bets the expected profit and chance of ending down."),
+    _fn("set_bankroll", "Set the user's budget, which sizes suggested bets.", {"amount": N}, ["amount"]),
+    _fn("summarize_portfolio", "Budget, bets placed through Horizon, money in play, result so far, today's loss vs the limit."),
 ]}]
 
 
