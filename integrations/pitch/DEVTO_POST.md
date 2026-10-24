@@ -56,12 +56,12 @@ On the held-out markets:
 - A four-coefficient calibration model (logistic regression on logit(price), log(horizon) and their product) beats the market
   price itself: **Brier 0.1297 vs 0.1305**. That's a small gain, but the market price is a hard baseline.
 - Trading only where the edge clears the spread, Polymarket's own taker fee and the model's bootstrap interval, at a
-  quarter-Kelly stake, never more than one bankroll at risk: **6,013 trades, +190% of the starting bankroll**, 90% CI
-  [+94%, +285%], +11.9% per dollar staked. Max drawdown 31%. Hit rate 21%: lots of small losses, a few large wins.
+  quarter-Kelly stake: **+12.7¢ per dollar staked**, 90% CI [+7.0¢, +19.1¢], 6,102 trades. With at most one bankroll at
+  risk that's +199% of the starting bankroll. Max drawdown 29%. Hit rate 21%: lots of small losses, a few large wins.
 - "Always back the favourite" on the same markets: **−908%**.
 
 Our first version had no fees and showed +304%. A teammate's agent audited the model, found that 93% of our test
-markets charge takers a fee, and the number dropped to +190%. The edge survived; the headline got honest.
+markets charge takers a fee, and the number dropped to +12.7¢ per dollar staked. The edge survived; the headline got honest.
 
 And the part that fits the theme:
 
