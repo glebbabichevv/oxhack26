@@ -507,23 +507,23 @@
  "by_horizon": [
   {
    "horizon_hours": 720,
-   "mean_return_per_trade": 0.0462
+   "mean_return_per_trade": -0.1903
   },
   {
    "horizon_hours": 168,
-   "mean_return_per_trade": 0.0461
+   "mean_return_per_trade": 0.023
   },
   {
    "horizon_hours": 72,
-   "mean_return_per_trade": 0.0727
+   "mean_return_per_trade": 0.0495
   },
   {
    "horizon_hours": 24,
-   "mean_return_per_trade": 0.1432
+   "mean_return_per_trade": 0.1255
   },
   {
    "horizon_hours": 12,
-   "mean_return_per_trade": 0.1628
+   "mean_return_per_trade": 0.1484
   }
  ],
  "train_cutoff": "2026-05-18",
@@ -535,5 +535,27 @@
    "simple": 0.5645,
    "full": 0.5672
   }
+ },
+ "version": "2026-10-24-390c312",
+ "fitted_at": "2026-10-24T15:41:01+00:00",
+ "metrics": {
+  "test_cutoff": "2026-05-18",
+  "n_test_markets": 10579,
+  "n_test_rows": 37451,
+  "n_train_markets": 23838,
+  "brier_model": 0.1297,
+  "brier_market": 0.1305,
+  "logloss_model": 0.3917,
+  "logloss_market": 0.394
+ },
+ "fee_rates": {
+  "sports": 0.05,
+  "crypto": 0.07,
+  "politics": 0.04,
+  "science_tech": 0.04,
+  "economics": 0.05,
+  "culture": 0.05,
+  "other": 0.05,
+  "geopolitics": 0.0
  }
 }

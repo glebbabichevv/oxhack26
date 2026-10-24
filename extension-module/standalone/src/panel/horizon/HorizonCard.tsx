@@ -98,8 +98,8 @@ function Row({ leg, band }: { leg: Leg; band: [number, number] }) {
   );
 }
 
-// When to act: in the backtest, return per $1 trade after costs was highest 12–24h before the
-// scheduled end (≈14–15%, vs ≈7% at 3d and ≈4–5% at 7d–30d), after dropping stale prices and
+// When to act: in the backtest, return per $1 trade after costs and fees was highest 12–24h before
+// the scheduled end (≈13–15%, vs ≈5% at 3d, ≈2% at 7d and negative at 30d), after dropping stale prices and
 // markets whose event was already over. The window is shown in the reader's local time.
 const WINDOW_H: [number, number] = [24, 12];
 export function When({ hours }: { hours: number }) {
@@ -109,7 +109,7 @@ export function When({ hours }: { hours: number }) {
       ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
       : { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   const text = hours > WINDOW_H[0]
-    ? <>Best window: <b className="font-semibold text-[#0a0a0a]">{at(WINDOW_H[0])} – {at(WINDOW_H[1])}</b> (12–24h before the end), when the edge per trade was ~2× the 3-day one.</>
+    ? <>Best window: <b className="font-semibold text-[#0a0a0a]">{at(WINDOW_H[0])} – {at(WINDOW_H[1])}</b> (12–24h before the end), when the edge per trade was more than twice the 3-day one.</>
     : hours > WINDOW_H[1]
       ? <><b className="font-semibold" style={{ color: UP }}>In the best window now</b>: 12–24h before the end, where the edge per trade was largest.</>
       : <>Under 12h to the end: the edge per trade stayed high, but books thin out; check the spread.</>;
