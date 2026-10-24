@@ -71,8 +71,8 @@ def snapshot(a):
 
 def resolution(market_id):
     """1 / 0 if the market resolved YES / NO, None if not resolved yet (or 50-50 / unknown)."""
-    rows = get(f"{GAMMA}/markets", dict(condition_ids=market_id)) or []
-    if not rows or not rows[0].get("closed"):
+    rows = get(f"{GAMMA}/markets", dict(condition_ids=market_id, closed="true")) or []  # gamma hides closed markets by default
+    if not rows:
         return None
     prices = json.loads(rows[0].get("outcomePrices") or "[]")
     return {("1", "0"): 1, ("0", "1"): 0}.get(tuple(prices[:2]))
