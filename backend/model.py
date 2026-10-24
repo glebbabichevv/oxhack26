@@ -322,7 +322,7 @@ def exposure(trades, stake):
     # so the result does not depend on the input order.
     capped, open_ = np.zeros(len(stake)), []  # open_: (exit, stake)
     order = np.argsort(entry, kind="stable")
-    groups = np.split(order, np.flatnonzero(np.diff(entry[order]) != np.timedelta64(0)) + 1) if len(order) else []
+    groups = np.split(order, np.flatnonzero(np.diff(entry[order]) != np.timedelta64(0, "ns")) + 1) if len(order) else []
     for g in groups:
         t0 = entry[g[0]]
         open_ = [(e, s) for e, s in open_ if e > t0]

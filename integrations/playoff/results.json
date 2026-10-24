@@ -1,0 +1,718 @@
+{
+ "protocol": "Policy playoff: one harness, identical costs / exposure / split, selection on VALIDATION only.\n\n  .venv/bin/python playoff.py      # -> integrations/playoff/results.json (does not touch backend/results/)\n\nVariants (same model M0 = model.py's simple calibrator, same decide(), same Polymarket taker fees):\n  V0  current main policy: enter at the first (furthest) horizon whose net edge is > 0\n  V1  V0 + minimum net edge 1\u00a2  (Ayaz, PR #17)\n  V2  V0 + do not enter earlier than 24 h before the scheduled end  (Mark, PR #13)\n  V3  V1 + V2\n\nValidation = model.select_model's split: the last 20% of TRAIN markets by resolution time; the model is\nfitted on the first 80% (seed 0). Test = model.split_by_time at the shipped cutoff; the model is fitted on\nall of train (exactly backend/results/model.json). Embargo (Ayaz) on both: a trade counts only if its entry\ntime (scheduled end - horizon) is at or after the start of the scored period.\n\nExposure rule sets, applied identically to every variant:\n  \"ours\"  (primary)     \u00bc Kelly capped 5%/trade; total open stake <= 1 starting bankroll; trades entering\n                         at the same moment share the remaining room pro rata (model.exposure)\n  \"ayaz\"  (sensitivity)  \u00bc Kelly capped 5%/trade; <= 10% of the starting bankroll per event; total open stake\n                         <= current equity (1 + P&L realised so far); same pro-rata tie rule\nReturns are additive, in starting bankrolls. CIs: 90%, event bootstrap (1,000 resamples, seed 0).",
+ "cutoff": "2026-05-18",
+ "validation_start": "2026-03-01T20:37:27+00:00",
+ "n_validation_markets": 4768,
+ "n_test_markets": 10579,
+ "variants": {
+  "V0": {
+   "label": "current main",
+   "min_edge": 0.0,
+   "enter_from": null
+  },
+  "V1": {
+   "label": "+ min edge 1\u00a2",
+   "min_edge": 0.01,
+   "enter_from": null
+  },
+  "V2": {
+   "label": "+ enter from 24h",
+   "min_edge": 0.0,
+   "enter_from": 24
+  },
+  "V3": {
+   "label": "+ both",
+   "min_edge": 0.01,
+   "enter_from": 24
+  }
+ },
+ "selected_by_validation": {
+  "rule": "highest validation per-$ return, 'ours' exposure rules",
+  "winner": "V3",
+  "winner_under_ayaz_caps": "V3"
+ },
+ "validation": {
+  "V0": {
+   "ours": {
+    "n_trades": 2409,
+    "return": 1.6479,
+    "return_ci": [
+     0.96,
+     2.35
+    ],
+    "per_dollar": 0.2204,
+    "per_dollar_ci": [
+     0.1295,
+     0.3143
+    ],
+    "hit_rate": 0.2437,
+    "max_drawdown": 0.2667,
+    "peak_open_stake": 1.0,
+    "staked": 7.479,
+    "by_horizon": [
+     {
+      "horizon_hours": 720,
+      "n_trades": 185,
+      "return": -0.0062,
+      "per_dollar": -0.0344
+     },
+     {
+      "horizon_hours": 168,
+      "n_trades": 1028,
+      "return": 0.407,
+      "per_dollar": 0.1209
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 734,
+      "return": 0.4042,
+      "per_dollar": 0.1803
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 330,
+      "return": 0.6996,
+      "per_dollar": 0.6141
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 132,
+      "return": 0.1433,
+      "per_dollar": 0.2613
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 2471,
+    "return": 1.689,
+    "return_ci": [
+     0.99,
+     2.44
+    ],
+    "per_dollar": 0.214,
+    "per_dollar_ci": [
+     0.1259,
+     0.3107
+    ],
+    "hit_rate": 0.2469,
+    "max_drawdown": 0.2907,
+    "peak_open_stake": 1.225,
+    "staked": 7.891,
+    "by_horizon": [
+     {
+      "horizon_hours": 720,
+      "n_trades": 186,
+      "return": -0.0041,
+      "per_dollar": -0.0237
+     },
+     {
+      "horizon_hours": 168,
+      "n_trades": 1051,
+      "return": 0.4179,
+      "per_dollar": 0.1182
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 759,
+      "return": 0.4454,
+      "per_dollar": 0.1831
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 340,
+      "return": 0.6959,
+      "per_dollar": 0.5958
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 135,
+      "return": 0.1339,
+      "per_dollar": 0.2303
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 2524,
+    "return": 1.7585,
+    "per_dollar": 0.211,
+    "peak_open_stake": 1.507
+   }
+  },
+  "V1": {
+   "ours": {
+    "n_trades": 1689,
+    "return": 1.9576,
+    "return_ci": [
+     1.21,
+     2.73
+    ],
+    "per_dollar": 0.2326,
+    "per_dollar_ci": [
+     0.1439,
+     0.3253
+    ],
+    "hit_rate": 0.2581,
+    "max_drawdown": 0.2418,
+    "peak_open_stake": 1.0,
+    "staked": 8.415,
+    "by_horizon": [
+     {
+      "horizon_hours": 168,
+      "n_trades": 652,
+      "return": 0.3346,
+      "per_dollar": 0.1149
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 555,
+      "return": 0.8155,
+      "per_dollar": 0.3004
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 319,
+      "return": 0.7674,
+      "per_dollar": 0.4187
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 163,
+      "return": 0.0401,
+      "per_dollar": 0.042
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 1711,
+    "return": 2.0351,
+    "return_ci": [
+     1.29,
+     2.75
+    ],
+    "per_dollar": 0.2362,
+    "per_dollar_ci": [
+     0.1485,
+     0.3215
+    ],
+    "hit_rate": 0.2589,
+    "max_drawdown": 0.2463,
+    "peak_open_stake": 1.129,
+    "staked": 8.615,
+    "by_horizon": [
+     {
+      "horizon_hours": 168,
+      "n_trades": 660,
+      "return": 0.4344,
+      "per_dollar": 0.1456
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 567,
+      "return": 0.8029,
+      "per_dollar": 0.2865
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 320,
+      "return": 0.7658,
+      "per_dollar": 0.4117
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 164,
+      "return": 0.032,
+      "per_dollar": 0.033
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 1728,
+    "return": 2.0756,
+    "per_dollar": 0.237,
+    "peak_open_stake": 1.226
+   }
+  },
+  "V2": {
+   "ours": {
+    "n_trades": 1792,
+    "return": 2.3325,
+    "return_ci": [
+     1.44,
+     3.19
+    ],
+    "per_dollar": 0.2435,
+    "per_dollar_ci": [
+     0.1511,
+     0.3336
+    ],
+    "hit_rate": 0.2746,
+    "max_drawdown": 0.166,
+    "peak_open_stake": 0.92,
+    "staked": 9.577,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 1577,
+      "return": 2.0572,
+      "per_dollar": 0.2405
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 215,
+      "return": 0.2753,
+      "per_dollar": 0.2688
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 1792,
+    "return": 2.3325,
+    "return_ci": [
+     1.44,
+     3.19
+    ],
+    "per_dollar": 0.2435,
+    "per_dollar_ci": [
+     0.1511,
+     0.3336
+    ],
+    "hit_rate": 0.2746,
+    "max_drawdown": 0.166,
+    "peak_open_stake": 0.92,
+    "staked": 9.577,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 1577,
+      "return": 2.0572,
+      "per_dollar": 0.2405
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 215,
+      "return": 0.2753,
+      "per_dollar": 0.2688
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 1792,
+    "return": 2.3325,
+    "per_dollar": 0.2435,
+    "peak_open_stake": 0.92
+   }
+  },
+  "V3": {
+   "ours": {
+    "n_trades": 1373,
+    "return": 2.3351,
+    "return_ci": [
+     1.47,
+     3.19
+    ],
+    "per_dollar": 0.2553,
+    "per_dollar_ci": [
+     0.161,
+     0.3485
+    ],
+    "hit_rate": 0.2724,
+    "max_drawdown": 0.2416,
+    "peak_open_stake": 0.876,
+    "staked": 9.147,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 1153,
+      "return": 2.1302,
+      "per_dollar": 0.2736
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 220,
+      "return": 0.2049,
+      "per_dollar": 0.1505
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 1373,
+    "return": 2.3351,
+    "return_ci": [
+     1.47,
+     3.19
+    ],
+    "per_dollar": 0.2553,
+    "per_dollar_ci": [
+     0.161,
+     0.3485
+    ],
+    "hit_rate": 0.2724,
+    "max_drawdown": 0.2416,
+    "peak_open_stake": 0.876,
+    "staked": 9.147,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 1153,
+      "return": 2.1302,
+      "per_dollar": 0.2736
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 220,
+      "return": 0.2049,
+      "per_dollar": 0.1505
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 1373,
+    "return": 2.3351,
+    "per_dollar": 0.2553,
+    "peak_open_stake": 0.876
+   }
+  }
+ },
+ "test": {
+  "V0": {
+   "ours": {
+    "n_trades": 5968,
+    "return": 1.7612,
+    "return_ci": [
+     0.76,
+     2.71
+    ],
+    "per_dollar": 0.1111,
+    "per_dollar_ci": [
+     0.0475,
+     0.1713
+    ],
+    "hit_rate": 0.213,
+    "max_drawdown": 0.32,
+    "peak_open_stake": 1.0,
+    "staked": 15.85,
+    "by_horizon": [
+     {
+      "horizon_hours": 720,
+      "n_trades": 275,
+      "return": 0.0128,
+      "per_dollar": 0.1973
+     },
+     {
+      "horizon_hours": 168,
+      "n_trades": 2317,
+      "return": 0.3954,
+      "per_dollar": 0.077
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 2034,
+      "return": 0.0641,
+      "per_dollar": 0.0101
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 945,
+      "return": 1.2491,
+      "per_dollar": 0.3974
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 397,
+      "return": 0.0398,
+      "per_dollar": 0.0346
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 5925,
+    "return": 1.7559,
+    "return_ci": [
+     0.82,
+     2.71
+    ],
+    "per_dollar": 0.1113,
+    "per_dollar_ci": [
+     0.0522,
+     0.172
+    ],
+    "hit_rate": 0.2135,
+    "max_drawdown": 0.32,
+    "peak_open_stake": 1.052,
+    "staked": 15.769,
+    "by_horizon": [
+     {
+      "horizon_hours": 720,
+      "n_trades": 274,
+      "return": 0.0128,
+      "per_dollar": 0.1975
+     },
+     {
+      "horizon_hours": 168,
+      "n_trades": 2280,
+      "return": 0.4179,
+      "per_dollar": 0.0823
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 2032,
+      "return": 0.0506,
+      "per_dollar": 0.008
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 944,
+      "return": 1.226,
+      "per_dollar": 0.3931
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 395,
+      "return": 0.0485,
+      "per_dollar": 0.0425
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 5993,
+    "return": 1.8212,
+    "per_dollar": 0.1131,
+    "peak_open_stake": 1.182
+   }
+  },
+  "V1": {
+   "ours": {
+    "n_trades": 4162,
+    "return": 2.4197,
+    "return_ci": [
+     1.38,
+     3.51
+    ],
+    "per_dollar": 0.1256,
+    "per_dollar_ci": [
+     0.071,
+     0.1831
+    ],
+    "hit_rate": 0.215,
+    "max_drawdown": 0.3274,
+    "peak_open_stake": 1.0,
+    "staked": 19.27,
+    "by_horizon": [
+     {
+      "horizon_hours": 168,
+      "n_trades": 684,
+      "return": 0.1907,
+      "per_dollar": 0.0829
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 2167,
+      "return": 1.0461,
+      "per_dollar": 0.1075
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 924,
+      "return": 0.9142,
+      "per_dollar": 0.1816
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 387,
+      "return": 0.2687,
+      "per_dollar": 0.1218
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 4128,
+    "return": 2.371,
+    "return_ci": [
+     1.28,
+     3.45
+    ],
+    "per_dollar": 0.1241,
+    "per_dollar_ci": [
+     0.0668,
+     0.1824
+    ],
+    "hit_rate": 0.2154,
+    "max_drawdown": 0.3256,
+    "peak_open_stake": 1.003,
+    "staked": 19.105,
+    "by_horizon": [
+     {
+      "horizon_hours": 168,
+      "n_trades": 660,
+      "return": 0.1641,
+      "per_dollar": 0.0734
+     },
+     {
+      "horizon_hours": 72,
+      "n_trades": 2160,
+      "return": 1.0353,
+      "per_dollar": 0.1071
+     },
+     {
+      "horizon_hours": 24,
+      "n_trades": 921,
+      "return": 0.8985,
+      "per_dollar": 0.1795
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 387,
+      "return": 0.2731,
+      "per_dollar": 0.124
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 4162,
+    "return": 2.37,
+    "per_dollar": 0.1216,
+    "peak_open_stake": 1.186
+   }
+  },
+  "V2": {
+   "ours": {
+    "n_trades": 4686,
+    "return": 3.9177,
+    "return_ci": [
+     2.58,
+     5.29
+    ],
+    "per_dollar": 0.1628,
+    "per_dollar_ci": [
+     0.1068,
+     0.2196
+    ],
+    "hit_rate": 0.2407,
+    "max_drawdown": 0.4304,
+    "peak_open_stake": 0.719,
+    "staked": 24.066,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 4167,
+      "return": 3.8191,
+      "per_dollar": 0.1703
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 519,
+      "return": 0.0985,
+      "per_dollar": 0.0599
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 4686,
+    "return": 3.9177,
+    "return_ci": [
+     2.58,
+     5.29
+    ],
+    "per_dollar": 0.1628,
+    "per_dollar_ci": [
+     0.1068,
+     0.2196
+    ],
+    "hit_rate": 0.2407,
+    "max_drawdown": 0.4304,
+    "peak_open_stake": 0.719,
+    "staked": 24.066,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 4167,
+      "return": 3.8191,
+      "per_dollar": 0.1703
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 519,
+      "return": 0.0985,
+      "per_dollar": 0.0599
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 4686,
+    "return": 3.9177,
+    "per_dollar": 0.1628,
+    "peak_open_stake": 0.719
+   }
+  },
+  "V3": {
+   "ours": {
+    "n_trades": 3653,
+    "return": 4.0081,
+    "return_ci": [
+     2.78,
+     5.44
+    ],
+    "per_dollar": 0.1723,
+    "per_dollar_ci": [
+     0.1184,
+     0.2346
+    ],
+    "hit_rate": 0.2242,
+    "max_drawdown": 0.3806,
+    "peak_open_stake": 0.694,
+    "staked": 23.261,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 3205,
+      "return": 3.6644,
+      "per_dollar": 0.1772
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 448,
+      "return": 0.3438,
+      "per_dollar": 0.1331
+     }
+    ]
+   },
+   "ayaz": {
+    "n_trades": 3653,
+    "return": 4.0081,
+    "return_ci": [
+     2.78,
+     5.44
+    ],
+    "per_dollar": 0.1723,
+    "per_dollar_ci": [
+     0.1184,
+     0.2346
+    ],
+    "hit_rate": 0.2242,
+    "max_drawdown": 0.3806,
+    "peak_open_stake": 0.694,
+    "staked": 23.261,
+    "by_horizon": [
+     {
+      "horizon_hours": 24,
+      "n_trades": 3205,
+      "return": 3.6644,
+      "per_dollar": 0.1772
+     },
+     {
+      "horizon_hours": 12,
+      "n_trades": 448,
+      "return": 0.3438,
+      "per_dollar": 0.1331
+     }
+    ]
+   },
+   "uncapped": {
+    "n_trades": 3653,
+    "return": 4.0081,
+    "per_dollar": 0.1723,
+    "peak_open_stake": 0.694
+   }
+  }
+ }
+}
