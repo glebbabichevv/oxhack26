@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
 import { HorizonCurve } from "@/components/HorizonCurve";
 import { LongRun } from "@/components/LongRun";
+import { CachedNote } from "@/components/CachedNote";
 import { Capsule, type CapsuleData } from "@/components/Capsule";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
@@ -106,7 +107,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "My results", href: "/me" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "My results", href: "/me" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }, { label: "How we chose", href: "/methods" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
@@ -170,7 +171,7 @@ export default function Home() {
           <Section
             title="Live decisions"
             lead={live?.[0] ? "Open markets right now: price, model, and the call after the spread and Polymarket's fee. We only trade when the edge survives the model's own uncertainty." : "Open markets right now: price, model, and the call after costs."}
-            controls={<Freshness meta={liveMeta} now={now} />}
+            controls={<><Freshness meta={liveMeta} now={now} /><CachedNote paths={["/api/live"]} className="mt-1" /></>}
           >
             <FramedCard>
               {live ? <LiveList live={live} showAll={showAll} onToggle={() => setShowAll((s) => !s)} /> : <Skeleton className="h-[320px]" />}
@@ -185,11 +186,13 @@ export default function Home() {
               lead="A backtest can always be tuned after the fact. So on Saturday afternoon we hashed Horizon's probabilities for every market that ends before judging, after writing down how they would be scored and what we expected. It opens on Sunday, whatever it says."
             >
               <Capsule data={capsule} />
+              <CachedNote paths={["/api/capsule"]} className="mt-2" />
             </Section>
           </div>
         ) : null}
 
         <div id="backtest">{backtest ? <BacktestSection b={backtest} /> : null}</div>
+        <CachedNote paths={["/api/backtest", "/api/calibration"]} className="mt-3" />
         {backtest ? <Failures b={backtest} /> : null}
         <div id="method">{backtest ? <Method b={backtest} /> : null}</div>
 
