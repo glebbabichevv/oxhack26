@@ -66,6 +66,7 @@ TOOLS = [{"functionDeclarations": [
     _fn("open_market_in_tab", "Open a Polymarket event page in the user's tab.", {"slug": {**S, "description": "event slug"}}, ["slug"]),
     _fn("prepare_ticket_on_page", "Fill Polymarket's ticket in the user's tab (outcome + amount) without pressing Trade.",
         {"market": S, "side": SIDE, "amount": N}, ["market", "side"]),
+    _fn("open_my_results", "Open the user's personal results page (decisions made with Horizon and how they turned out) in a new tab; returns a one-line summary if available. Use for 'show my stats', 'my results', 'how am I doing', 'am I up'."),
     _fn("set_bankroll", "Set the user's budget, which sizes suggested bets.", {"amount": N}, ["amount"]),
     _fn("summarize_portfolio", "Budget, bets the user placed after Horizon set them up, money in those bets, result so far."),
 ]}]

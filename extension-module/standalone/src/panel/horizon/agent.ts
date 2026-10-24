@@ -12,6 +12,7 @@ import {
 import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
 import { intendedAction, verdictOf } from './policy';
+import { fetchMe, openMyResults } from './me';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -193,6 +194,13 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const r = await fillTicket(ctx, q, String(args.side ?? 'YES').toUpperCase() as Side, Number(args.amount ?? (q.decision ? suggested(a, q.decision) : 5)), 'buy');
       return { ok: r.ok, error: r.error };
     }
+    case 'open_my_results': {
+      const done = step('Opening your results');
+      await openMyResults();
+      const me = await fetchMe();
+      done('ok');
+      return { opened: true, summary: me?.summary };
+    }
     case 'set_bankroll': {
       const n = Number(args.amount);
       if (!(n >= 1)) return { error: 'amount must be at least 1' };
@@ -350,6 +358,11 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
       if (r.added_to_plan) added++;
     }
     return added ? 'Here is the plan.' : `Nothing ${where === 'all' ? '' : `in ${where} `}is a good bet right now. Horizon would wait.`;
+  }
+
+  if (/\b(my (stats|results|record)|how am i doing|am i (up|down)|show (me )?my)\b/.test(t)) {
+    const r = await runTool(ctx, 'open_my_results', {}) as { summary?: string };
+    return r.summary ? `${r.summary}. Your results are open in a new tab.` : 'Your results are open in a new tab.';
   }
 
   if (/\b(how|status|portfolio|summary|doing|budget|p&l|pnl)\b/.test(t)) {

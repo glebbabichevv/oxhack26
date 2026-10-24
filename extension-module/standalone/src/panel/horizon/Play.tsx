@@ -11,6 +11,7 @@ import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
+import { fetchMe, getWallet, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
 import { intendedAction, verdictOf, verdictRank } from './policy';
 import { API } from './agent';
 
@@ -481,6 +482,7 @@ export function MyDecisions({ model }: { model: Model }) {
   return (
     <div className="px-4 pb-6 pt-4">
       <h1 className="hz-display text-[32px] leading-none">My decisions</h1>
+      <MeStrip />
       <p className="mt-2 text-body text-[#475569]">
         {rows.length ? `${rows.length} decision${rows.length === 1 ? '' : 's'} so far${resolved.length ? `, ${resolved.length} resolved: ${resolved.reduce((s, x) => s + x, 0) >= 0 ? '+' : '−'}${money(Math.abs(resolved.reduce((s, x) => s + x, 0)))} per $1 each` : ''}.` : 'Every bet Horizon shows you lands here, with the result once the market ends.'}
       </p>
@@ -529,6 +531,53 @@ export function Settings({ a, onClose }: { a?: Account; onClose: () => void }) {
         </span>
         <button type="submit" className="hz-cta rounded-control bg-[#0f172a] px-5 text-body font-semibold text-white">Save</button>
       </form>
+      <WalletField />
+    </div>
+  );
+}
+
+/** Optional public wallet address, so the results page can read the user's positions. */
+function WalletField() {
+  const [v, setV] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
+  useEffect(() => { void getWallet().then((w) => setV(w ?? '')); }, []);
+  const save = async () => {
+    const w = v.trim();
+    if (w && !WALLET_RE.test(w)) { setMsg({ ok: false, text: 'That is not a wallet address: it starts with 0x and has 40 more letters and digits.' }); return; }
+    await setWallet(w || undefined);
+    setMsg({ ok: true, text: w ? 'Saved.' : 'Removed.' });
+  };
+  return (
+    <div className="mt-8">
+      <h2 className="text-subhead font-semibold">Your Polymarket wallet <span className="font-normal text-[#64748b]">(optional)</span></h2>
+      <p className="mt-1 text-footnote text-[#64748b]">Public address, read-only. Used only to read your public positions. Never your keys.</p>
+      <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="mt-3 flex gap-2">
+        <span className="hz-composer flex min-w-0 flex-1 items-center rounded-control px-3">
+          <input value={v} onChange={(e) => { setV(e.target.value); setMsg(undefined); }} placeholder="0x…" spellCheck={false} aria-label="Polymarket wallet address"
+            className="min-w-0 flex-1 bg-transparent py-2.5 font-mono text-footnote outline-none" />
+        </span>
+        <button type="submit" className="hz-chip rounded-control px-4 text-body font-semibold">Save</button>
+      </form>
+      {msg ? <p className="mt-1.5 text-caption" style={{ color: msg.ok ? UP : DOWN }}>{msg.text}</p> : null}
+    </div>
+  );
+}
+
+/** "You're up $X" from /api/me (hidden if the endpoint is not live) + a link to the results page. */
+function MeStrip() {
+  const [me, setMe] = useState<Me>();
+  useEffect(() => { void fetchMe().then(setMe); }, []);
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3">
+      {me ? (
+        <span className="min-w-0">
+          <span className="block text-subhead font-semibold" style={{ color: me.pnl === undefined || Math.abs(me.pnl) < 0.005 ? INK : me.pnl > 0 ? UP : DOWN }}>{me.summary}</span>
+          {me.label ? <span className="block text-caption text-[#94a3b8]">{me.label}</span> : null}
+        </span>
+      ) : <span />}
+      <button type="button" onClick={() => void openMyResults()} className="hz-chip inline-flex shrink-0 items-center gap-1 rounded-control px-3.5 py-1.5 text-footnote font-semibold">
+        Open my results <Icon d={I.external} size={12} />
+      </button>
     </div>
   );
 }
