@@ -9,7 +9,7 @@
 export type PrepareStep = { step: string; ok: boolean; detail?: string };
 export type PrepareResult = { ok: boolean; steps: PrepareStep[] };
 
-type Hit = { role: string; name: string; ref: string; state: string };
+type Hit = { role: string; name: string; ref: string; state: string; where: string };
 
 export async function send(tabId: number, action: Record<string, unknown>): Promise<any> {
   return chrome.tabs.sendMessage(tabId, { type: 'EXECUTE_ACTION', action }, { frameId: 0 });
@@ -28,8 +28,9 @@ async function ensureContentScript(tabId: number) {
 export async function find(tabId: number, description: string): Promise<Hit[]> {
   const r = await send(tabId, { op: 'find', payload: { description } });
   if (!r?.success || typeof r.result !== 'string') return [];
-  return [...r.result.matchAll(/^- (\S+) "([^"]*)" \[ref=(e\d+)\](?: \(([^)]*)\))?/gm)]
-    .map((m) => ({ role: m[1], name: m[2], ref: m[3], state: m[4] ?? '' }));
+  // "- button "Buy Yes 27¢" [ref=e9] (checked) — below the viewport"
+  return [...r.result.matchAll(/^- (\S+) "([^"]*)" \[ref=(e\d+)\](?: \(([^)]*)\))?(?: — (.*))?$/gm)]
+    .map((m) => ({ role: m[1], name: m[2], ref: m[3], state: m[4] ?? '', where: m[5] ?? '' }));
 }
 
 export async function click(tabId: number, ref: string) {
@@ -53,34 +54,78 @@ export async function prepareOrder(opts: {
   const steps: PrepareStep[] = [];
   await ensureContentScript(tabId);
 
+  const word = side === 'YES' ? 'Yes' : 'No';
+  const c = (x: number) => Number((x * 100).toFixed(1));
+  const wantCents = bid !== undefined && ask !== undefined ? c(side === 'YES' ? ask : 1 - bid) : undefined;
+  /** The ticket's checked outcome radio ("Yes 27¢ 0"): its price says which leg is selected. */
+  const ticketCents = async () => {
+    const r = (await find(tabId, `${word} radio`)).filter((h) => h.role === 'radio' && new RegExp(`^${word}\\b`, 'i').test(h.name));
+    const m = r[0]?.name.match(/(\d+(?:\.\d+)?)¢/);
+    return m ? Number(m[1]) : undefined;
+  };
+  const sameLeg = async () => {
+    if (wantCents === undefined) return true;
+    const got = await ticketCents();
+    return got !== undefined && Math.abs(got - wantCents) <= 1.5;
+  };
+
   // 1. The leg. Sports pages: a moneyline button named by the slug suffix ("DRAW 16¢", "BAR 60¢").
-  //    Other multi-market pages: the row named by the leg. Single-market pages: nothing to pick.
+  //    Multi-outcome pages: each row has "Buy Yes 27¢ / Buy No 74¢" buttons, often far below the
+  //    fold: scroll the row into view by its label (search_page scans and scrolls), then click the
+  //    in-view button for the chosen side at this leg's price. Single-market pages: nothing to pick.
+  //    Afterwards the ticket must show this leg's price, or nothing is typed.
   if (legCount > 1) {
     say(`Choosing ${label}`);
     const suffix = marketSlug?.startsWith(`${eventSlug}-`) ? marketSlug.slice(eventSlug.length + 1) : '';
-    let picked = false;
-    if (suffix && /^[a-z]{2,6}$/.test(suffix)) {
+    const bySuffix = async () => {
+      if (!(suffix && /^[a-z][a-z0-9]{1,6}$/.test(suffix))) return false;
       const hits = await find(tabId, `${suffix} button`);
       const hit = hits.find((h) => h.role === 'button' && new RegExp(`^${esc(suffix)}(\\s|\\d|$)`, 'i').test(h.name));
-      if (hit) picked = await click(tabId, hit.ref);
-    }
-    if (!picked && bid !== undefined && ask !== undefined) {
-      // Multi-outcome pages list a "Buy Yes 24¢" / "Buy No 77¢" button per row, priced at the ask.
-      // Click it only if exactly one button carries this leg's price.
-      const c = (x: number) => `${Number((x * 100).toFixed(1))}¢`;
-      const name = side === 'YES' ? `Buy Yes ${c(ask)}` : `Buy No ${c(1 - bid)}`;
+      return hit ? click(tabId, hit.ref) : false;
+    };
+    const byRow = async () => {
+      if (wantCents === undefined) return false;
+      await send(tabId, { op: 'search_page', payload: { query: label } }).catch(() => undefined);
+      await new Promise((r) => setTimeout(r, 350));
+      const name = `Buy ${word} ${wantCents}¢`;
       const hits = (await find(tabId, `${name} button`)).filter((h) => h.role === 'button' && h.name.replace(/\s+/g, ' ') === name);
-      if (hits.length === 1) picked = await click(tabId, hits[0].ref);
-    }
-    if (!picked) {
+      const inView = hits.filter((h) => !/viewport/i.test(h.where));
+      const hit = inView.length >= 1 ? inView[0] : hits.length === 1 ? hits[0] : undefined;
+      return hit ? click(tabId, hit.ref) : false;
+    };
+    // Sports moneylines are labelled by team abbreviation + price ("COR 45¢", "DRAW 16¢"): try the
+    // abbreviations a team name usually gets, then the price alone on such short buttons.
+    const bySports = async () => {
+      if (side !== 'YES' || wantCents === undefined) return false;
+      const words = label.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/)
+        .filter((w) => w && !['FC', 'SC', 'CF', 'AC', 'CD', 'CA', 'AFC', 'SSC', 'CLUB', 'DE', 'THE', 'RC', 'SV', 'FK', 'SK'].includes(w));
+      const abbrs = [...new Set([words[0]?.slice(0, 3), words.map((w) => w[0]).join('').slice(0, 3), words[words.length - 1]?.slice(0, 3), label === 'Draw' ? 'DRAW' : '']
+        .filter((x): x is string => !!x && x.length >= 2))];
+      const short = (h: Hit) => h.role === 'button' && /^[A-Z][A-Z0-9]{1,4}\s+\d+(\.\d)?¢$/.test(h.name.trim());
+      const priceOk = (h: Hit) => { const m = h.name.match(/(\d+(?:\.\d)?)¢/); return !!m && Math.abs(Number(m[1]) - wantCents) <= 1; };
+      for (const ab of abbrs) {
+        const hit = (await find(tabId, `${ab} button`)).find((h) => short(h) && h.name.toUpperCase().startsWith(`${ab} `) && priceOk(h));
+        if (hit) return click(tabId, hit.ref);
+      }
+      const byPrice = (await find(tabId, `${wantCents}¢ button`)).filter((h) => short(h) && priceOk(h));
+      return byPrice.length === 1 ? click(tabId, byPrice[0].ref) : false;
+    };
+    const byLabel = async () => {
       const hits = await find(tabId, label);
       const hit = hits.find((h) => ['button', 'link', 'row', 'radio', 'option', 'tab'].includes(h.role)
         && h.name.toLowerCase().includes(label.toLowerCase()) && !NEVER.test(h.name));
-      if (hit) picked = await click(tabId, hit.ref);
+      return hit ? click(tabId, hit.ref) : false;
+    };
+    let picked = false;
+    for (const attempt of [bySuffix, bySports, byRow, byLabel, byRow]) {
+      if (!(await attempt())) continue;
+      // The ticket re-renders after the click: give it up to ~2s to show this leg.
+      for (let k = 0; k < 6 && !picked; k++) { await new Promise((r) => setTimeout(r, 350)); picked = await sameLeg(); }
+      if (picked) break;
     }
-    steps.push({ step: `Select “${label}”`, ok: picked, detail: picked ? undefined : 'could not find this market on the page' });
+    steps.push({ step: `Select “${label}”`, ok: picked, detail: picked ? undefined
+      : wantCents !== undefined && (await ticketCents()) !== undefined ? 'wrong outcome selected' : 'could not find this market on the page' });
     if (!picked) return { ok: false, steps };
-    await new Promise((r) => setTimeout(r, 400));
   }
 
   // 1b. Sell: switch the ticket to its Sell tab.
@@ -94,7 +139,6 @@ export async function prepareOrder(opts: {
   }
 
   // 2. The outcome in the order ticket: a radio "Yes 16¢" / "No 85¢".
-  const word = side === 'YES' ? 'Yes' : 'No';
   say(`Picking ${word}`);
   const want = new RegExp(`^${word}\\b`, 'i');
   let radios = (await find(tabId, `${word} radio`)).filter((h) => h.role === 'radio' && want.test(h.name));
@@ -106,6 +150,7 @@ export async function prepareOrder(opts: {
   }
   steps.push({ step: `Outcome ${word}`, ok: outcomeOk, detail: outcomeOk ? radios[0]?.name.replace(/\s+\d+$/, '') : 'order ticket not found' });
   if (!outcomeOk) return { ok: false, steps };
+  if (!(await sameLeg())) { steps.push({ step: 'Check the ticket', ok: false, detail: 'wrong outcome selected' }); return { ok: false, steps }; }
 
   // 3. The stake. Then stop: the Trade button is the user's.
   const sell = opts.mode === 'sell';

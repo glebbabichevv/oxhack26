@@ -10,6 +10,7 @@ import {
   type Position, type Quote, type Side,
 } from './ledger';
 import { fallbackHint, prepareOrder } from './prepareOrder';
+import { markPage, stylePage } from './pageStyle';
 
 export const API = 'https://horizon-api-iota.vercel.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -131,7 +132,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question });
-      return { queued: true, amount: c.amount, capped_from: c.capped, note: 'added to the plan; Horizon sets up the ticket and the user presses Trade' };
+      return { added_to_plan: true, amount: c.amount, capped_from: c.capped, note: 'Horizon will set up this ticket on Polymarket; the user presses Trade' };
     }
     case 'adjust_stake': {
       const p = await findPosition(String(args.position ?? ''));
@@ -139,12 +140,12 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const target = args.new_amount !== undefined ? Number(args.new_amount) : p.stake * Number(args.factor ?? 1);
       const q = await quoteOne(m, p.marketSlug);
       if (!q) return { error: 'no live price' };
-      if (target < p.stake - 0.005) { ctx.plan.push({ kind: 'sell', q, pos: p, fraction: 1 - target / p.stake, name: nameOf(p) }); return { queued: true }; }
+      if (target < p.stake - 0.005) { ctx.plan.push({ kind: 'sell', q, pos: p, fraction: 1 - target / p.stake, name: nameOf(p) }); return { added_to_plan: true }; }
       if (target > p.stake + 0.005) {
         const c = checkBet(await getAccount(), q, p.side, target - p.stake, !!args.override);
         if (!c.ok) return { error: c.error };
         ctx.plan.push({ kind: 'buy', q, side: p.side, amount: c.amount, name: nameOf(p) });
-        return { queued: true, capped: !!c.capped };
+        return { added_to_plan: true, capped: !!c.capped };
       }
       return { ok: true, unchanged: true };
     }
@@ -154,7 +155,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const q = await quoteOne(m, p.marketSlug);
       if (!q) return { error: 'no live price' };
       ctx.plan.push({ kind: 'sell', q, pos: p, fraction: 1, name: nameOf(p) });
-      return { queued: true };
+      return { added_to_plan: true };
     }
     case 'close_all': {
       const filter = String(args.filter ?? 'all');
@@ -174,7 +175,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
         n++;
       }
       done('ok', undefined, n ? `${n} to sell` : 'Nothing to sell');
-      return { queued: n };
+      return { added_to_plan: n };
     }
     case 'open_market_in_tab': {
       const done = stepper(ctx, 'shaping')('Opening the market');
@@ -201,8 +202,8 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const open = a.positions.filter((x) => x.status === 'open');
       await refresh(await quotes(m, open.map((p) => p.marketSlug)));
       const a2 = await getAccount();
-      return { budget: a2.bankroll, open_bets: open.length, in_play: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2),
-        loss_today: +lossToday(a2).loss.toFixed(2), loss_limit: +lossToday(a2).limit.toFixed(2) };
+      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2),
+        loss_today: +lossToday(a2).loss.toFixed(2), daily_loss_limit: +lossToday(a2).limit.toFixed(2) };
     }
     default:
       return { error: `unknown tool ${name}` };
@@ -229,7 +230,8 @@ async function openEvent(ctx: Pick<Ctx, 'tabId'>, eventSlug: string) {
 }
 
 const plainPageError = (e: string) => /ticket not found/i.test(e) ? "Polymarket's order box is not on screen"
-  : /could not find this market/i.test(e) ? 'This outcome is not visible on the page'
+  : /wrong outcome/i.test(e) ? "Polymarket's ticket shows a different outcome. Don't press Trade there"
+  : /could not find this market/i.test(e) ? 'Could not find this outcome on the page'
   : /amount field/i.test(e) ? "Could not find Polymarket's amount box"
   : /Sell tab/i.test(e) ? "Could not find Polymarket's Sell tab"
   : /Receiving end|Could not establish/i.test(e) ? 'The page is still loading'
@@ -250,6 +252,8 @@ export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q
   try {
     await openEvent(ctx, q.eventSlug);
     open('ok');
+    await stylePage(ctx.tabId);
+    void markPage(ctx.tabId, 'act');
     const ev = await decideEvent(ctx.model, q.eventSlug);
     const leg = ev.legs.find((l) => l.marketSlug === q.marketSlug);
     label = (leg?.label ?? q.label).replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
@@ -257,7 +261,8 @@ export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q
     const r = await prepareOrder({ tabId: ctx.tabId, eventSlug: q.eventSlug, marketSlug: q.marketSlug, label,
       legCount: ev.legs.filter((l) => l.decision).length, side, amount, bid: leg?.bid ?? q.bid, ask: leg?.ask ?? q.ask, mode,
       onProgress: (t) => { cur?.('ok'); cur = sh(t); } });
-    if (r.ok) { cur?.('ok'); return { ok: true, label }; }
+    if (r.ok) { cur?.('ok'); void markPage(ctx.tabId, 'ok'); return { ok: true, label }; }
+    void markPage(ctx.tabId, 'fail');
     const why = plainPageError(r.steps.filter((s) => !s.ok).map((s) => s.detail ?? s.step).join('; '));
     cur?.('fail', why);
     await fallbackHint(ctx.tabId, label, amount).catch(() => false);
@@ -294,8 +299,8 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
   if (/\b(close|sell|cash ?out|exit|get out)\b/.test(t)) {
     const filter = /\b(lost|losing|losers?|red|down)\b/.test(t) && !/\bedge\b/.test(t) ? 'losing' : /\b(edge|advantage|no longer|stale)\b/.test(t) ? 'no_edge'
       : /\b(winning|winners?|profit|green)\b/.test(t) ? 'winning' : 'all';
-    const r = await runTool(ctx, 'close_all', { filter }) as { queued: number };
-    return r.queued ? `Ready to sell ${r.queued} bet${r.queued === 1 ? '' : 's'}.` : 'Nothing to sell.';
+    const r = await runTool(ctx, 'close_all', { filter }) as { added_to_plan: number };
+    return r.added_to_plan ? `Ready to sell ${r.added_to_plan} bet${r.added_to_plan === 1 ? '' : 's'}.` : 'Nothing to sell.';
   }
 
   const scale = /\b(lower|reduce|cut|decrease|halve|shrink|less|raise|increase|double|boost|more)\b/.test(t) && /\b(stakes?|bets?|everything|all|positions?|them)\b/.test(t);
@@ -326,15 +331,15 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
     for (const p of s.picks ?? []) {
       if (added >= n || ctx.signal.stop) break;
       if (have.has(p.market)) continue;
-      const r = await runTool(ctx, 'place_bet', { market: p.market, side: p.side, amount: amt, override }) as { queued?: boolean };
-      if (r.queued) added++;
+      const r = await runTool(ctx, 'place_bet', { market: p.market, side: p.side, amount: amt, override }) as { added_to_plan?: boolean };
+      if (r.added_to_plan) added++;
     }
     return added ? 'Here is the plan.' : `Nothing ${where === 'all' ? '' : `in ${where} `}is a good bet right now. Horizon would wait.`;
   }
 
   if (/\b(how|status|portfolio|summary|doing|budget|p&l|pnl)\b/.test(t)) {
-    const s = await runTool(ctx, 'summarize_portfolio', {}) as { open_bets: number; result_so_far: number };
-    return s.open_bets ? `${s.open_bets} bets open, ${s.result_so_far >= 0 ? 'up' : 'down'} ${money(Math.abs(s.result_so_far))} so far.` : 'No bets yet.';
+    const s = await runTool(ctx, 'summarize_portfolio', {}) as { bets_user_placed: number; result_so_far: number };
+    return s.bets_user_placed ? `${s.bets_user_placed} bets placed, ${s.result_so_far >= 0 ? 'up' : 'down'} ${money(Math.abs(s.result_so_far))} so far.` : 'No bets placed yet.';
   }
   return 'Sorry, I did not catch that. Try "Bet on my 5 best tonight" or "Sell what lost its edge".';
 }
@@ -355,7 +360,7 @@ export async function llmAvailable(): Promise<boolean> {
 export async function planWithLLM(ctx: Ctx, text: string): Promise<string | undefined> {
   const contents: Content[] = [{ role: 'user', parts: [{ text }] }];
   const a = await getAccount();
-  const context = `budget $${a.bankroll}, ${a.positions.filter((p) => p.status === 'open').length} open bets placed through Horizon, daily loss limit ${Math.round(a.lossLimitPct * 100)}% of budget`;
+  const context = `the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up; daily loss limit ${Math.round(a.lossLimitPct * 100)}% of the budget. Horizon only sets up tickets; the user presses Trade on Polymarket.`;
   for (let i = 0; i < 25 && !ctx.signal.stop; i++) {
     let res: Response;
     try {

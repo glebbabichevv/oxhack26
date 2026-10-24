@@ -197,3 +197,36 @@
   .hz-orb-label::before, .hz-loader i, .hz-skeleton::after, .hz-pulse-dot, .hz-step, .hz-bar, .hz-enter, .hz-reason-pill { animation: none !important; }
   .hz-drawer, .hz-chip, .hz-cta, .hz-composer { transition: none; }
 }
+
+/* ── Messages (Argos .argos-bubble-user / .ai-message-content / .argos-w) ── */
+.hz-bubble-user {
+  background:
+    linear-gradient(125deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.14) 40%, rgba(255,255,255,0.05) 58%, rgba(255,255,255,0.28) 100%),
+    linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.10), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.10)),
+    rgba(244, 245, 247, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(255,255,255,0.22), 0 2px 12px rgba(15, 23, 42, 0.08);
+  animation: hz-reason-in 0.34s var(--ease-soft) both;
+}
+.hz-msg { font-size: 13px; line-height: 1.62; letter-spacing: -0.006em; color: var(--hz-ink); }
+.hz-w { animation: hz-w-in 420ms cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+@keyframes hz-w-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hz-w, .hz-bubble-user { animation: none; } }
+
+/* ── Argos assistant message typography (styles.css .ai-message-content, .argos-w) ── */
+.ai-message-content .prose { font-size: 13px; line-height: 1.62; }
+/* Scoped to the markdown block, so Horizon's own cards inside a message keep their sizes. */
+.ai-message-content .prose h1 { font-size: 17px; line-height: 1.32; letter-spacing: -0.021em; }
+.ai-message-content .prose h2 { font-size: 15px; line-height: 1.4; letter-spacing: -0.014em; }
+.ai-message-content .prose h3 { font-size: 13px; line-height: 1.45; font-weight: 600; }
+.ai-message-content .prose p, .ai-message-content .prose li, .ai-message-content .prose td, .ai-message-content .prose th, .ai-message-content .prose blockquote { font-size: 13px; line-height: 1.62; }
+.ai-message-content code { font-size: 12px; }
+.ai-message-content :not(pre) > code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-weight: 500; padding: 1px 5px; border-radius: 5px; background: rgba(15, 23, 42, 0.06); color: #0f172a; overflow-wrap: anywhere; }
+.ai-message-content code::before, .ai-message-content code::after { content: none; }
+.ai-message-content .katex { font-size: 1.05em; }
+.ai-message-content .katex-display { margin: 0.6em 0; overflow-x: auto; overflow-y: hidden; }
+.argos-w { animation: argos-w-in 420ms cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+@keyframes argos-w-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .argos-w { animation: none; } }

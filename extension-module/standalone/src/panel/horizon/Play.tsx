@@ -10,6 +10,7 @@ import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Mo
 import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Quote, type Side } from './ledger';
 import { fillTicket, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
+import { AssistantMessage, UserMessage } from './argos/Message';
 
 export const UP = '#15803d';
 export const DOWN = '#e11d48';
@@ -491,7 +492,8 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
     } catch (e) { answer = `Stopped: ${(e as Error).message ?? e}`; }
     if (sig.current.stop) { answer = 'Stopped.'; ctx.plan = []; }
     for (const item of ctx.plan) journalOf(item, 'agent', 'shown');
-    // With a plan on screen, one plain line beats the model's paragraph.
+    // The model's words only when they are plain and on-message; with a plan, one line of ours.
+    if (answer && /\b(demo|balance|portfolio|simulat|paper)/i.test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
     if (ctx.plan.length) {
       const n = ctx.plan.length, buys = ctx.plan.every((x) => x.kind === 'buy');
       answer = buys ? `Here ${n === 1 ? 'is 1 good bet' : `are ${n} good bets`}.` : `Here ${n === 1 ? 'is 1 change' : `are ${n} changes`}.`;
@@ -543,15 +545,24 @@ function PlanList({ model, tabId, plan }: { model: Model; tabId?: number; plan: 
 
 export function AgentRun({ model, tabId, run, onBack }: { model: Model; tabId?: number; run: Run; onBack: () => void }) {
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }); }, [run.steps.length, run.answer]);
+  // Scroll only the panel's own scroller, never the document (which would slide under the header).
+  useEffect(() => {
+    const el = endRef.current, box = el?.closest('.overflow-y-auto') as HTMLElement | null;
+    if (box) box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+  }, [run.steps.length, run.answer, run.busy]);
   return (
-    <div className="px-4 pb-6 pt-3">
+    <div className="space-y-4 px-4 pb-6 pt-4">
       {!run.busy ? <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-footnote font-medium text-[#64748b] hover:text-[#0f172a]"><Icon d={I.back} size={14} /> Back</button> : null}
-      <h1 className="hz-display mt-2 text-[28px] leading-[1.1]">{run.task}</h1>
-      {run.busy ? <div className="mt-3"><Thinking steps={run.steps} fallback="Thinking" /></div> : null}
-      <Steps steps={run.steps} />
-      {run.answer && !run.busy ? <p className="hz-enter mt-4 text-subhead font-medium">{run.answer}</p> : null}
-      {!run.busy && run.plan.length ? <PlanList model={model} tabId={tabId} plan={run.plan} /> : null}
+      <UserMessage text={run.task} />
+      <AssistantMessage text={!run.busy ? run.answer : undefined} fresh>
+        {run.busy ? <div><Thinking steps={run.steps} fallback="Thinking" /></div> : null}
+        {run.steps.length ? (
+          <div className="hz-card rounded-panel px-3.5 pb-3 pt-1">
+            <Steps steps={run.steps} />
+          </div>
+        ) : null}
+        {!run.busy && run.plan.length ? <PlanList model={model} tabId={tabId} plan={run.plan} /> : null}
+      </AssistantMessage>
       <div ref={endRef} />
     </div>
   );

@@ -12,6 +12,7 @@ import type { Account } from './ledger';
 import { pageDrive } from './agent';
 import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
 import { flush } from './journal';
+import { Md } from './argos/Message';
 import './horizon-mode.css';
 
 const API = 'https://horizon-api-iota.vercel.app';
@@ -103,6 +104,15 @@ function useWidth<T extends HTMLElement>() {
 
 // ---------- Details: the full analysis, one tap away ----------
 
+/** The model and the decision rule, in the same notation as backend/model.py. */
+const MATH = String.raw`Horizon corrects the market price $p$ for the time left $h$ (hours to the scheduled end):
+
+$$q = \sigma\!\left(\beta_0 + \beta_1\,\operatorname{logit} p + \beta_2 \log\tfrac{h}{24} + \beta_3\,\operatorname{logit} p \cdot \log\tfrac{h}{24}\right)$$
+
+Its range $[q_{10}, q_{90}]$ comes from 40 refits on resampled events. With cost $c$ = half the spread (at least 1¢) plus Polymarket's fee, it backs **Yes** only if $q_{10} > p + c$ and **No** only if $q_{90} < p - c$, and stakes a quarter of the Kelly fraction:
+
+$$f = \min\!\left(\tfrac14 \cdot \frac{q_{10} - (p + c)}{1 - (p + c)},\; 5\%\right)$$`;
+
 function Details({ model, slug, a, onBack }: { model?: Model; slug?: string; a?: Account; onBack: () => void }) {
   const [ev, setEv] = useState<{ title: string; legs: Leg[] }>();
   useEffect(() => { if (model && slug) decideEvent(model, slug).then(setEv).catch(() => setEv(undefined)); }, [model, slug]);
@@ -116,7 +126,7 @@ function Details({ model, slug, a, onBack }: { model?: Model; slug?: string; a?:
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 6l-6 6 6 6" /></svg> Back
       </button>
       <h1 className="hz-display mt-2 text-[30px] leading-[1.08]">{ev?.title ?? 'How Horizon decides'}</h1>
-      <p className="mt-2 text-body text-[#475569]">Horizon corrects Polymarket prices for time left to the end: long shots win more often than priced, favourites less. It bets only when the gap beats the spread, the fee and its own uncertainty, and sizes bets at a quarter of the Kelly stake, max 5% of your budget.</p>
+      <Md className="mt-2" text={MATH} />
       {legs.length ? (
         <section className="mt-4">
           {legs.map((l) => {
