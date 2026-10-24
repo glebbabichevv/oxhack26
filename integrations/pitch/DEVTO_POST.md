@@ -94,6 +94,6 @@ pitch in under an hour. [One line about Delta, if used.]
 
 **Stack:** Python, pandas, scikit-learn, FastAPI, Next.js, Tailwind, Recharts.
 
-Repo: [GitHub URL] · Demo: [public URL] · Devpost: [Devpost URL]
+Repo: https://github.com/glebbabichevv/oxhack26 · Demo: https://horizon-two-gilt.vercel.app · Devpost: [Devpost URL]
 
 *Built at OxHack '26, Mathematical Institute, Oxford, by [team names].*
