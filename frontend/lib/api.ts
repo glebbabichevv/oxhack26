@@ -56,6 +56,7 @@ export type Backtest = {
   worst_trades: WorstTrade[];
   assumptions: string[];
   return_ci?: [number, number];
+  by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };
 
 export async function getJSON<T>(path: string): Promise<T> {

@@ -72,7 +72,7 @@ export default function Home() {
 
         <Hero
           first="Polymarket prices are overconfident."
-          second="Correcting them pays, in the last week."
+          second="Correcting them pays, most near resolution."
           lead={backtest
             ? `${int(backtest.n_train_markets + backtest.n_test_markets)} resolved markets. Trained on events that ended before ${dateLong(backtest.cutoff)}, tested on the ${int(backtest.n_test_markets)} that ended after.`
             : undefined}
@@ -137,18 +137,23 @@ export default function Home() {
   );
 }
 
-// Horizons where the with-costs backtest makes money per trade, e.g. "12h–7d".
-function payingRange(b: Backtest) {
-  const paying = b.by_horizon.filter((h) => h.with_costs.mean_return_per_trade > 0).map((h) => h.horizon_hours).sort((x, y) => x - y);
-  const losing = b.by_horizon.filter((h) => h.with_costs.mean_return_per_trade <= 0).map((h) => h.horizon_hours).sort((x, y) => x - y);
+const MIN_DOMAIN_TRADES = 100; // below this a domain's CI is too wide to headline
+
+const domainName = (d: string) => (d[0].toUpperCase() + d.slice(1)).replace("_", " & ");
+
+// Market types whose with-costs return CI clears zero on a real sample, e.g. "Sports".
+function whereItPays(b: Backtest) {
+  const clear = (b.by_domain ?? []).filter((d) => d.n_trades >= MIN_DOMAIN_TRADES && d.return_ci && d.return_ci[0] > 0);
+  if (!clear.length) return { value: "Nowhere clear", note: "no market type's CI clears zero" };
+  const top = clear[0];
   return {
-    value: paying.length ? `${horizonShort(paying[0])}–${horizonShort(paying[paying.length - 1])}` : "Nowhere",
-    note: losing.length ? `${losing.map(horizonShort).join(", ")} out: no edge after costs` : "every horizon pays",
+    value: clear.map((d) => domainName(d.domain)).join(", "),
+    note: `${bankroll(top.return)}, CI ${bankroll(top.return_ci![0])} to ${bankroll(top.return_ci![1])}; other types' CIs include 0`,
   };
 }
 
 function Kpis({ b }: { b: Backtest }) {
-  const where = payingRange(b);
+  const where = whereItPays(b);
   const brier = brierVerdict(b.overall.brier_model, b.overall.brier_market);
   return (
     <KpiRow
@@ -226,8 +231,37 @@ function BacktestSection({ b }: { b: Backtest }) {
             );
           })}
         </div>
+        {b.by_domain?.length ? <DomainReturns rows={b.by_domain} /> : null}
       </FramedCard>
     </Section>
+  );
+}
+
+// Return after costs per market type with its 90% CI: a range bar around zero, dot at the estimate.
+function DomainReturns({ rows }: { rows: NonNullable<Backtest["by_domain"]> }) {
+  const shown = rows.filter((d) => d.n_trades >= 30 && d.return_ci);
+  const lo = Math.min(0, ...shown.map((d) => d.return_ci![0]));
+  const hi = Math.max(...shown.map((d) => d.return_ci![1]), 0.01);
+  const x = (v: number) => `${((v - lo) / (hi - lo)) * 100}%`;
+  return (
+    <div className="mt-5 border-t border-hairline-soft pt-3">
+      <div className="mb-2 text-[13px] font-semibold text-ink-strong">Where: return after costs by market type, with 90% CI</div>
+      {shown.map((d) => {
+        const clear = d.return_ci![0] > 0;
+        return (
+          <div key={d.domain} className="grid grid-cols-[112px_1fr_64px] items-center gap-3 py-1 text-[13px] tabular-nums">
+            <span className="truncate text-ink-muted" title={`${int(d.n_trades)} trades`}>{domainName(d.domain)}</span>
+            <div className="relative h-2" aria-label={`${bankroll(d.return)}, 90% CI ${bankroll(d.return_ci![0])} to ${bankroll(d.return_ci![1])}`}>
+              <div className="absolute inset-y-0 w-px bg-hairline" style={{ left: x(0) }} />
+              <div className={`absolute inset-y-0 rounded-[2px] ${clear ? "bg-up-tint" : "bg-fill-soft"}`} style={{ left: x(d.return_ci![0]), right: `calc(100% - ${x(d.return_ci![1])})` }} />
+              <div className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white ${clear ? "bg-up" : "bg-ink-faint"}`} style={{ left: x(d.return) }} />
+            </div>
+            <span className={`text-right font-semibold ${clear ? "text-up" : "text-ink-muted"}`}>{bankroll(d.return)}</span>
+          </div>
+        );
+      })}
+      <p className="mt-1.5 text-[12px] text-ink-faint">Green: the interval clears zero. Grey: can&apos;t tell from this sample.</p>
+    </div>
   );
 }
 
