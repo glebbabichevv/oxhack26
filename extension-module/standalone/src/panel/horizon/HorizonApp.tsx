@@ -147,7 +147,7 @@ function Details({ model, slug, a, onBack }: { model?: Model; slug?: string; a?:
                 <div className="font-semibold text-[#0f172a]">{cleanLabel(l.label)}</div>
                 {out ? <div className="text-[#64748b]">Market {pct(d.price)}: outside {pct(band[0])}–{pct(band[1])}, not traded.</div> : (
                   <div className="text-[#475569]">
-                    Market {pct(d.price)} · Horizon {pct(d.q)} (range {pct(d.lo)}–{pct(d.hi)}) · {d.action === 'NO_TRADE' ? 'no trade' : `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · suggested ${(d.kelly * 100).toFixed(1)}% = $${(d.kelly * bankroll).toFixed(2)}`}
+                    Market {pct(d.price)} · Horizon {pct(d.q)} (range {pct(d.lo)}–{pct(d.hi)}) · {d.wait ? `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · wait: enter within 24h of the end` : d.action === 'NO_TRADE' ? 'no trade' : `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · suggested ${(d.kelly * 100).toFixed(1)}% = $${(d.kelly * bankroll).toFixed(2)}`}
                     {d.action !== 'NO_TRADE' ? <Scale d={d} /> : null}
                   </div>
                 )}

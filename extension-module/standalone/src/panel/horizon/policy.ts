@@ -1,17 +1,16 @@
 /**
- * Entry policy V3 (chosen on validation in the policy playoff): act only when the advantage after
- * costs is at least 1¢ per $1 share, and only from 24h before the scheduled end. Earlier than that
- * Horizon says "wait" and when. Kept apart from horizon.ts so the fee-aware model stays a file copy;
- * if a newer horizon.ts encodes the same rule itself, this stays consistent with it.
+ * Entry policy V3 lives in horizon.ts now (decide() reads model.json's policy: advantage after
+ * costs >= 1¢, enter only within 24h of the end). An early market comes back as NO_TRADE with
+ * wait: true and wouldBe = the action it will be. These are thin readers of that decision.
  */
-import type { Decision } from './horizon';
+import type { Action, Decision } from './horizon';
 
-export const MIN_NET_EDGE = 0.01;
-export const ENTER_HOURS = 24;
 export type Verdict = 'BET' | 'WAIT' | 'SKIP';
 
 export function verdictOf(d: Decision): Verdict {
-  if (d.action === 'NO_TRADE' || d.netEdge < MIN_NET_EDGE) return 'SKIP';
-  return d.hours > ENTER_HOURS ? 'WAIT' : 'BET';
+  if (d.wait && d.wouldBe) return 'WAIT';
+  return d.action === 'NO_TRADE' ? 'SKIP' : 'BET';
 }
+/** The side Horizon backs now, or will back once the window opens. */
+export const intendedAction = (d: Decision): Action => (d.action !== 'NO_TRADE' ? d.action : d.wait && d.wouldBe ? d.wouldBe : 'NO_TRADE');
 export const verdictRank: Record<Verdict, number> = { BET: 2, WAIT: 1, SKIP: 0 };

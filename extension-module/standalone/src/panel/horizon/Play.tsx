@@ -11,7 +11,7 @@ import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
-import { verdictOf, verdictRank } from './policy';
+import { intendedAction, verdictOf, verdictRank } from './policy';
 import { API } from './agent';
 
 /** "Why wait" numbers from the backtest (return per $1 by horizon, after costs); none if offline. */
@@ -46,15 +46,15 @@ export const money = (x: number) => {
   return `${x < 0 ? '−' : ''}$${s}`;
 };
 const pct = (x: number) => `${Math.round(x * 100)}%`;
-const sideOf = (d: Decision): Side | undefined => (d.action === 'BUY_YES' ? 'YES' : d.action === 'BUY_NO' ? 'NO' : undefined);
+const sideOf = (d: Decision): Side | undefined => { const a = intendedAction(d); return a === 'BUY_YES' ? 'YES' : a === 'BUY_NO' ? 'NO' : undefined; };
 const clean = (s: string) => s.replace(/\s*\(.*\)\s*$/, '').replace(/\s+/g, ' ').trim();
 /** "Price too low" when Horizon backs Yes, "too high" when it backs No, else fair. */
-const priceWord = (d: Decision) => (verdictOf(d) === 'SKIP' ? 'Price fair, skip' : d.action === 'BUY_YES' ? 'Price too low' : 'Price too high');
+const priceWord = (d: Decision) => (verdictOf(d) === 'SKIP' ? 'Price fair, skip' : intendedAction(d) === 'BUY_YES' ? 'Price too low' : 'Price too high');
 const stakeFor = (a: Account | undefined, d: Decision) => Math.max(1, Math.floor(a ? suggested(a, d) : 0));
 /** One plain reason per decision. */
-export const reasonOf = (d: Decision) => d.action === 'BUY_YES'
+export const reasonOf = (d: Decision) => intendedAction(d) === 'BUY_YES'
   ? (d.price < 0.5 ? 'Long shots like this come true more often than their price says.' : 'Horizon thinks this is more likely than the price says.')
-  : d.action === 'BUY_NO'
+  : intendedAction(d) === 'BUY_NO'
     ? (d.price > 0.5 ? 'Favourites like this lose more often than their price says.' : 'Horizon thinks this is less likely than the price says.')
     : 'The price looks about right.';
 
