@@ -52,7 +52,7 @@ Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabe
 Out-of-time test: train = events that ended before 2026-05-18 (23,838 markets); test = markets of the remaining events that resolved after the cutoff (10,579). Legs of one event never straddle the split; 260 legs that resolved before the cutoff were dropped from test (TheMarkz3's catch — they leaked time). Prices 3–97% only; 1¢ cost floor (no historical spreads).
 - **Calibration:** slope ≈ 0.85 at every horizon, same in train and test → prices are overconfident: 10–35¢ longshots underpriced, favourites overpriced; the 0–10¢ tail is about fair (24h: 3.0% YES, n=3,904).
 - **Model beats the market** out of time: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940 (simple 4-coefficient model, picked on validation).
-- **Money after costs:** 7,106 trades, +3.05 starting bankrolls (+305%, additive, ¼ Kelly), 90% CI [1.84, 4.40] by event bootstrap; max drawdown 42%; hit rate 24%. Naive "always back the favourite": −7.41.
+- **Money after costs:** 7,106 trades, +3.05 starting bankrolls (+304% on screen, additive, ¼ Kelly), 90% CI [1.84, 4.40] by event bootstrap; max drawdown 42%; hit rate 24%. Naive "always back the favourite": −7.41.
 - **When:** return per $1 trade grows toward resolution: 30d +4.6%, 7d +4.6%, 3d +7.3%, 1d +14.3%, 12h +16.3% (each horizon backtested on its own).
 - **Where:** sports +1.85 [1.11, 2.63] (4,475 trades), science/tech +0.42 [0.16, 0.72]; politics +0.35, geopolitics, economics, culture, crypto all have CIs touching zero. `by_domain[]` is in `/api/backtest`.
 - **Earlier 3.1k sample (TheMarkz3)** said "politics, a month out": it did not replicate on 11× more data. Keep it in the pitch as the honesty moment.
@@ -93,7 +93,7 @@ At the start of every session, ask the human which role they have (if not obviou
 - From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
 
 ## API contract (Role A maintains this) — v1
-Base URL: `https://horizon-api-five.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
+**Demo screen: https://horizon-jet-mu.vercel.app** · API base URL: `https://horizon-api-five.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
 
 `GET /api/live` → open markets with a decision
 ```json
