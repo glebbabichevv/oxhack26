@@ -23,6 +23,9 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [x] [Ayaz] Open markets → `data/live.csv` (`integrations/fetch_live.py`)
 - [x] [Ayaz] Sanity checks (`integrations/check_data.py`)
 - [x] [TheMarkz3] First pipeline + 3.1k-market sample and the calibration check that caught the sign flip (`integrations/polymarket.py`, `calibration_check.py`) — superseded as the main dataset by Ayaz's
+- [x] [Ayaz] Domain fix: tweet/post-count and `mention-markets` markets → culture (PR #4)
+- [x] [Ayaz] /qa of the main screen (PR #5) — 6 issues sent to B/A inboxes 15:35
+- [ ] [Ayaz] Refresh `data/live.csv` right before the demo and the backup video: `python integrations/fetch_live.py`
 - [ ] If Polymarket blocks you for >30 min: switch to Manifold (`/v0/search-markets?filter=resolved` + `/v0/bets`)
 
 ### Everyone
