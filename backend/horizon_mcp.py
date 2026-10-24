@@ -1,7 +1,7 @@
 """Horizon as an MCP server: two tools for a browser agent (Argos), stateless JSON-RPC over POST.
 
 Same math as extension-module/horizon.ts and backend/model.py, in pure Python from
-results/model.json (no sklearn at runtime). Parity: `python3 backend/horizon_mcp.py parity capsule/seal-<ts>.json`.
+results/model.json (no sklearn at runtime). Parity: `python3 backend/horizon_mcp.py parity capsule/seal-<ts>.json` (or a fee fixture from parity_fees.py).
 
 Transport: MCP Streamable HTTP without sessions. POST /mcp takes a JSON-RPC message (or batch) and
 answers application/json; notifications get 202; GET /mcp is 405 (no server-initiated stream).
@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-MODEL = json.loads((Path(__file__).parent / "results" / "model.json").read_text())
+MODEL_PATH = Path(__file__).parent / "results" / "model.json"
 GAMMA = "https://gamma-api.polymarket.com"
 SERVER_INFO = {"name": "horizon", "version": "1.0.0"}
 FALLBACK_PROTOCOL = "2025-06-18"
@@ -27,11 +27,54 @@ def _clip(x, a, b):
     return min(max(x, a), b)
 
 
-def _features(price, hours):
-    p = _clip(price, MODEL["eps"], 1 - MODEL["eps"])
-    lp = math.log(p / (1 - p))
-    lh = math.log(_clip(hours, 12, 720) / 24)  # stay inside the trained range
-    return [lp, lh, lp * lh]
+# A model file names its features; each is a product (" * ") of these factors. The default model is
+# ["logit(p)", "log(clip(hours, 12, 720) / 24)", "logit(p) * log(clip(hours, 12, 720) / 24)"];
+# "domain=<name>" (1 if the market's domain is <name>, else 0) lets a per-domain model drop in.
+LOGIT_P = "logit(p)"
+LOG_H = "log(clip(hours, 12, 720) / 24)"
+DEFAULT_FEATURES = [LOGIT_P, LOG_H, f"{LOGIT_P} * {LOG_H}"]
+
+
+def parse_features(names):
+    """Feature names -> list of factor tuples; raises ValueError on anything this code can't compute."""
+    parsed = []
+    for name in names or DEFAULT_FEATURES:
+        factors = tuple(f.strip() for f in name.split(" * "))
+        for f in factors:
+            if f not in (LOGIT_P, LOG_H) and not (f.startswith("domain=") and len(f) > 7):
+                raise ValueError(f"unknown feature factor {f!r} in {name!r}")
+        parsed.append(factors)
+    return parsed
+
+
+def load_model(path=MODEL_PATH):
+    """Read and validate a model file (same format as results/model.json)."""
+    m = json.loads(Path(path).read_text()) if not isinstance(path, dict) else path
+    m["_features"] = parse_features(m.get("features"))
+    for fit in [m["main"], *m["boot"]]:
+        if len(fit["coef"]) != len(m["_features"]):
+            raise ValueError(f"{len(fit['coef'])} coefficients for {len(m['_features'])} features")
+    return m
+
+
+MODEL = load_model()
+
+
+def model_version(m=None):
+    return (m or MODEL).get("version") or "unversioned"
+
+
+def _features(price, hours, domain=None, m=None):
+    m = m or MODEL
+    p = _clip(price, m["eps"], 1 - m["eps"])
+    val = {LOGIT_P: math.log(p / (1 - p)), LOG_H: math.log(_clip(hours, 12, 720) / 24)}  # inside the trained range
+    out = []
+    for factors in m["_features"]:
+        x = 1.0
+        for f in factors:
+            x *= val[f] if f in val else float(domain == f[7:])
+        out.append(x)
+    return out
 
 
 def _prob(fit, x):
@@ -63,16 +106,32 @@ def _horizon_label(h):
     return f"{round(h / 24)}d" if h >= 48 else f"{max(1, round(h))}h"
 
 
-def decide(price, hours, domain, spread=None):
-    """price = order-book mid, spread = ask - bid (None if unknown), hours = to the scheduled end."""
-    m = MODEL
+def fee_of(mk, domain, m=None):
+    """(rate, exponent) of a Gamma market's taker fee: its own feeSchedule, else the model's domain table; 0 if off."""
+    m = m or MODEL
+    if not mk.get("feesEnabled"):
+        return 0.0, 1.0
+    sched = mk.get("feeSchedule") or {}
+    rate = sched.get("rate")
+    if rate is None:
+        rate = (m.get("fee_rates") or {}).get(domain, (m.get("fee_rates") or {}).get("other", 0.0))
+    return float(rate), float(sched.get("exponent") or 1)
+
+
+def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponent=1.0):
+    """price = order-book mid, spread = ask - bid (None if unknown), hours = to the scheduled end.
+    Taker fee per share = fee_rate * (p(1-p))**fee_exponent (fee_of(market)); fee_rate None = the domain's rate."""
+    m = m or MODEL
     has_spread = spread is not None and math.isfinite(spread)
-    cost = max(spread / 2, m["min_half_spread"]) if has_spread else m["min_half_spread"]
+    if fee_rate is None:
+        fee_rate = (m.get("fee_rates") or {}).get(domain, (m.get("fee_rates") or {}).get("other", 0.0))
+    fee = fee_rate * (price * (1 - price)) ** fee_exponent
+    cost = (max(spread / 2, m["min_half_spread"]) if has_spread else m["min_half_spread"]) + fee
     base = {"price": price, "hours": hours, "domain": domain, "cost": cost}
     if not (m["tradable"][0] <= price <= m["tradable"][1]):
         return {**base, "q": price, "lo": price, "hi": price, "action": "NO_TRADE", "kelly": 0.0, "net_edge": 0.0,
                 "reason": f"Market at {price * 100:.1f}%: too close to certain, a {round(cost * 100)}¢ cost exceeds any edge"}
-    x = _features(price, hours)
+    x = _features(price, hours, domain, m)
     q = _prob(m["main"], x)
     qs = [_prob(f, x) for f in m["boot"]]
     lo = _percentile(qs, m["interval_percentiles"][0])
@@ -101,7 +160,8 @@ def _best_window_note():
     r = {h["horizon_hours"]: h["mean_return_per_trade"] for h in MODEL["by_horizon"]}
     near = sorted([r[12], r[24]])
     far = sorted([r[168], r[720]])
-    return (f"In the out-of-time backtest (10,579 markets resolved after {MODEL['train_cutoff']}), return per $1 trade "
+    n_test = (MODEL.get("metrics") or {}).get("n_test_markets", 10579)
+    return (f"In the out-of-time backtest ({n_test:,} markets resolved after {MODEL['train_cutoff']}), return per $1 trade "
             f"was highest 12–24h before the end (≈{near[0] * 100:.0f}–{near[1] * 100:.0f}%), vs ≈{r[72] * 100:.0f}% at 3d "
             f"and ≈{far[0] * 100:.0f}–{far[1] * 100:.0f}% at 7d–30d. That is an average over many markets, not a forecast "
             "for this one. The edge was solid only in sports.")
@@ -153,7 +213,9 @@ def _leg(mk, event, now):
     if not hours > 0:
         return {"question": question, "skip": "past its end date"}
     tags = [t.get("slug") for t in (mk.get("tags") or []) + (event.get("tags") or []) if t.get("slug")]
-    d = decide((bid + ask) / 2, hours, domain_of(tags), ask - bid)
+    domain = domain_of(tags)
+    rate, exp = fee_of(mk, domain)
+    d = decide((bid + ask) / 2, hours, domain, ask - bid, fee_rate=rate, fee_exponent=exp)
     return {
         "question": question,
         "event": event.get("slug"),
@@ -198,7 +260,7 @@ def horizon_check(slug):
         "best_window": _best_window_note(),
         "method": ("Horizon recalibrates the order-book mid with a 4-coefficient logistic model fitted on 23,838 resolved "
                    "Polymarket markets; it trades only if the model's 10–90% bootstrap interval clears price ± cost "
-                   "(cost = max(spread/2, 1¢)), sizes by quarter-Kelly capped at 5%, and skips prices outside 3–97%."),
+                   "(cost = max(spread/2, 1¢) + Polymarket's taker fee for that market), sizes by quarter-Kelly capped at 5%, and skips prices outside 3–97%."),
     }
 
 
@@ -349,7 +411,8 @@ if __name__ == "__main__" and len(sys.argv) == 3 and sys.argv[1] == "parity":
     seal = json.loads(Path(sys.argv[2]).read_text())
     worst, mismatched = 0.0, 0
     for r in seal["markets"]:
-        d = decide(r["price_yes"], r["hours_to_resolution"], r["domain"], r.get("spread"))
+        d = decide(r["price_yes"], r["hours_to_resolution"], r["domain"], r.get("spread"),
+                   fee_rate=r.get("fee_rate", 0.0), fee_exponent=r.get("fee_exponent", 1.0))  # seals predate fees
         worst = max(worst, abs(d["q"] - r["q_yes"]), abs(d["lo"] - r["q_low"]), abs(d["hi"] - r["q_high"]),
                     abs(d["net_edge"] - r["net_edge"]))
         mismatched += d["action"] != r["action"]

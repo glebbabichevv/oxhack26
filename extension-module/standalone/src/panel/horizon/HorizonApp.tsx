@@ -7,9 +7,10 @@
  * All maths is horizon.ts (parity-checked against the Python model); prices come from Gamma.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { decide, decideEvent, domainOf, scanTag, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
-import { Chip, When, cents, loadModel, pct, slugFrom, when } from './HorizonCard';
-import { fallbackHint, prepareOrder, type PrepareResult } from './prepareOrder';
+import { decide, decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
+import { When, cents, loadModel, pct, slugFrom, when } from './HorizonCard';
+import type { Account } from './demo';
+import { AccountBar, Agent, BetBox, MyBets, PlainCall, Settings, Tabs, Tonight, useAccount, useMarking, type TabName } from './Play';
 import './horizon-mode.css';
 
 const API = 'https://horizon-api-iota.vercel.app';
@@ -20,16 +21,7 @@ const MARKET = '#a1a1aa';
 const INK = '#111113';
 const BANKROLL_KEY = 'horizonBankroll';
 
-// ---------- state: bankroll and the active tab ----------
-
-function useBankroll(): [number, (v: number) => void] {
-  const [v, setV] = useState(1000);
-  useEffect(() => {
-    void chrome.storage.local.get(BANKROLL_KEY).then((r) => { const n = Number(r[BANKROLL_KEY]); if (n > 0) setV(n); }).catch(() => {});
-  }, []);
-  const set = useCallback((n: number) => { setV(n); void chrome.storage.local.set({ [BANKROLL_KEY]: n }); }, []);
-  return [v, set];
-}
+// ---------- the active tab ----------
 
 function useActiveTab() {
   const [tab, setTab] = useState<{ id?: number; url?: string; title?: string }>({});
@@ -51,25 +43,30 @@ function useActiveTab() {
 // ---------- the app ----------
 
 export function HorizonApp() {
-  const [bankroll, setBankroll] = useBankroll();
+  const account = useAccount();
+  const tab = useActiveTab();
+  const onEvent = !!slugFrom(tab.url);
+  const [view, setView] = useState<TabName>(onEvent ? 'market' : 'tonight');
+  const [settings, setSettings] = useState(false);
+  const [model, setModel] = useState<Model>();
+  useEffect(() => { void loadModel().then(setModel); }, []);
+  // Follow the page: landing on a Polymarket event opens "This market".
+  const lastSlug = useRef<string | undefined>(undefined);
+  useEffect(() => { const s = slugFrom(tab.url); if (s && s !== lastSlug.current) setView('market'); lastSlug.current = s; }, [tab.url]);
+  useMarking(model, account);
+  const openCount = account?.positions.filter((p) => p.status === 'open').length ?? 0;
   return (
     <div className="hz-mode flex h-full flex-col bg-white">
-      <div className="flex items-center justify-between gap-3 border-b border-black/[0.08] px-4 py-2.5">
-        <span className="flex items-center gap-2">
-          <img src="icons/icon48.png" alt="" className="h-[18px] w-[18px] rounded-[5px]" />
-          <span className="hz-serif text-[16px] font-semibold tracking-[-0.01em]">Horizon</span>
-          <span className="hidden text-[11px] text-[#71717a] min-[420px]:inline">prediction-market analyst</span>
-        </span>
-        <label className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-[#71717a]" title="Your bankroll: ¼-Kelly stakes are sized from it. Stored only in this browser.">
-          bankroll $
-          <input
-            type="number" min={1} step={100} value={bankroll}
-            onChange={(e) => { const n = Number(e.target.value); if (n > 0) setBankroll(n); }}
-            className="w-[64px] border-b border-black/[0.15] bg-transparent text-right text-[12px] font-semibold text-[#111113] outline-none focus:border-[#111113]"
-          />
-        </label>
+      {/* Chrome's side-panel title bar already shows the Horizon name and icon; no second brand row. */}
+      <AccountBar a={account} onSettings={() => setSettings((x) => !x)} />
+      {settings ? null : <Tabs tab={view} setTab={setView} openCount={openCount} />}
+      <div className="relative min-h-0 flex-1 overflow-y-auto">
+        {settings ? <Settings a={account} onClose={() => setSettings(false)} />
+          : view === 'tonight' ? (model ? <Tonight model={model} a={account} tabId={tab.id} /> : null)
+          : view === 'bets' ? (model ? <MyBets model={model} a={account} /> : null)
+          : <HorizonAnalysis account={account} tab={tab} />}
       </div>
-      <HorizonAnalysis bankroll={bankroll} />
+      <Agent model={model} tabId={tab.id} onActivity={() => { setSettings(false); setView('bets'); }} />
     </div>
   );
 }
@@ -78,19 +75,15 @@ export function HorizonApp() {
 
 const cleanLabel = (l: string) => l.replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
 const signedCents = (x: number) => `${x >= 0 ? '+' : '−'}${(Math.abs(x) * 100).toFixed(1)}¢`;
-const TAG_FOR_DOMAIN: Record<string, string> = {
-  sports: 'sports', crypto: 'crypto', politics: 'politics', geopolitics: 'geopolitics',
-  culture: 'culture', economics: 'economy', science_tech: 'tech', other: 'sports',
-};
 
 function verdict(legs: Leg[], band: [number, number]) {
   const top = legs[0]?.decision;
   if (!top) return 'Nothing to price on this page.';
   const name = cleanLabel(legs[0].label);
-  if (top.action === 'BUY_YES') return `${name} is underpriced: ${cents(top.price)} vs Horizon ${pct(top.q)}.`;
-  if (top.action === 'BUY_NO') return `${name} is overpriced: ${cents(top.price)} vs Horizon ${pct(top.q)}.`;
+  if (top.action === 'BUY_YES') return `Good bet: ${name} YES. Market says ${pct(top.price)}, Horizon thinks ${pct(top.q)}.`;
+  if (top.action === 'BUY_NO') return `Good bet: ${name} NO. Market says ${pct(top.price)}, Horizon thinks ${pct(top.q)}.`;
   if (legs.every((l) => l.decision!.price < band[0] || l.decision!.price > band[1])) return 'Too close to certain to trade.';
-  return 'No edge here after the spread.';
+  return 'No advantage here after costs. Horizon would skip this one.';
 }
 
 function useWidth<T extends HTMLElement>() {
@@ -109,8 +102,7 @@ function useWidth<T extends HTMLElement>() {
 
 type EventState = { title: string; legs: Leg[]; tags: string[]; model: Model } | 'loading' | 'error' | 'notfound';
 
-function HorizonAnalysis({ bankroll }: { bankroll: number }) {
-  const tab = useActiveTab();
+function HorizonAnalysis({ account, tab }: { account?: Account; tab: { id?: number; url?: string; title?: string } }) {
   const slug = slugFrom(tab.url);
   const [model, setModel] = useState<Model>();
   const [ev, setEv] = useState<EventState>('loading');
@@ -134,11 +126,10 @@ function HorizonAnalysis({ bankroll }: { bankroll: number }) {
     Number(b.decision!.action !== 'NO_TRADE') - Number(a.decision!.action !== 'NO_TRADE') || b.decision!.netEdge - a.decision!.netEdge) : []), [data]);
   const band = (model?.tradable ?? [0.03, 0.97]) as [number, number];
   const top = legs.find((l) => { const d = l.decision!; return d.price >= band[0] && d.price <= band[1]; });
-  const scanTagSlug = data && legs[0] ? TAG_FOR_DOMAIN[domainOf(data.model, data.tags)] ?? 'sports' : 'sports';
   const shown = showAll ? legs : legs.slice(0, 5);
 
   return (
-    <div className="hz-mode relative z-[75] min-h-0 flex-1 overflow-y-auto bg-white">
+    <div className="hz-mode relative z-[75] bg-white">
       <div className="px-4 pb-6 pt-4">
         {/* a. Headline + verdict */}
         {!slug ? (
@@ -160,7 +151,7 @@ function HorizonAnalysis({ bankroll }: { bankroll: number }) {
         ) : data ? (
           <header>
             <div className="hz-eyebrow">{legs.length ? `${legs.length} yes/no market${legs.length === 1 ? '' : 's'} · ${when(legs[0].decision!.hours)} to the end` : 'Horizon'}</div>
-            <h1 className="hz-serif mt-1 text-[26px] font-medium leading-[1.12]">{data.title}</h1>
+            <h1 className="hz-serif mt-1 text-[24px] font-medium leading-[1.15] [overflow-wrap:anywhere] [text-wrap:balance]">{data.title}</h1>
             <p className="mt-2 text-[15px] font-medium leading-snug" style={{ color: legs[0]?.decision?.action === 'BUY_YES' ? UP : legs[0]?.decision?.action === 'BUY_NO' ? DOWN : INK }}>
               {verdict(legs, band)}
             </p>
@@ -170,7 +161,7 @@ function HorizonAnalysis({ bankroll }: { bankroll: number }) {
         {/* b. Legs */}
         {data && legs.length ? (
           <section className="mt-4">
-            {shown.map((l, i) => <LegRow key={`${slug}-${i}`} leg={l} band={band} bankroll={bankroll} tabId={tab.id} eventSlug={slug!} legCount={legs.length} />)}
+            {shown.map((l, i) => <LegRow key={`${slug}-${i}`} leg={l} band={band} account={account} model={data.model} tabId={tab.id} />)}
             {legs.length > 5 ? (
               <button type="button" onClick={() => setShowAll((s) => !s)} className="hz-rule w-full pt-2.5 text-left text-[12px] font-semibold text-[#111113]">
                 {showAll ? 'Show fewer' : `Show all ${legs.length} markets`}
@@ -192,8 +183,6 @@ function HorizonAnalysis({ bankroll }: { bankroll: number }) {
           </section>
         ) : null}
 
-        {/* e. Tonight's edges */}
-        {model ? <TonightsEdges model={model} tag={scanTagSlug} tabId={tab.id} currentSlug={slug} /> : null}
 
         {/* f. Credentials */}
         <Credentials />
@@ -204,94 +193,22 @@ function HorizonAnalysis({ bankroll }: { bankroll: number }) {
 
 // ---------- b. one leg ----------
 
-function LegRow({ leg, band, bankroll, tabId, eventSlug, legCount }: {
-  leg: Leg; band: [number, number]; bankroll: number; tabId?: number; eventSlug: string; legCount: number;
+function LegRow({ leg, band, account, model, tabId }: {
+  leg: Leg; band: [number, number]; account?: Account; model: Model; tabId?: number;
 }) {
   const d = leg.decision!;
   const outOfBand = d.price < band[0] || d.price > band[1];
-  const hue = d.action === 'BUY_YES' ? UP : d.action === 'BUY_NO' ? DOWN : INK;
   return (
-    <div className="hz-rule py-3" title={d.reason}>
-      <div className="flex items-start justify-between gap-2">
-        <span className="min-w-0 text-[13px] font-semibold leading-snug" title={leg.question}>{cleanLabel(leg.label)}</span>
-        <Chip d={d} />
-      </div>
+    <div className="hz-rule py-3.5" title={d.reason}>
+      <div className="mb-1.5 text-[14px] font-semibold leading-snug" title={leg.question}>{cleanLabel(leg.label)}</div>
       {outOfBand ? (
-        <p className="mt-1 text-[12px] text-[#676e7e]">Market {cents(d.price)} · outside {pct(band[0])}–{pct(band[1])}: a {cents(d.cost)} cost exceeds any edge.</p>
+        <p className="text-[12.5px] text-[#676e7e]">Market says {pct(d.price)}: too close to certain, costs would eat any advantage.</p>
       ) : (
         <>
-          <div className="mt-1.5 flex items-end gap-5">
-            <div>
-              <div className="text-[10.5px] font-medium text-[#71717a]">Market</div>
-              <div className="text-[24px] font-semibold leading-none" style={{ color: MARKET }}>{cents(d.price)}</div>
-            </div>
-            <div>
-              <div className="text-[10.5px] font-medium text-[#71717a]">Horizon</div>
-              <div className="text-[24px] font-semibold leading-none" style={{ color: INK }}>{pct(d.q)}</div>
-            </div>
-            <div className="ml-auto text-right text-[12px] leading-tight text-[#676e7e]">
-              {d.action !== 'NO_TRADE' ? (
-                <>
-                  <div>edge <b className="font-semibold" style={{ color: hue }}>{signedCents(d.netEdge)}</b> after spread</div>
-                  <div>¼ Kelly <b className="font-semibold text-[#111113]">${stake(d.kelly * bankroll)}</b> ({(d.kelly * 100).toFixed(1)}%)</div>
-                </>
-              ) : (
-                <div className="max-w-[150px]">gap inside uncertainty + {cents(d.cost)} cost</div>
-              )}
-            </div>
-          </div>
-          <Scale d={d} />
-          {d.action !== 'NO_TRADE' && tabId !== undefined ? (
-            <Prepare leg={leg} d={d} bankroll={bankroll} tabId={tabId} eventSlug={eventSlug} legCount={legCount} />
-          ) : null}
+          <PlainCall d={d} />
+          {leg.marketSlug ? <BetBox model={model} a={account} marketSlug={leg.marketSlug} d={d} tabId={tabId} label={leg.label} /> : null}
         </>
       )}
-    </div>
-  );
-}
-
-const stake = (x: number) => (x >= 10 ? Math.round(x).toLocaleString() : x.toFixed(2));
-
-/** Horizon decides, the browser-use layer acts: pick leg + outcome, type the stake, stop before confirm. */
-function Prepare({ leg, d, bankroll, tabId, eventSlug, legCount }: {
-  leg: Leg; d: Decision; bankroll: number; tabId: number; eventSlug: string; legCount: number;
-}) {
-  const [st, setSt] = useState<'idle' | 'running' | PrepareResult>('idle');
-  const [copied, setCopied] = useState(false);
-  const side = d.action === 'BUY_YES' ? 'YES' : 'NO';
-  const amount = d.kelly * bankroll;
-  const run = async () => {
-    setSt('running');
-    setCopied(false);
-    try {
-      const r = await prepareOrder({ tabId, eventSlug, marketSlug: leg.marketSlug, label: cleanLabel(leg.label), legCount, side, amount, bid: leg.bid, ask: leg.ask });
-      setSt(r);
-      if (!r.ok) setCopied(await fallbackHint(tabId, cleanLabel(leg.label), amount));
-    } catch (e) {
-      setSt({ ok: false, steps: [{ step: 'Reach the page', ok: false, detail: e instanceof Error ? e.message : String(e) }] });
-      setCopied(await fallbackHint(tabId, cleanLabel(leg.label), amount));
-    }
-  };
-  const hue = side === 'YES' ? UP : DOWN;
-  return (
-    <div className="mt-2.5">
-      <button type="button" onClick={() => void run()} disabled={st === 'running'}
-        className="w-full rounded-[10px] border py-1.5 text-[12.5px] font-semibold transition-colors disabled:opacity-60"
-        style={{ borderColor: hue, color: hue }}>
-        {st === 'running' ? 'Preparing on the page…' : `Prepare order · Buy ${side} $${stake(amount)}`}
-      </button>
-      {typeof st === 'object' ? (
-        st.ok ? (
-          <p className="mt-1.5 text-[12px] leading-snug text-[#3f3f46]">
-            <b className="font-semibold" style={{ color: hue }}>Order prepared:</b> Buy {side} {cleanLabel(leg.label)}, ${stake(amount)} ({(d.kelly * 100).toFixed(1)}% of ${bankroll.toLocaleString()}). Review and confirm on Polymarket; Horizon never clicks Trade.
-          </p>
-        ) : (
-          <p className="mt-1.5 text-[12px] leading-snug text-[#676e7e]">
-            Could not prepare it on the page ({st.steps.filter((s) => !s.ok).map((s) => `${s.step}: ${s.detail ?? 'failed'}`).join('; ')}).{' '}
-            {copied ? `Amount $${amount.toFixed(2)} copied; pick Buy ${side} yourself.` : `Enter $${amount.toFixed(2)} and Buy ${side} yourself.`}
-          </p>
-        )
-      ) : null}
     </div>
   );
 }
@@ -460,42 +377,6 @@ function EdgeRow({ r, onOpen }: { r: ScanRow; onOpen: (url: string) => void }) {
         <span className="block text-[10.5px] text-[#71717a]">{d.action === 'BUY_YES' ? 'buy YES' : d.action === 'BUY_NO' ? 'buy NO' : 'no trade'}</span>
       </span>
     </button>
-  );
-}
-
-// ---------- e. tonight's edges ----------
-
-function TonightsEdges({ model, tag, tabId, currentSlug }: { model: Model; tag: string; tabId?: number; currentSlug?: string }) {
-  const [state, setState] = useState<{ rows: ScanRow[]; scanned: number; trades: number } | 'loading' | 'error'>('loading');
-  const run = useCallback(() => {
-    setState('loading');
-    scanTag(model, tag, 24, 6).then(setState).catch(() => setState('error'));
-  }, [model, tag]);
-  useEffect(() => { run(); }, [run]);
-  const rows = typeof state === 'object' ? state.rows.filter((r) => r.slug !== currentSlug).slice(0, 5) : [];
-  const open = (url: string) => {
-    if (tabId !== undefined) void chrome.tabs.update(tabId, { url });
-    else void chrome.tabs.create({ url });
-  };
-  return (
-    <section className="hz-rule mt-5 pt-4">
-      <div className="hz-eyebrow">Tonight's edges · {tag} · next 24h</div>
-      <h2 className="hz-serif mt-1 text-[18px] font-medium leading-snug">Where else Horizon would act</h2>
-      {state === 'loading' ? (
-        <div className="mt-2 space-y-2" aria-busy>{[0, 1, 2].map((i) => <div key={i} className="h-9 animate-pulse rounded bg-black/[0.04]" />)}</div>
-      ) : state === 'error' ? (
-        <p className="mt-2 text-[13px] text-[#676e7e]">Scan failed. <button type="button" onClick={run} className="font-semibold text-[#111113] underline decoration-black/20 underline-offset-2">Retry</button></p>
-      ) : rows.length ? (
-        <>
-          <div className="mt-2">
-            {rows.map((r) => <EdgeRow key={r.question + r.slug} r={r} onOpen={open} />)}
-          </div>
-          <p className="mt-1.5 text-[11px] text-[#71717a]">{state.scanned.toLocaleString()} most-traded {tag} markets ending within 24h scanned, {state.trades} clear the cost and uncertainty bar. Tap to open.</p>
-        </>
-      ) : (
-        <p className="mt-2 text-[13px] text-[#676e7e]">No open {tag} market ending in the next 24h clears the bar.</p>
-      )}
-    </section>
   );
 }
 

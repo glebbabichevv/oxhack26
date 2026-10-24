@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Hourly Horizon refit + gated promotion + API redeploy. NOT installed by default. Enable:
+       cp scripts/com.horizon.refresh.plist ~/Library/LaunchAgents/ && launchctl load -w ~/Library/LaunchAgents/com.horizon.refresh.plist
+     Disable:
+       launchctl unload -w ~/Library/LaunchAgents/com.horizon.refresh.plist
+     Log: ~/Library/Logs/horizon-refresh.log -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.horizon.refresh</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>/Users/gleb_babichev/Documents/oxhack26/scripts/refresh.sh</string></array>
+  <key>StartInterval</key><integer>3600</integer>
+  <key>RunAtLoad</key><false/>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>/Users/gleb_babichev/Library/Logs/horizon-refresh.log</string>
+  <key>StandardErrorPath</key><string>/Users/gleb_babichev/Library/Logs/horizon-refresh.log</string>
+</dict>
+</plist>
