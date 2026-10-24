@@ -12,6 +12,7 @@ import { migrate, type Account } from './ledger';
 import { pageDrive } from './agent';
 import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
 import { flush } from './journal';
+import { initPaper } from './paper';
 import { apiJSON, hhmm } from './net';
 import { stylePage } from './pageStyle';
 import { Md } from './argos/Message';
@@ -56,7 +57,7 @@ export function HorizonApp() {
   const [model, setModel] = useState<Model>();
   const agent = useAgent(model, tab.id);
   const scroller = useRef<HTMLDivElement>(null);
-  useEffect(() => { void migrate(); void loadModel().then(setModel); void flush(); }, []);
+  useEffect(() => { void initPaper(); void migrate(); void loadModel().then(setModel); void flush(); }, []);
   useEffect(() => { void chrome.storage.local.get(WELCOME_KEY).then((r) => setWelcome(!r[WELCOME_KEY])).catch(() => setWelcome(false)); }, []);
   const dismiss = () => { setWelcome(false); setView('bet'); void chrome.storage.local.set({ [WELCOME_KEY]: true }); };
   // Landing on a Polymarket market shows its bet (unless Horizon itself is steering the tab).

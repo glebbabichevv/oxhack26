@@ -23,7 +23,9 @@ export type Quote = {
   volume?: number; startsAt?: string;
 };
 
-const KEY = 'horizonLedger';
+/** Two books with the same maths: 'real' (what the user placed on Polymarket) and 'paper' (practice, never on Polymarket). */
+export type Book = 'real' | 'paper';
+const keyOf = (book: Book = 'real') => (book === 'paper' ? 'horizonPaper' : 'horizonLedger');
 const GAMMA = 'https://gamma-api.polymarket.com';
 export const fresh = (bankroll = 1000): Account => ({ bankroll, positions: [] });
 
@@ -36,13 +38,15 @@ export function migrate() {
 // ---------- storage, serialised so parallel calls never clobber each other ----------
 
 let chain: Promise<unknown> = Promise.resolve();
-export async function getAccount(): Promise<Account> {
+export async function getAccount(book: Book = 'real'): Promise<Account> {
+  const KEY = keyOf(book);
   const r = await chrome.storage.local.get(KEY).catch(() => ({} as Record<string, unknown>));
   return (r[KEY] as Account | undefined) ?? fresh();
 }
-export function mutate<T>(fn: (a: Account) => Promise<T> | T): Promise<T> {
+export function mutate<T>(fn: (a: Account) => Promise<T> | T, book: Book = 'real'): Promise<T> {
+  const KEY = keyOf(book);
   const run = chain.then(async () => {
-    const a = await getAccount();
+    const a = await getAccount(book);
     const out = await fn(a);
     await chrome.storage.local.set({ [KEY]: a });
     return out;
@@ -50,7 +54,8 @@ export function mutate<T>(fn: (a: Account) => Promise<T> | T): Promise<T> {
   chain = run.catch(() => undefined);
   return run;
 }
-export function onAccount(cb: (a: Account) => void) {
+export function onAccount(cb: (a: Account) => void, book: Book = 'real') {
+  const KEY = keyOf(book);
   const l = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area === 'local' && changes[KEY]?.newValue) cb(changes[KEY].newValue as Account);
   };
@@ -169,7 +174,7 @@ export function checkBet(a: Account, q: Quote, side: Side, amount: number | unde
 
 // ---------- recording what Polymarket confirmed ----------
 
-export function recordBuy(q: Quote, side: Side, amount: number, by: 'you' | 'agent', pmMessage: string) {
+export function recordBuy(q: Quote, side: Side, amount: number, by: 'you' | 'agent', pmMessage: string, book: Book = 'real') {
   return mutate((a) => {
     const d = q.decision;
     const px = fillPrice(q, side, true);
@@ -185,11 +190,11 @@ export function recordBuy(q: Quote, side: Side, amount: number, by: 'you' | 'age
       a.positions.unshift(pos);
     }
     return { ...pos };
-  });
+  }, book);
 }
 
 /** Record a sale of `fraction` of a position that Polymarket confirmed. */
-export function recordSell(q: Quote, id: string, fraction: number, pmMessage: string) {
+export function recordSell(q: Quote, id: string, fraction: number, pmMessage: string, book: Book = 'real') {
   return mutate((a) => {
     const p = a.positions.find((x) => x.id === id && x.status === 'open');
     if (!p) return undefined;
@@ -204,7 +209,7 @@ export function recordSell(q: Quote, id: string, fraction: number, pmMessage: st
     if (f >= 0.999) Object.assign(p, { status: 'closed', exitPrice: px, closedAt: new Date().toISOString(), pnl: (p.pnl ?? 0) + pnl, mark: px });
     else { p.shares -= sh; p.stake -= basis; p.pnl = (p.pnl ?? 0) + pnl; }
     return { proceeds, pnl };
-  });
+  }, book);
 }
 
 /** Forget a bet locally (it stays on Polymarket). */
@@ -213,7 +218,7 @@ export function forget(id: string) {
 }
 
 /** Mark open bets to the live mid and settle the ones whose market has resolved. */
-export function refresh(map: Map<string, Quote>) {
+export function refresh(map: Map<string, Quote>, book: Book = 'real') {
   return mutate((a) => {
     for (const p of a.positions) {
       if (p.status !== 'open') continue;
@@ -228,7 +233,12 @@ export function refresh(map: Map<string, Quote>) {
         p.markAt = new Date().toISOString();
       }
     }
-  });
+  }, book);
+}
+
+/** Paper book: start again with $1,000 (or the given amount). */
+export function resetPaper(bankroll = 1000) {
+  return mutate((a) => { a.bankroll = bankroll; a.positions = []; }, 'paper');
 }
 
 export function setBankroll(n: number) {
