@@ -49,7 +49,7 @@ CANDIDATES = [("M0", {}), ("M1", {"C": 0.1}), ("M1", {"C": 1.0}), ("M2", {})]
 
 
 def playoff(fit, val):
-    """Returns ((name, kwargs), scores); M1's C is picked here too; ties within TIE go to the simpler model."""
+    """Returns ((name, kwargs), scores); M1's C is picked here too; earliest candidate within TIE of the lowest validation log loss."""
     vb = val[in_band(val["price_yes"])]
     y = vb["outcome"].to_numpy()
     scores = {"market": backend.log_loss(vb["price_yes"], y)}
@@ -141,18 +141,27 @@ def main():
     fails += [{"kind": "null_strategy", "domain": "all", "horizon_hours": None, "n": None, "text": s} for s in NULL_STRATEGIES]
     _, lo_t, hi_t = model.predict(test)
     by_h = backend.by_horizon(test, q, c, lo_t, hi_t)  # descriptive: backend's decide() per fixed horizon, with our fee-aware costs
+    with_costs = summary(trades, rng)
+    dom_rows = backend.by_domain(trades, rng)
+    for r in dom_rows:
+        g = trades[trades["domain"] == r["domain"]]
+        st = float(g["stake"].sum())
+        r["return_per_dollar"] = round(float((g["stake"] * g["ret"]).sum()) / st, 4) if st else None
+    ratio = kelly_mult / 0.25
+    kelly_note = ("" if ratio == 1 else
+                  f"; x{kelly_mult} Kelly is {ratio:.1f}x the backend's x0.25 stake size, so return and drawdown scale with it - compare return_per_dollar across rules")
     backtest = {
         "cutoff": CUTOFF, "model": "v2",
         "n_train_markets": int(train.market_id.nunique()), "n_test_markets": int(test.market_id.nunique()),
         "n_trades": int(len(trades)),
         "model_selection": {"chosen": best, "params": best_kw, "val_logloss": scores, "val_markets": int(val.market_id.nunique()),
                             "kelly_mult": kelly_mult, "min_edge": min_edge, "grid": grid},
-        "with_costs": summary(trades, rng),
-        "return_ci": backend.return_ci(trades, rng),
-        "by_domain": backend.by_domain(trades, rng),
+        "with_costs": with_costs,
+        "return_ci": with_costs["return_ci"],
+        "by_domain": dom_rows,
         "without_costs": summary(zero, rng),
         "naive_favourite": backend.naive_favourite(test, c),
-        "baseline_m0": {"logloss": round(backend.log_loss(q0, y), 4), **summary(m0_trades, rng)},
+        "baseline_m0": {"logloss": round(backend.log_loss(q0, y), 4), "brier": round(backend.brier(q0, y), 4), **summary(m0_trades, rng)},
         "overall": {"brier_market": round(backend.brier(test["price_yes"], y), 4), "brier_model": round(backend.brier(q, y), 4),
                     "logloss_market": round(backend.log_loss(test["price_yes"], y), 4), "logloss_model": round(backend.log_loss(q, y), 4)},
         "by_horizon": by_h,
@@ -163,7 +172,9 @@ def main():
             "Cost per contract = max(spread/2, 1c) + Polymarket taker fee rate x p x (1-p) on markets with fees enabled (today's rates, whole period).",
             "One trade per market at the earliest qualifying horizon, held to resolution; fills at the historical price.",
             "Stakes capped at 5% per trade, 10% per event, and 1.0 starting bankroll open at any time; P&L additive.",
-            f"Validation chose Kelly x{kelly_mult} and a {min_edge*100:.0f}c minimum edge; x0.5 Kelly doubles stake size versus the backend's x0.25, so return and drawdown scale with it - compare return_per_dollar across rules.",
+            f"Validation chose Kelly x{kelly_mult} and a {min_edge*100:.0f}c minimum edge{kelly_note}.",
+            "by_horizon is descriptive: each horizon traded on its own with the backend's quarter-Kelly rule, no minimum edge and no caps - it is not the headline policy.",
+            "naive_favourite uses flat 2% stakes with no caps, so compare its sign, not its size.",
             "volume_usd is not a feature (lifetime volume would leak trading after the horizon).",
         ],
     }
