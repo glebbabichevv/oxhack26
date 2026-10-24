@@ -6,7 +6,14 @@ import { int } from "@/lib/api";
 // The rules were committed before the seal (capsule/EXPECTATIONS.md); the copy here restates them.
 
 type Score = { n: number; brier_model: number; brier_market: number; gap_market_minus_model?: number; gap_ci90?: [number, number] };
-type Opened = { opened_at: string; n_scored: number; n_excluded_unresolved: number; primary: Tier; secondary: Tier };
+type Verdict = { expected: string; n: number; verdict: string };
+type Decisions = { n: number; per_dollar_kelly?: number; per_dollar_kelly_ci90?: [number, number]; hit_rate?: number };
+type Opened = {
+  opened_at: string; n_scored: number; n_excluded_unresolved: number; n_excluded_resolved_before_post?: number;
+  primary: Tier; secondary: Tier;
+  expectations?: { primary: Record<string, Verdict>; secondary: Record<string, Verdict> };
+  decisions?: Decisions;
+};
 type Tier = { n_sealed: number; all: Score; sports: Score; crypto: Score };
 export type CapsuleData = {
   seals: { name: string; sealed_at: string; deadline: string; sha256: string; timestamped: boolean; n_markets: number; n_primary?: number; opened: Opened | null }[];
@@ -76,6 +83,29 @@ export function Capsule({ data }: { data: CapsuleData }) {
               <ScoreRow label="Secondary, sports" s={o.secondary.sports} />
               <ScoreRow label="Secondary, crypto" s={o.secondary.crypto} />
               <p className="mt-1.5 text-[12px] text-ink-faint">Green: the 90% interval of (market − model) clears zero. Grey: can&apos;t tell.</p>
+              {o.expectations ? (
+                <ul className="mt-3 space-y-1 text-[13px] text-ink-muted">
+                  {(["all", "sports", "crypto"] as const).map((k) => {
+                    const v = o.expectations!.primary[k];
+                    return v ? (
+                      <li key={k}>
+                        <span className="text-ink-strong">Primary, {k}</span>: expected {v.expected}; <b className="font-semibold text-ink-strong">{v.verdict}</b>{" "}
+                        <span className="text-ink-faint tabular-nums">(n = {int(v.n)})</span>
+                      </li>
+                    ) : null;
+                  })}
+                </ul>
+              ) : null}
+              {o.decisions?.n ? (
+                <p className="mt-3 text-[13px] text-ink-muted tabular-nums">
+                  Sealed bets, held to resolution, after fees (not the metric): {int(o.decisions.n)} bets ·{" "}
+                  {o.decisions.per_dollar_kelly! >= 0 ? "+" : "−"}{Math.abs(o.decisions.per_dollar_kelly! * 100).toFixed(1)}¢ per $1
+                  {o.decisions.per_dollar_kelly_ci90
+                    ? ` [${(o.decisions.per_dollar_kelly_ci90[0] * 100).toFixed(0)}, ${(o.decisions.per_dollar_kelly_ci90[1] * 100).toFixed(0)}]`
+                    : ""}
+                  {o.n_excluded_resolved_before_post ? ` · ${int(o.n_excluded_resolved_before_post)} resolved before the hash was posted, excluded` : ""}
+                </p>
+              ) : null}
             </>
           ) : (
             <p className="py-3 text-[13px] text-ink-muted">Sealed and waiting. The markets resolve over the night; the score appears here, whatever it is.</p>
