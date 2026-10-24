@@ -73,10 +73,13 @@ export default function JournalPage() {
   }, []);
 
   useEffect(() => {
+    // A failed refresh keeps the last good data; one quick retry rides out an API restart.
+    const get = () => getJSON<Journal>(`/api/journal?limit=100${scope === "me" && me ? `&me=${encodeURIComponent(me)}` : ""}`);
     const load = () =>
-      getJSON<Journal>(`/api/journal?limit=100${scope === "me" && me ? `&me=${encodeURIComponent(me)}` : ""}`)
+      get()
+        .catch(() => new Promise<Journal>((ok) => setTimeout(ok, 3000)).then(get))
         .then((d) => { setData(d); setError(undefined); })
-        .catch((e) => setError(String(e)));
+        .catch((e) => setData((prev) => { if (!prev) setError(String(e)); return prev; }));
     load();
     const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, REFRESH_MS);
     return () => clearInterval(t);
