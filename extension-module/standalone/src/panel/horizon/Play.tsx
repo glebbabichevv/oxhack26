@@ -678,7 +678,12 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
     const ctx: Ctx = { model, tabId, onStep: push, signal: sig.current, plan: [] };
     let answer: string | undefined, mode = 'Horizon';
     try {
-      if (llm) { answer = await planWithLLM(ctx, task); if (answer !== undefined) mode = 'Horizon with Gemini'; }
+      // Gemini first, re-checked every run (it may have been down when the panel opened), one retry on a blip.
+      if (llm || (await llmAvailable())) {
+        answer = await planWithLLM(ctx, task);
+        if (answer === undefined && !ctx.signal.stop) { await new Promise((r) => setTimeout(r, 1500)); answer = await planWithLLM(ctx, task); }
+        if (answer !== undefined) mode = 'Horizon with Gemini';
+      }
       if (answer === undefined) answer = await planFromWords(ctx, task);
     } catch (e) { answer = `Stopped: ${(e as Error).message ?? e}`; }
     if (sig.current.stop) { answer = 'Stopped.'; ctx.plan = []; }
