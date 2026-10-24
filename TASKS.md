@@ -5,7 +5,8 @@ Roles are described in CLAUDE.md (A = backend/agent, B = frontend, C = integrati
 
 ## Now
 - [ ] [all] Run `bash scripts/setup.sh`, fill `.env.local`, run `claude` in the repo once
-- [ ] [C] After opening ceremony: fill theme, tracks, main prize and submission deadline in `CLAUDE.md`
+- [ ] [C] Ask organisers: HRT prize, overall winner?, submission deadline → `CLAUDE.md`
+- [ ] [C] Get Delta access for the team at the Zed stand (15-min limit)
 - [ ] [A, all together] `/office-hours` → `/plan-ceo-review` → `/plan-eng-review`; write "What we are building" + API contract in `CLAUDE.md`
 - [ ] [B] Drop the Argos design preset into `DESIGN.md` (repo root; tokens, fonts, spacing)
 - [ ] [B] After the idea is locked: `/impeccable init` once to write `PRODUCT.md`
@@ -19,6 +20,7 @@ Roles are described in CLAUDE.md (A = backend/agent, B = frontend, C = integrati
 - [ ] Demo script, 90 seconds, one scenario end to end
 - [ ] Backup demo video recorded by Sunday morning
 - [ ] Devpost page: what it does, how we built it, sponsor tech used, what we brought in vs built here
+- [ ] Collect best Delta thread links (ideation, build, testing) for the Zed track
 - [ ] Rehearse pitch 5x with a timer
 
 ## Done

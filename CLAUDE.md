@@ -8,8 +8,14 @@ Update it whenever a decision changes; it is how our three agents stay in sync.
 - Clocks go back 1 hour on Sunday night (02:00 → 01:00).
 - Submission deadline: TBA (fill in after opening ceremony).
 - **Platinum sponsor challenge — HRT (Hudson River Trading): "Best use of Data for Predictions & Decision Making".** Prize and whether there is also an overall winner: TBA.
-- Other tracks / main prize: TBA.
-- MLH sponsor prizes we target alongside: Best Use of Gemini, ElevenLabs (+ Tiger Data if we use live time-series, Presage if natural).
+- **Silver sponsor challenge — Zed: "Built with Delta".** Show how we worked together in Delta (teammates + agents, from ideation through building to testing); share Delta threads as evidence. Extra points for solving real problems.
+- Only HRT and Zed have challenges; the other sponsors (Citadel, Jane Street, Oxford Asset Management, Entangl) are recruiting only.
+- **Strategy: one project for both.** Build the HRT data/prediction/decision project, and do the work inside Delta so the Zed track comes for free. MLH prizes (Gemini, ElevenLabs, Tiger Data) only if they fit naturally.
+
+## Working in Delta (for the Zed track)
+- Run Claude Code sessions linked to Delta threads; Delta works on top of this git repo, so branches and `CLAUDE.md` stay as they are.
+- Keep ideation (`/office-hours`), key build steps and testing (`/qa`) in Delta threads. Role C collects the best thread links for Devpost as we go.
+- If Delta access or setup takes more than 15 minutes, drop it and keep working in git — HRT is the priority.
 
 ## What HRT judges will look for (design every feature around this)
 HRT is a quant trading firm. A pretty chart is not enough. Our project must show:
