@@ -12,6 +12,7 @@ import type { Account } from './ledger';
 import { pageDrive } from './agent';
 import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
 import { flush } from './journal';
+import { stylePage } from './pageStyle';
 import { Md } from './argos/Message';
 import './horizon-mode.css';
 
@@ -62,6 +63,15 @@ export function HorizonApp() {
   useEffect(() => { if (slug && slug !== lastSlug.current && !pageDrive.active) { setView('bet'); setScreen('main'); } lastSlug.current = slug; }, [slug]);
   useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [view, screen]);
   useMarking(model, account);
+  // Restyle the page overlay whenever the panel's tab finishes loading a Polymarket page.
+  useEffect(() => {
+    const l = (id: number, info: chrome.tabs.TabChangeInfo, t: chrome.tabs.Tab) => {
+      if (id === tab.id && info.status === 'complete' && /polymarket\.com/.test(t.url ?? '')) void stylePage(id);
+    };
+    chrome.tabs.onUpdated.addListener(l);
+    if (tab.id !== undefined && /polymarket\.com/.test(tab.url ?? '')) void stylePage(tab.id);
+    return () => chrome.tabs.onUpdated.removeListener(l);
+  }, [tab.id, tab.url]);
   const go = (t: TabName) => { agent.clear(); setScreen('main'); setView(t); };
   const showRun = !!agent.run && screen === 'main' && !welcome;
   return (

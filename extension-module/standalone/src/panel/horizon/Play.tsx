@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
 import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Quote, type Side } from './ledger';
-import { fillTicket, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
+import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
 
@@ -491,6 +491,8 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
       if (answer === undefined) answer = await planFromWords(ctx, task);
     } catch (e) { answer = `Stopped: ${(e as Error).message ?? e}`; }
     if (sig.current.stop) { answer = 'Stopped.'; ctx.plan = []; }
+    // Main-line legs first: they set up reliably; sub-tab legs (exact score, halves...) go last.
+    ctx.plan = [...ctx.plan.filter((x) => !subTabOf(x.q)), ...ctx.plan.filter((x) => subTabOf(x.q))];
     for (const item of ctx.plan) journalOf(item, 'agent', 'shown');
     // The model's words only when they are plain and on-message; with a plan, one line of ours.
     if (answer && /\b(demo|balance|portfolio|simulat|paper)/i.test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
@@ -506,8 +508,8 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
 
 /** The plan as a list: decision, size, one plain reason. The top few are set up live on the page. */
 function PlanList({ model, tabId, plan }: { model: Model; tabId?: number; plan: PlanItem[] }) {
-  const LIVE = 3;
-  const [liveDone, setLiveDone] = useState(false);
+  const LIVE = Math.min(3, plan.filter((x) => !subTabOf(x.q)).length);
+  const [liveDone, setLiveDone] = useState(LIVE === 0);
   const [one, setOne] = useState<number>();
   const total = plan.reduce((s, p) => s + (p.kind === 'buy' ? p.amount : 0), 0);
   return (
@@ -524,16 +526,18 @@ function PlanList({ model, tabId, plan }: { model: Model; tabId?: number; plan: 
                   <span className="shrink-0 text-body font-semibold">{p.kind === 'buy' ? `${money(p.amount)} ${p.side === 'YES' ? 'Yes' : 'No'}` : p.fraction >= 0.999 ? 'Sell all' : 'Sell part'}</span>
                 </div>
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
-                {k >= LIVE && liveDone && one !== k ? (
+                {k >= LIVE && liveDone && one !== k ? (subTabOf(p.q) ? (
+                  <a href={`https://polymarket.com/event/${p.q.eventSlug}`} target="_blank" rel="noreferrer" className="hz-chip mt-1.5 inline-flex items-center gap-1 rounded-control px-3 py-1 text-footnote font-semibold">Open <Icon d={I.external} size={12} /></a>
+                ) : (
                   <button type="button" onClick={() => setOne(k)} className="hz-chip mt-1.5 rounded-control px-3 py-1 text-footnote font-semibold">Set up</button>
-                ) : null}
+                )) : null}
                 {one === k ? <Doer model={model} tabId={tabId} items={[p]} source="agent" onFinish={() => setOne(undefined)} /> : null}
               </li>
             );
           })}
         </ul>
       </div>
-      {!liveDone ? (
+      {!liveDone && LIVE > 0 ? (
         <div className="mt-4">
           <p className="text-footnote font-medium text-[#64748b]">Setting up the top {Math.min(LIVE, plan.length)} on Polymarket{plan.length > LIVE ? '. The rest stay in the list.' : ''}</p>
           <Doer model={model} tabId={tabId} items={plan.slice(0, LIVE)} source="agent" onFinish={() => setLiveDone(true)} />

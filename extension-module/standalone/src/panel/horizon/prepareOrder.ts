@@ -6,12 +6,15 @@
  * touches a wallet or a login form.
  */
 
+import { stylePage } from './pageStyle';
+
 export type PrepareStep = { step: string; ok: boolean; detail?: string };
 export type PrepareResult = { ok: boolean; steps: PrepareStep[] };
 
 type Hit = { role: string; name: string; ref: string; state: string; where: string };
 
 export async function send(tabId: number, action: Record<string, unknown>): Promise<any> {
+  await stylePage(tabId); // Horizon's look for the overlay, re-checked before every action
   return chrome.tabs.sendMessage(tabId, { type: 'EXECUTE_ACTION', action }, { frameId: 0 });
 }
 
@@ -48,6 +51,8 @@ export async function prepareOrder(opts: {
   onProgress?: (text: string) => void;
   /** 'sell' switches the ticket to Sell; amount is then a number of shares. */
   mode?: 'buy' | 'sell';
+  /** Sports pages keep exact score, halves, corners and scorers under sub-tabs: open this one first. */
+  tab?: string;
 }): Promise<PrepareResult> {
   const { tabId, eventSlug, marketSlug, label, legCount, side, amount, bid, ask } = opts;
   const say = opts.onProgress ?? (() => {});
@@ -87,8 +92,9 @@ export async function prepareOrder(opts: {
       if (wantCents === undefined) return false;
       await send(tabId, { op: 'search_page', payload: { query: label } }).catch(() => undefined);
       await new Promise((r) => setTimeout(r, 350));
-      const name = `Buy ${word} ${wantCents}¢`;
-      const hits = (await find(tabId, `${name} button`)).filter((h) => h.role === 'button' && h.name.replace(/\s+/g, ' ') === name);
+      // "Buy Yes 27¢" on multi-outcome rows, "YES 13¢" on sports sub-tab rows.
+      const re = new RegExp(`^(buy\\s+)?${word}\\s+${String(wantCents).replace('.', '\\.')}¢`, 'i');
+      const hits = (await find(tabId, `${word} ${wantCents}¢ button`)).filter((h) => h.role === 'button' && re.test(h.name.replace(/\s+/g, ' ')));
       const inView = hits.filter((h) => !/viewport/i.test(h.where));
       const hit = inView.length >= 1 ? inView[0] : hits.length === 1 ? hits[0] : undefined;
       return hit ? click(tabId, hit.ref) : false;
@@ -96,12 +102,12 @@ export async function prepareOrder(opts: {
     // Sports moneylines are labelled by team abbreviation + price ("COR 45¢", "DRAW 16¢"): try the
     // abbreviations a team name usually gets, then the price alone on such short buttons.
     const bySports = async () => {
-      if (side !== 'YES' || wantCents === undefined) return false;
+      if (side !== 'YES' || wantCents === undefined || opts.tab) return false;
       const words = label.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/)
         .filter((w) => w && !['FC', 'SC', 'CF', 'AC', 'CD', 'CA', 'AFC', 'SSC', 'CLUB', 'DE', 'THE', 'RC', 'SV', 'FK', 'SK'].includes(w));
       const abbrs = [...new Set([words[0]?.slice(0, 3), words.map((w) => w[0]).join('').slice(0, 3), words[words.length - 1]?.slice(0, 3), label === 'Draw' ? 'DRAW' : '']
         .filter((x): x is string => !!x && x.length >= 2))];
-      const short = (h: Hit) => h.role === 'button' && /^[A-Z][A-Z0-9]{1,4}\s+\d+(\.\d)?¢$/.test(h.name.trim());
+      const short = (h: Hit) => h.role === 'button' && /^[A-Z][A-Z0-9]{1,4}\s+\d+(\.\d)?¢$/.test(h.name.trim()) && !/^(YES|NO)\s/i.test(h.name.trim());
       const priceOk = (h: Hit) => { const m = h.name.match(/(\d+(?:\.\d)?)¢/); return !!m && Math.abs(Number(m[1]) - wantCents) <= 1; };
       for (const ab of abbrs) {
         const hit = (await find(tabId, `${ab} button`)).find((h) => short(h) && h.name.toUpperCase().startsWith(`${ab} `) && priceOk(h));
@@ -117,14 +123,21 @@ export async function prepareOrder(opts: {
       return hit ? click(tabId, hit.ref) : false;
     };
     let picked = false;
-    for (const attempt of [bySuffix, bySports, byRow, byLabel, byRow]) {
+    if (opts.tab) {
+      say(`Opening the ${opts.tab} tab`);
+      const t = (await find(tabId, `${opts.tab} tab`)).find((h) => ['button', 'tab', 'link'].includes(h.role) && h.name.trim().toLowerCase() === opts.tab!.toLowerCase());
+      if (t) { await click(tabId, t.ref); await new Promise((r) => setTimeout(r, 900)); }
+      say(`Choosing ${label}`);
+    }
+    for (const attempt of opts.tab ? [byRow, byRow] : [bySuffix, bySports, byRow, byLabel, byRow]) {
       if (!(await attempt())) continue;
       // The ticket re-renders after the click: give it up to ~2s to show this leg.
       for (let k = 0; k < 6 && !picked; k++) { await new Promise((r) => setTimeout(r, 350)); picked = await sameLeg(); }
       if (picked) break;
     }
+    let shown: number | undefined;
     steps.push({ step: `Select “${label}”`, ok: picked, detail: picked ? undefined
-      : wantCents !== undefined && (await ticketCents()) !== undefined ? 'wrong outcome selected' : 'could not find this market on the page' });
+      : wantCents !== undefined && (shown = await ticketCents()) !== undefined ? `wrong outcome selected (the ticket shows ${word} at ${shown}¢, not ${wantCents}¢)` : 'could not find this market on the page' });
     if (!picked) return { ok: false, steps };
   }
 
