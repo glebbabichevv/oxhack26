@@ -41,6 +41,22 @@ def fit():
     return model, selection, cutoff
 
 
+def fee_columns(market):
+    """Polymarket taker fee schedule of one Gamma market, as backend/model.py fee_per_share() reads it."""
+    fs = market.get("feeSchedule") or {}
+    on = bool(market.get("feesEnabled")) and bool(fs)
+    return dict(fees_enabled=on, fee_rate=float(fs.get("rate") or 0) if on else 0.0,
+                fee_exponent=float(fs.get("exponent") or 1))
+
+
+def fee_table(ids):
+    rows = {}
+    for i in range(0, len(ids), 100):
+        for m in get(f"{GAMMA}/markets", [("limit", 100)] + [("condition_ids", c) for c in ids[i:i + 100]]) or []:
+            rows[m["conditionId"]] = fee_columns(m)
+    return rows
+
+
 def snapshot(a):
     OUT.mkdir(exist_ok=True)
     now = datetime.now(timezone.utc)
@@ -50,15 +66,19 @@ def snapshot(a):
     live = pd.read_csv(tmp)
     tmp.unlink()
     live["domain"] = live["domain"].fillna("other").str.lower()
+    fees = fee_table(live["market_id"].tolist())
+    for col in ("fees_enabled", "fee_rate", "fee_exponent"):
+        live[col] = live["market_id"].map(lambda m: fees.get(m, fee_columns({}))[col])
     model, selection, cutoff = fit()
     p = live["price_yes"].to_numpy()
     q, lo, hi = model.predict(p, live["hours_to_resolution"], live["domain"])
-    cost = M.trade_cost(pd.to_numeric(live["spread"], errors="coerce").to_numpy(), 0.0, 0.01)
+    fee = M.fee_per_share(live)  # same cost as /api/live since 18:10: half-spread floor + taker fee
+    cost = M.trade_cost(pd.to_numeric(live["spread"], errors="coerce").to_numpy(), fee, 0.01)
     action, kelly, edge = M.decide(p, q, cost, lo, hi)
     rows = [dict(market_id=r.market_id, question=r.question, domain=r.domain, url=r.url, end_date=r.end_date,
                  volume_usd=r.volume_usd, spread=r.spread, price_yes=round(float(p[i]), 4),
                  hours_to_resolution=float(r.hours_to_resolution), q_yes=round(float(q[i]), 4),
-                 q_low=round(float(lo[i]), 4), q_high=round(float(hi[i]), 4), cost=round(float(cost[i]), 4),
+                 q_low=round(float(lo[i]), 4), q_high=round(float(hi[i]), 4), cost=round(float(cost[i]), 4), fee=round(float(fee[i]), 4),
                  action=str(action[i]), kelly_fraction=round(float(kelly[i]), 4), net_edge=round(float(edge[i]), 4))
             for i, r in enumerate(live.itertuples())]
     snap = dict(taken_at=now.isoformat(timespec="seconds"), git_head=git_head(), cutoff=cutoff,
@@ -70,12 +90,12 @@ def snapshot(a):
 
 
 def resolution(market_id):
-    """1 / 0 if the market resolved YES / NO, None if not resolved yet (or 50-50 / unknown)."""
+    """(1 / 0 if the market resolved YES / NO, None if not resolved yet or 50-50; the Gamma market or {})."""
     rows = get(f"{GAMMA}/markets", dict(condition_ids=market_id, closed="true")) or []  # gamma hides closed markets by default
     if not rows:
-        return None
+        return None, {}
     prices = json.loads(rows[0].get("outcomePrices") or "[]")
-    return {("1", "0"): 1, ("0", "1"): 0}.get(tuple(prices[:2]))
+    return {("1", "0"): 1, ("0", "1"): 0}.get(tuple(prices[:2])), rows[0]
 
 
 def score(a):
@@ -89,9 +109,12 @@ def score(a):
     due = {k: v for k, v in first.items() if parse_ts(v[1]["end_date"]) <= now}
     scored = []
     for mid, (taken, r) in due.items():
-        y = resolution(mid)
+        y, market = resolution(mid)
         if y is not None:
-            scored.append(dict(r, taken_at=taken, outcome=y))
+            # Snapshots before 18:10 decided without fees; their P&L is still charged the market's taker fee
+            # (the schedule is fixed per market, so this is not look-ahead).
+            fee = r["fee"] if "fee" in r else M.fee_per_share(pd.DataFrame([dict(r, **fee_columns(market))]))[0]
+            scored.append(dict(r, taken_at=taken, outcome=y, cost=r["cost"] + (0 if "fee" in r else fee)))
     df = pd.DataFrame(scored, columns=["action", "price_yes", "q_yes", "cost", "kelly_fraction", "outcome", "taken_at",
                                        "question", "domain", "hours_to_resolution", "url"])
     band = df[M.in_band(df["price_yes"])]

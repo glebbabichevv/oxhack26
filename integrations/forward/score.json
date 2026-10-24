@@ -6,8 +6,8 @@
  "n_resolved": 8,
  "n_trades_resolved": 1,
  "n_won": 1,
- "pnl": 0.0113,
- "updated_at": "2026-10-24T17:09:44+00:00",
+ "pnl": 0.0106,
+ "updated_at": "2026-10-24T17:14:50+00:00",
  "n_due": 23,
  "snapshots": [
   "snapshot_20261024T1443Z.json",
@@ -15,7 +15,7 @@
  ],
  "brier_market": 0.4843,
  "brier_model": 0.4502,
- "mean_return_per_trade": 2.1746,
+ "mean_return_per_trade": 2.0367,
  "calls": [
   {
    "question": "Will the price of Bitcoin be between $78,000 and $80,000 on October 24?",
@@ -27,8 +27,8 @@
    "action": "BUY_YES",
    "kelly_fraction": 0.0052,
    "outcome": 1,
-   "ret": 2.1746,
-   "pnl": 0.0113,
+   "ret": 2.0367,
+   "pnl": 0.0106,
    "url": "https://polymarket.com/event/bitcoin-price-on-october-24-2026"
   }
  ]
