@@ -1,4 +1,4 @@
-"""Model v2: playoff on validation, betting knobs tuned on validation, one out-of-time test.
+"""Model v2: playoff on validation, minimum edge tuned on validation (Kelly fixed at x0.25), one out-of-time test.
 
   python integrations/model_v2/train.py [--data data] [--raw data/raw] [--out integrations/model_v2/results]
 """
@@ -23,9 +23,11 @@ from features import book_features, build_table, by_date, path_stats  # noqa: E4
 from models import in_band, make  # noqa: E402
 
 CUTOFF = "2026-05-18"
-KELLY_GRID = (0.125, 0.25, 0.5)
+KELLY_MULT = 0.25  # house rule: quarter Kelly (additive P&L rises with stake, so it is not tuned)
+HALF_KELLY = 0.5  # reported as a variant only
 EDGE_GRID = (0.0, 0.01, 0.02, 0.03)
 TIE = 0.0005
+MIN_HORIZON_H = 12  # shortest trained horizon; live cards closer than this get no call
 
 
 def split_time(df, cutoff):
@@ -65,16 +67,16 @@ def playoff(fit, val):
 
 
 def tune(model, val):
+    """Minimum edge chosen on validation P&L after caps; Kelly fixed at KELLY_MULT."""
     q, lo, hi = model.predict(val)
     c = costs(val)
     grid = []
-    for k in KELLY_GRID:
-        for e in EDGE_GRID:
-            t = apply_caps(earliest_trades(val, q, lo, hi, c, e, k))
-            grid.append({"kelly_mult": k, "min_edge": e, "n_trades": int(len(t)),
-                         "pnl": round(float((t["stake"] * t["ret"]).sum()), 4)})
-    best = max(grid, key=lambda g: (g["pnl"], -g["kelly_mult"], g["min_edge"]))
-    return best["kelly_mult"], best["min_edge"], grid
+    for e in EDGE_GRID:
+        t = apply_caps(earliest_trades(val, q, lo, hi, c, e, KELLY_MULT))
+        grid.append({"kelly_mult": KELLY_MULT, "min_edge": e, "n_trades": int(len(t)),
+                     "pnl": round(float((t["stake"] * t["ret"]).sum()), 4)})
+    best = max(grid, key=lambda g: (g["pnl"], g["min_edge"]))
+    return KELLY_MULT, best["min_edge"], grid
 
 
 NULL_STRATEGIES = [
@@ -91,10 +93,37 @@ def peak_exposure(t):
     return round(float(ev["d"].cumsum().max()), 4) if len(ev) else 0.0
 
 
-def policy(model, df, kelly_mult, min_edge, cost):
+def embargo(t, cutoff):
+    """Test trades must enter on or after the cutoff: nothing opened before it is scored."""
+    return t[t["entry_at"] >= pd.Timestamp(cutoff, tz="UTC")]
+
+
+def policy(model, df, kelly_mult, min_edge, cost, cutoff=None, caps=True):
     q, lo, hi = model.predict(df)
-    t = apply_caps(earliest_trades(df, q, lo, hi, cost, min_edge, kelly_mult))
+    t = earliest_trades(df, q, lo, hi, cost, min_edge, kelly_mult)
+    if cutoff is not None:
+        t = embargo(t, cutoff)
+    t = apply_caps(t) if caps else t.assign(stake=t["kelly"])
     return t.sort_values("resolved_at"), q
+
+
+def ladder_row(label, t):
+    pnl, staked = float((t["stake"] * t["ret"]).sum()), float(t["stake"].sum())
+    return {"label": label, "n_trades": int(len(t)), "return": round(pnl, 4),
+            "return_per_dollar": round(pnl / staked, 4) if staked else None}
+
+
+def decomposition(model, test, min_edge, trades, half):
+    """Test-set ladder from the old backend rules to the headline policy, one change at a time."""
+    no_fees = trade_cost(test["price_yes"], test["spread"], np.zeros(len(test), bool), test["domain"])
+    a, _ = policy(model, test, KELLY_MULT, 0.0, no_fees, CUTOFF, caps=False)
+    b, _ = policy(model, test, KELLY_MULT, 0.0, costs(test), CUTOFF, caps=False)
+    c, _ = policy(model, test, KELLY_MULT, 0.0, costs(test), CUTOFF)
+    return [ladder_row("old rules: 1c cost, x0.25 Kelly, no min edge, no caps", a),
+            ladder_row("+ Polymarket fees", b),
+            ladder_row("+ caps (5%/trade, 10%/event, equity-capped bankroll)", c),
+            ladder_row(f"+ min edge {min_edge * 100:.0f}c (chosen on validation)", trades),
+            ladder_row("+ half Kelly (variant)", half)]
 
 
 def summary(t, rng):
@@ -131,9 +160,14 @@ def live_report(model, live, kelly_mult, min_edge, n_trades=30, n_no_trade=15):
     q, lo, hi = model.predict(live)
     c = costs(live)
     action, kelly, edge = decide(p, q, lo, hi, c, min_edge, kelly_mult)
+    short = live["hours_to_resolution"].to_numpy(float) < MIN_HORIZON_H
+    action = np.where(short, "NO_TRADE", action)
+    kelly = np.where(short, 0.0, kelly)
     out = []
     for i, r in enumerate(live.itertuples()):
-        if not in_band(p[i]):
+        if short[i]:
+            reason = "Outside the trained horizon range (12h-30d): no call"
+        elif not in_band(p[i]):
             reason = f"Market at {p[i]:.1%}: too close to certain, costs exceed any edge"
         elif action[i] == "NO_TRADE":
             reason = (f"Model {q[i]:.0%} (range {lo[i]:.0%}-{hi[i]:.0%}) vs market {p[i]:.0%}: "
@@ -176,10 +210,13 @@ def main():
     # ---- frozen: refit on all train, score the test once ----
     model = make(best, **best_kw).fit(train)
     c = costs(test)
-    trades, q = policy(model, test, kelly_mult, min_edge, c)
-    zero, _ = policy(model, test, kelly_mult, min_edge, np.zeros(len(test)))
+    trades, q = policy(model, test, kelly_mult, min_edge, c, CUTOFF)
+    zero, _ = policy(model, test, kelly_mult, min_edge, np.zeros(len(test)), CUTOFF)
+    half, _ = policy(model, test, HALF_KELLY, min_edge, c, CUTOFF)
     m0 = model if best == "M0" else make("M0").fit(train)
-    m0_trades, q0 = policy(m0, test, kelly_mult, min_edge, c)
+    m0_trades, q0 = (trades, q) if best == "M0" else policy(m0, test, kelly_mult, min_edge, c, CUTOFF)
+    cut = pd.Timestamp(CUTOFF, tz="UTC")
+    assert all((t["entry_at"] >= cut).all() for t in (trades, zero, half, m0_trades)), "test embargo violated"
     y = test["outcome"].to_numpy()
 
     cal = backend.calibration_report(test, q)
@@ -194,9 +231,10 @@ def main():
         g = trades[trades["domain"] == r["domain"]]
         st = float(g["stake"].sum())
         r["return_per_dollar"] = round(float((g["stake"] * g["ret"]).sum()) / st, 4) if st else None
-    ratio = kelly_mult / 0.25
-    kelly_note = ("" if ratio == 1 else
-                  f"; x{kelly_mult} Kelly is {ratio:.1f}x the backend's x0.25 stake size, so return and drawdown scale with it - compare return_per_dollar across rules")
+    without_costs = summary(zero, rng)
+    m0_scores = {"logloss": round(backend.log_loss(q0, y), 4), "brier": round(backend.brier(q0, y), 4)}
+    baseline_m0 = {**m0_scores, **(with_costs if best == "M0" else summary(m0_trades, rng))}
+    half_kelly = summary(half, rng)
     backtest = {
         "cutoff": CUTOFF, "model": "v2",
         "n_train_markets": int(train.market_id.nunique()), "n_test_markets": int(test.market_id.nunique()),
@@ -206,20 +244,27 @@ def main():
         "with_costs": with_costs,
         "return_ci": with_costs["return_ci"],
         "by_domain": dom_rows,
-        "without_costs": summary(zero, rng),
+        "without_costs": without_costs,
+        "variants": {"half_kelly": half_kelly},
+        "decomposition": decomposition(model, test, min_edge, trades, half),
         "naive_favourite": backend.naive_favourite(test, c),
-        "baseline_m0": {"logloss": round(backend.log_loss(q0, y), 4), "brier": round(backend.brier(q0, y), 4), **summary(m0_trades, rng)},
+        "baseline_m0": baseline_m0,
         "overall": {"brier_market": round(backend.brier(test["price_yes"], y), 4), "brier_model": round(backend.brier(q, y), 4),
                     "logloss_market": round(backend.log_loss(test["price_yes"], y), 4), "logloss_model": round(backend.log_loss(q, y), 4)},
         "by_horizon": by_h,
         "failures": fails, "worst_trades": worst,
         "assumptions": [
             f"Split by time at {CUTOFF}: train on events that ended before it; test on markets of the remaining events that resolved after it.",
-            "Model, Kelly multiplier and minimum edge chosen on the last 20% of train events; the test set is scored once.",
+            "Model and minimum edge chosen on the last 20% of train events; the test set is scored once.",
+            f"Test trades must enter on or after the cutoff (no position opened before {CUTOFF} is scored).",
             "Cost per contract = max(spread/2, 1c) + Polymarket taker fee rate x p x (1-p) on markets with fees enabled (today's rates, whole period).",
             "One trade per market at the earliest qualifying horizon, held to resolution; fills at the historical price.",
-            "Stakes capped at 5% per trade, 10% per event, and 1.0 starting bankroll open at any time; P&L additive.",
-            f"Validation chose Kelly x{kelly_mult} and a {min_edge*100:.0f}c minimum edge{kelly_note}.",
+            "Stakes capped at 5% per trade, 10% per event, and open stakes of at most min(1.0, 1 + realised P&L) bankrolls; P&L additive.",
+            f"Validation chose a {min_edge*100:.0f}c minimum edge.",
+            "Kelly is fixed at the house x0.25; additive P&L rises with stake size, so tuning the multiplier on P&L would just pick the largest one. Half Kelly is shown in variants.half_kelly.",
+            "without_costs is a separate policy run with zero costs (different trades), not the same trades without fees.",
+            "Max drawdown is measured on resolved P&L in resolution order, not mark-to-market.",
+            "Live kelly_fraction is per card; it does not apply the per-event or bankroll caps.",
             "by_horizon is descriptive: each horizon traded on its own with the backend's quarter-Kelly rule, no minimum edge and no caps - it is not the headline policy.",
             "naive_favourite uses flat 2% stakes with no caps, so compare its sign, not its size.",
             "volume_usd is not a feature (lifetime volume would leak trading after the horizon).",
@@ -235,6 +280,10 @@ def main():
     print(f"TEST  {len(trades)} trades  return {w['return']:+.3f} CI {w['return_ci']}  peak exposure {w['peak_exposure']}  "
           f"per $ {w['return_per_dollar']}  maxDD {w['max_drawdown']}")
     print(f"      M0 same rules: return {backtest['baseline_m0']['return']:+.3f} CI {backtest['baseline_m0']['return_ci']}")
+    print(f"      half Kelly variant: return {half_kelly['return']:+.3f} CI {half_kelly['return_ci']}  "
+          f"maxDD {half_kelly['max_drawdown']}  peak exposure {half_kelly['peak_exposure']}")
+    for r in backtest["decomposition"]:
+        print(f"      ladder: {r['label']}: {r['n_trades']} trades, return {r['return']:+.3f}, per $ {r['return_per_dollar']}")
 
 
 if __name__ == "__main__":
