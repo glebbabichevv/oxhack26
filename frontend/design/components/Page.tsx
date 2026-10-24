@@ -1,6 +1,7 @@
 import type { KeyboardEvent, ReactNode } from "react";
+import { Rail } from "@/components/Rail";
 
-// "The Quiet Page" primitives (DESIGN.md → Components). React + Tailwind only, no client hooks.
+// "The Quiet Page" primitives (DESIGN.md → Components). React + Tailwind; the only client piece is Rail.
 
 export function Nav({ links, action }: { links: { label: string; href: string }[]; action?: ReactNode }) {
   return (
@@ -45,8 +46,9 @@ export function KpiRow({ items }: { items: { label: string; value: ReactNode; no
 /** Text column + evidence column. */
 export function Section({ title, lead, controls, children }: { title: string; lead?: string; controls?: ReactNode; children: ReactNode }) {
   return (
-    <section className="mt-14 grid grid-cols-1 items-start gap-10 md:grid-cols-[1fr_1.25fr]">
-      <div>
+    <section className="mt-20 grid grid-cols-1 items-start gap-10 md:grid-cols-[1fr_1.25fr] md:gap-16">
+      <div className="relative md:sticky md:top-[104px] md:pl-7">
+        <Rail />
         <h2 className="font-serif text-[32px] leading-[1.2] tracking-[-0.01em]">{title}</h2>
         {lead ? <p className="mt-2.5 text-[15px] leading-[1.6] text-ink-muted">{lead}</p> : null}
         {controls ? <div className="mt-5">{controls}</div> : null}
