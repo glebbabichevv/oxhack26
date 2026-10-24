@@ -1,0 +1,24 @@
+{
+ "seals": [
+  {
+   "name": "seal-20261024T153130Z.json",
+   "sealed_at": "2026-10-24T15:31:30+00:00",
+   "deadline": "2026-10-25T13:00:00+00:00",
+   "sha256": "31d2510c13ee29c0a4c9ac26aa498b7ca1cffca58d4bf553f6d5bfd5acb73326",
+   "timestamped": true,
+   "n_markets": 359,
+   "n_primary": 48,
+   "by_domain": {
+    "science_tech": 133,
+    "sports": 112,
+    "politics": 72,
+    "culture": 22,
+    "crypto": 17,
+    "geopolitics": 3
+   },
+   "opened": null
+  }
+ ],
+ "expectations": "capsule/EXPECTATIONS.md",
+ "forward": null
+}

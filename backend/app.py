@@ -56,3 +56,9 @@ def backtest():
 def model():
     """Fitted coefficients + bootstrap sets + decision constants, for computing q in the browser."""
     return load("model")[0]
+
+
+@app.get("/api/capsule")
+def capsule():
+    """Sealed predictions: each seal's hash and counts, its opening once scored, and C's forward test."""
+    return load("capsule")[0]

@@ -2,6 +2,7 @@
 
   python backend/capsule.py seal            # writes capsule/seal-<UTC>.json, prints its SHA-256
   python backend/capsule.py open <seal>     # scores a seal against resolutions -> capsule/open-<UTC>.json
+  python backend/capsule.py summary [forward_score.json]   # -> backend/results/capsule.json for /api/capsule
 
 The rules are pre-registered in capsule/EXPECTATIONS.md. The market filter below is the
 deterministic rule stated there; do not change it after the first seal.
@@ -174,9 +175,28 @@ def open_seal(seal_path):
     print(f"-> {path.relative_to(ROOT)}")
 
 
+def summary(forward_path=None):
+    """Everything the site shows about sealed predictions: each seal (hash, counts) with its latest
+    opening if any, plus C's forward-test score (integrations/forward/score.json) when given."""
+    seals = []
+    for path in sorted(CAPSULE.glob("seal-*.json")):
+        s = json.loads(path.read_text())
+        opens = sorted(CAPSULE.glob(f"open-*-{path.stem}.json"))
+        seals.append({
+            "name": path.name, "sealed_at": s["sealed_at"], "deadline": s["deadline"], "sha256": sha256(path),
+            "timestamped": path.with_suffix(".json.ots").exists(),
+            "n_markets": s["n_markets"], "n_primary": s.get("n_primary"), "by_domain": s["by_domain"],
+            "opened": json.loads(opens[-1].read_text()) if opens else None,
+        })
+    out = {"seals": seals, "expectations": "capsule/EXPECTATIONS.md",
+           "forward": json.loads(Path(forward_path).read_text()) if forward_path else None}
+    (HERE / "results" / "capsule.json").write_text(json.dumps(out, indent=1))
+    print(f"wrote results/capsule.json: {len(seals)} seal(s), forward={'yes' if forward_path else 'no'}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["seal", "open"])
-    ap.add_argument("seal", nargs="?")
+    ap.add_argument("cmd", choices=["seal", "open", "summary"])
+    ap.add_argument("path", nargs="?")
     a = ap.parse_args()
-    seal() if a.cmd == "seal" else open_seal(a.seal)
+    {"seal": lambda: seal(), "open": lambda: open_seal(a.path), "summary": lambda: summary(a.path)}[a.cmd]()
