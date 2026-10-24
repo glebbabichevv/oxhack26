@@ -20,6 +20,14 @@ ensemble. If Mark's shin is missing at 00:00, the built-in SHIN below is used as
   (e) ENS     mean of M0, M1, M2 (integrations/model_v2), BETA and Mark's members (or the fallback SHIN)
   (f) AGREE   ENS, trading only when every member's edge has the same sign and the members' q spread is
               below a threshold chosen on validation from {2, 4, 6, 10}c
+  (g) POOL    time-weighted log pool (Gleb 23:12, Ranjan & Gneiting 2010): logit q = sum_i w_i(h) logit q_i + c,
+              w_i(h) = a_i + b_i log(clip(h,12,720)/24); fitted by log loss on the FIRST half of validation
+              (by resolution time), never extremized. For the test, refitted on all of validation.
+
+Selection (because POOL can only be scored honestly on the second half of validation): EVERY candidate is
+scored on the second half of validation (VAL2) and the winner is the highest VAL2 per-$ return (ties within
+0.5c to the earlier candidate). Full-validation numbers are reported alongside. results.json also holds the
+correlation matrix of the members' errors (q_i - outcome) on validation, in-band rows.
 
 Everything else is exactly backend/playoff.py's V3: same split (validation = last 20% of train markets by
 resolution, models fitted on the first 80%; test = shipped cutoff, models refitted on all of train), same
@@ -47,7 +55,7 @@ import playoff as P  # noqa: E402
 from features import build_table  # noqa: E402
 from models import make  # noqa: E402
 
-CANDIDATES = ["V3", "COH", "BETA", "ENS", "AGREE"]
+CANDIDATES = ["V3", "COH", "BETA", "ENS", "AGREE", "POOL"]
 MARK = ["shin", "power", "isotonic", "hier"]
 MEMBERS_DIR = HERE / "members"
 AGREE_GRID = (0.02, 0.04, 0.06, 0.10)
@@ -183,8 +191,48 @@ def trades_for(d, name, qs, dlo, dhi, agree=None):
     return t.sort_values("resolved_at"), q
 
 
+class LogPool:
+    """logit q = sum_i (a_i + b_i * lh) * logit q_i + c, by Newton on log loss (tiny ridge, no extremizing)."""
+
+    def __init__(self, keys):
+        self.keys = keys
+
+    def _x(self, d, qs):
+        lh = np.log(np.clip(d["horizon_hours"].to_numpy(float), 12, 720) / 24)
+        cols = [np.ones(len(d))]
+        for k in self.keys:
+            cols += [logit(qs[k]), logit(qs[k]) * lh]
+        return np.column_stack(cols)
+
+    def fit(self, d, qs):
+        b = B.in_band(d["price_yes"]).astype(bool)
+        X, y = self._x(d, qs)[b], d["outcome"].to_numpy(float)[b]
+        w = np.zeros(X.shape[1])
+        w[1::2] = 1.0 / len(self.keys)  # start at the plain logit average
+        for _ in range(50):
+            q = sigmoid(X @ w)
+            w -= np.linalg.solve(X.T @ (X * (q * (1 - q))[:, None]) + 1e-3 * np.eye(len(w)), X.T @ (q - y))
+        self.w = w
+        return self
+
+    def predict(self, d, qs):
+        p = d["price_yes"].to_numpy(float)
+        return np.where(B.in_band(p), sigmoid(self._x(d, qs) @ self.w), p)
+
+
+def sub(qs, mask):
+    return {k: v[mask] for k, v in qs.items()}
+
+
+def error_corr(d, qs, keys):
+    b = B.in_band(d["price_yes"]).astype(bool)
+    y = d["outcome"].to_numpy(float)[b]
+    e = pd.DataFrame({k: qs[k][b] - y for k in keys})
+    return {"members": keys, "matrix": e.corr().round(4).values.tolist()}
+
+
 def ensemble_keys(qs):
-    keys = ["M0", "M1", "M2", "BETA"] + [m for m in MARK if m in qs]
+    keys = ["M0", "M1", "M2", "BETA"] + [m for m in MARK if m in qs]  # POOL is a combiner, not a member
     return keys if "shin" in qs else keys + ["SHIN"]
 
 
@@ -230,24 +278,39 @@ def main():
     mem = Members().fit(fit, feats)
     qs, dlo, dhi = mem.predict(val, feats)
     qs.update(load_mark(val, "val"))
+    keys = ensemble_keys(qs)
     cands = CANDIDATES + [m for m in MARK if m in qs]
-    print("candidates:", cands, "| ensemble members:", ensemble_keys(qs), flush=True)
-    validation, agree_grid = {}, {}
+    print("candidates:", cands, "| ensemble members:", keys, flush=True)
+    half = (val["resolved_at"] >= val["resolved_at"].quantile(0.5)).to_numpy()  # VAL2 = later half by time
+    val1, val2 = val[~half], val[half]
+    pool = LogPool(keys).fit(val1, sub(qs, ~half))
+    qs["POOL"] = pool.predict(val, qs)
+    corr = error_corr(val, qs, keys)
+
+    def evaluate(rows, q_sub, lo, hi):
+        out, grid = {}, {}
+        for c in cands:
+            if c == "AGREE":
+                for thr in AGREE_GRID:
+                    grid[thr] = score(rows, c, q_sub, lo, hi, thr)
+                best_thr = max(AGREE_GRID, key=lambda t: grid[t].get("per_dollar") or -9)
+                out[c] = {**grid[best_thr], "threshold": best_thr}
+            else:
+                out[c] = score(rows, c, q_sub, lo, hi)
+        return out, grid
+
+    validation2, agree_grid = evaluate(val2, sub(qs, half), dlo[half], dhi[half])
+    validation_full, _ = evaluate(val, qs, dlo, dhi)
+    validation_full.pop("POOL")  # in-sample on VAL1, not reported
     for c in cands:
-        if c == "AGREE":
-            for thr in AGREE_GRID:
-                agree_grid[thr] = score(val, c, qs, dlo, dhi, thr)
-                print(f"  val AGREE <{thr}: {agree_grid[thr].get('per_dollar')}  n={agree_grid[thr]['n_trades']}", flush=True)
-            best_thr = max(AGREE_GRID, key=lambda t: agree_grid[t].get("per_dollar", -9))
-            validation[c] = {**agree_grid[best_thr], "threshold": best_thr}
-        else:
-            validation[c] = score(val, c, qs, dlo, dhi)
-        v = validation[c]
-        print(f"val {c:5s} brier {v['brier']} logloss {v['logloss']} per$ {v.get('per_dollar')} "
-              f"{v.get('per_dollar_ci')} n={v['n_trades']}", flush=True)
-    winner, best = "V3", validation["V3"].get("per_dollar", -9)
+        v = validation2[c]
+        f = validation_full.get(c, {})
+        print(f"VAL2 {c:8s} brier {v['brier']} logloss {v['logloss']} per$ {v.get('per_dollar')} {v.get('per_dollar_ci')} "
+              f"n={v['n_trades']} | full-val per$ {f.get('per_dollar')} n={f.get('n_trades')}", flush=True)
+    validation = validation2
+    winner, best = cands[0], validation[cands[0]].get("per_dollar") or -9
     for c in cands[1:]:
-        if validation[c].get("per_dollar", -9) > best + TIE:
+        if (validation[c].get("per_dollar") or -9) > best + TIE:
             winner, best = c, validation[c]["per_dollar"]
     print("validation winner:", winner, flush=True)
 
@@ -257,6 +320,7 @@ def main():
         test_rows = scored_rows(test, cutoff)
         qs_t, dlo_t, dhi_t = mem_t.predict(test_rows, feats)
         qs_t.update(load_mark(test_rows, "test"))
+        qs_t["POOL"] = LogPool(keys).fit(val, {k: v for k, v in qs.items() if k in keys}).predict(test_rows, qs_t)
         testing = {c: score(test_rows, c, qs_t, dlo_t, dhi_t, validation[c].get("threshold"))
                    for c in dict.fromkeys(["V3", winner])}
     for c, v in testing.items():
@@ -266,7 +330,9 @@ def main():
     res = {"protocol": __doc__.strip(), "candidates": cands, "n_candidates_compared": len(cands),
            "ensemble_members": ensemble_keys(qs), "test_opened": bool(a.test), "agree_thresholds_tried": list(AGREE_GRID),
            "n_validation_markets": len(val_ids), "n_test_markets": int(test["market_id"].nunique()),
-           "winner": winner, "validation": validation, "validation_agree_grid": {str(k): v for k, v in agree_grid.items()},
+           "winner": winner, "selection_on": "VAL2 (later half of validation by resolution time)",
+           "validation_second_half": validation, "validation_full": validation_full,
+           "pool_weights": {"keys": keys, "w": [round(float(x), 4) for x in pool.w]}, "error_correlation": corr, "validation_agree_grid": {str(k): v for k, v in agree_grid.items()},
            "test": testing}
     HERE.mkdir(exist_ok=True)
     (HERE / "results.json").write_text(json.dumps(res, indent=1, default=str))
