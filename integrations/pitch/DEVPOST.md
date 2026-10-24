@@ -1,7 +1,7 @@
 # Horizon — Devpost draft (Role C)
 
 Paste section by section into Devpost. Placeholders: `[public URL]`, `[video]`, `[Delta thread links]`, `[team names]`.
-Numbers from `backend/results/*.json` (14:25 Sat) — re-check before submitting.
+Numbers from `backend/results/*.json` (14:25 Sat) — re-check before submitting. "Mostly sports" is provisional until the tweet-count markets are relabelled (A, 14:22).
 
 ## Tagline
 Prediction markets are overconfident. Horizon tells you when it pays to trade against them.
@@ -37,8 +37,8 @@ on the same side of the split.
 - **Data:** Python against Polymarket's Gamma and CLOB APIs. Each horizon is measured from the *scheduled* end date
   (what a trader knows in advance), the price is the last trade at or before that moment, and a row exists only if the
   market was still open then. Cancelled and 50-50 resolutions are dropped.
-- **Model:** logistic regression on logit(price) with horizon and domain terms; the simpler variant won on a
-  validation split. Uncertainty intervals come from bootstrapping whole events.
+- **Model:** logistic regression with four coefficients: logit(price), log(horizon) and their interaction. A version with
+  domain terms overfit on validation and lost. Uncertainty intervals come from bootstrapping whole events.
 - **Decision:** edge = model − price; trade only if the edge clears max(spread / 2, 1¢) and the model's bootstrap
   interval; stake = ¼ Kelly capped at 5%.
 - **App:** FastAPI serving results, Next.js + Tailwind front end.

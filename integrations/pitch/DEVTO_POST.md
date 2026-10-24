@@ -53,7 +53,7 @@ you more for showing it.
 On the held-out markets:
 
 - Prices are overconfident at every horizon (calibration slope ≈ 0.85).
-- A simple calibration model (logistic regression on logit(price) with horizon and domain terms) beats the market
+- A four-coefficient calibration model (logistic regression on logit(price), log(horizon) and their product) beats the market
   price itself: **Brier 0.1274 vs 0.1281**. That's a small gain, but the market price is a hard baseline.
 - Trading only where the edge clears a 1¢ cost and the model's bootstrap interval, at a quarter-Kelly stake:
   **7,228 trades, +2.77 starting bankrolls**, 90% CI [1.41, 4.07]. Max drawdown 42%. Hit rate 24%: lots of small
