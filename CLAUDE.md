@@ -60,6 +60,7 @@ Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabe
 `data/live.csv` — open markets now: `market_id, question, domain, price_yes, hours_to_resolution, volume_usd, spread, url`
 Keep committed CSVs under ~50 MB; raw API dumps go in `data/raw/` (gitignored).
 Polymarket gotcha: for closed markets `prices-history` with `interval=max` can come back empty or 12h-coarse — request explicit `startTs`/`endTs` in ~15-day chunks. 12h granularity is fine for our horizons.
+**Horizon anchor (Role A, 13:50):** measure `horizon_hours` back from the market's **scheduled `endDate`**, not `closedTime` — live markets only know `endDate`, and markets that close early (e.g. a team knocked out) would leak the outcome. Drop a (market, horizon) row if the market was already closed at that time. `resolved_at` = `closedTime`. Gamma `category` is usually null — take domain from the event's tags/title.
 
 ## Roles — who you are
 At the start of every session, ask the human which role they have (if not obvious from the branch name), then act only as that role.
