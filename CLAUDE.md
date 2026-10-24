@@ -107,6 +107,12 @@ At the start of every session, ask the human which role they have (if not obviou
 
 **v1.3 (18:15, Role A) — `/api/live` is now an object, computed from live Gamma prices on request** (5 min per-instance cache, 60 s CDN): `{"updated_at": ISO, "model_version": "2026-10-24-390c312", "source": "live"|"fallback", "n_markets_scanned", "n_markets_priced", "n_trades", "markets": [ …the v1.1 items, plus "spread", "fee"… ]}`; `cost` now includes the taker fee. `"fallback"` = Gamma failed, saved snapshot `results/live.json` (+ `error`). `/api/backtest` and `/api/calibration` have `generated_at` + `model_version`; `/api/backtest` adds `peak_open_stake`, `return_per_dollar_staked`, `capped_exposure` {return, return_ci, n_trades, hit_rate, max_drawdown, equity, cap}. `/api/model` adds `version`, `metrics`, `fee_rates`. New models only via `backend/refit.py` (out-of-time Brier gate).
 
+**v1.4 additions (invest, Role C — draft for A to approve):** PIN-gated auto-invest plans, in `backend/invest_router.py`. Reads are open; writes send header `X-Dashboard-Pin` and only work on the process with `TRADER_ENABLED=1`.
+- `GET /api/plans` → `{mode: "paper"|"live", interval_min, max_bet_ceiling, plans:[…]}` (each plan: id, status, pause_reason, budget, max_bet, daily_loss_stop, cash, value, profit, profit_pct, open_bets, last_check, created_at).
+- `POST /api/plans` `{budget, max_bet, daily_loss_stop}` → the new plan summary. `POST /api/plans/{id}/pause|resume|stop` (pause only from running, resume only from paused).
+- `GET /api/orders?plan=<id>&limit=<n>` → events (newest first; `kind`, `plan_id`, time, plus `cost`, `shares`, `reason`, `question` where relevant). `GET /api/pnl` → `{real:[{t,value}], backtest:[{t,value}], backtest_budget}` (profit in $; backtest scaled to the plans' total budget).
+- Errors: 400 bad input or state, 401 wrong/missing PIN, 429 PIN lockout, 503 writes disabled (`TRADER_ENABLED` not 1).
+
 `GET /api/calibration?domain=all` → reliability curves per horizon
 ```json
 {"horizons":[{"horizon_hours":720,"bins":[{"price_mid":0.7,"observed":0.75,"n":312}],"brier_market":0.19,"brier_model":0.18}]}
