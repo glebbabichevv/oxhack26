@@ -16,7 +16,7 @@ For each market it records the market price and Horizon's probability q with its
 - **Secondary:** all sealed markets (≥ $1,000).
 
 ## Two seals, scored separately
-- **Seal 1** (Saturday evening) is the primary seal. **Seal 2** (around 01:30 Sunday) is secondary.
+- **Seal 1** (Saturday ~16:45 London, sealed as soon as these rules were committed and the site moved) is the primary seal. **Seal 2** (around 01:30 Sunday) is secondary.
 - Both are always reported. Within a seal each market counts once; the overlap between seals is expected and is not merged.
 
 ## What counts at opening
