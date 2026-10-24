@@ -298,7 +298,7 @@ function BacktestSection({ b }: { b: Backtest }) {
       title={b.headline
         ? `After fees, every $1 staked returned ${perDollar(b.headline.per_dollar)}`
         : `After fees and spread, the test made ${bankroll(b.with_costs.return)} of its starting bankroll`}
-      lead={`Out-of-time test on ${int(b.n_test_markets)} markets. The rule: trade only when the net edge after fees and the model's uncertainty is at least 1¢, and only within 24 hours of the end (picked on validation only). One trade per market at ¼ Kelly, at most one bankroll staked at once, P&L summed as a share of the starting bankroll${b.headline ? `: ${bankroll(b.headline.return)}, 90% CI ${bankroll(b.headline.return_ci[0])} to ${bankroll(b.headline.return_ci[1])}, mostly from sports` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
+      lead={`Out-of-time test on ${int(b.n_test_markets)} markets. The rule: trade only when the net edge after fees and the model's uncertainty is at least 1¢, and only within 24 hours of the end; across the outcomes of one event, probabilities are scaled to sum to 100% and at most one outcome is backed (picked on validation among 10 variants; the test was opened once for the two finalists). One trade per market at ¼ Kelly, at most one bankroll staked at once, P&L summed as a share of the starting bankroll${b.headline ? `: ${bankroll(b.headline.return)}, 90% CI ${bankroll(b.headline.return_ci[0])} to ${bankroll(b.headline.return_ci[1])}, mostly from sports` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
     >
       <FramedCard title="Equity, test period, uncapped stakes" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
         <EquityChart withCosts={b.with_costs.equity} withoutCosts={b.without_costs.equity} />
@@ -329,9 +329,9 @@ function BacktestSection({ b }: { b: Backtest }) {
   );
 }
 
-// How we chose the rule: V0 (main as it was), V2 (enter from 24 h), V3 (+ min edge 1¢); validation picked, test shown once.
+// How we chose the rule: V0/V2/V3 (round 1) and COH (round 2, event coherence); validation picked, test shown side by side.
 function PolicyTable({ pc }: { pc: NonNullable<Backtest["policy_comparison"]> }) {
-  const rows = pc.rows.filter((r) => ["V0", "V2", "V3"].includes(r.variant));
+  const rows = pc.rows.filter((r) => r.variant !== "V1");
   const ci = (c: [number, number]) => `${perDollar(c[0])} to ${perDollar(c[1])}`;
   return (
     <div className="mt-5 border-t border-hairline-soft pt-3">
@@ -396,6 +396,36 @@ function DomainReturns({ rows }: { rows: NonNullable<Backtest["by_domain"]> }) {
 
 const KIND = { losing_domain: "Loses money", no_lift: "No lift", thin_data: "Too little data" } as const;
 
+type MethodRow = { block: string; name: string; value: number; lo: number | null; hi: number | null; n: number; note?: string };
+
+/** Test breakdown by domain for the shipped rule (Ayaz, descriptive: not used for selection), from /api/methods. */
+function DomainBreakdown() {
+  const [rows, setRows] = useState<MethodRow[]>();
+  useEffect(() => { getJSON<{ rows: MethodRow[] }>("/api/methods").then((d) => setRows(d.rows)).catch(() => setRows([])); }, []);
+  const dom = (rows ?? []).filter((r) => r.block === "domain" && r.name.startsWith("COH: ") && r.n >= 2)
+    .map((r) => ({ ...r, d: r.name.slice(5).replace("_", " & ") })).sort((x, y) => x.value - y.value);
+  if (!dom.length) return null;
+  const c = (x: number) => `${x >= 0 ? "+" : "−"}${Math.round(Math.abs(x) * 100)}¢`;
+  return (
+    <div className="mb-4 border-b border-hairline-soft pb-3">
+      <div className="mb-1 text-[13px] font-semibold text-ink-strong">By domain on the test, per $1 staked after fees</div>
+      {dom.map((r) => {
+        const small = r.n < 100, loses = r.value < 0, flat = !loses && r.lo !== null && r.lo < 0;
+        const tag = small ? ["Too little data", "bg-fill-soft text-ink-muted"] : loses ? ["Loses money", "bg-down-tint text-down"] : flat ? ["No clear edge", "bg-fill-soft text-ink-muted"] : ["Pays", "bg-up-tint text-up"];
+        return (
+          <div key={r.name} className="flex items-center justify-between gap-3 border-t border-hairline-soft py-2 text-[13px] first:border-t-0">
+            <span className="min-w-0"><span className="font-medium capitalize">{r.d}</span>
+              <span className="ml-2 tabular-nums text-ink-muted">{c(r.value)}{r.lo !== null && r.hi !== null && r.lo !== r.hi ? ` [${c(r.lo)}, ${c(r.hi)}]` : ""} · {int(r.n)} bets</span></span>
+            <span className={`shrink-0 rounded-full px-2.5 py-[3px] text-[12px] font-semibold ${tag[1]}`}>{tag[0]}</span>
+          </div>
+        );
+      })}
+      <p className="mt-1.5 text-[12px] text-ink-faint">Descriptive, not used to choose the rule. Culture is the one domain that lost; crypto is about zero; small domains are too thin to read.</p>
+      <p className="mt-1 text-[12px] text-ink-faint">Selling before the end did not beat holding on validation (+33.6¢ vs +34.3¢ per $1), so Horizon holds to resolution.</p>
+    </div>
+  );
+}
+
 function Failures({ b }: { b: Backtest }) {
   const order = { losing_domain: 0, no_lift: 1, thin_data: 2 } as const;
   const failures = [...b.failures].sort((x, y) => order[x.kind] - order[y.kind]);
@@ -405,6 +435,7 @@ function Failures({ b }: { b: Backtest }) {
       lead={`${b.failures.length} domain × horizon cells where the model does not beat the market or the sample is too small to say. Reported as plainly as the wins.`}
     >
       <FramedCard title="No edge here" meta={`${failures.length} cells`}>
+        <DomainBreakdown />
         <div className="mb-3 flex items-start justify-between gap-3 border-b border-hairline-soft pb-3">
           <span className="min-w-0 text-[13px]">
             <span className="font-medium">Crypto, priced as options</span>
