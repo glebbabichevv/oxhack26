@@ -25,17 +25,18 @@ html[data-hz-state="fail"] .argos-agent-highlight, html[data-hz-state="fail"] .a
 html[data-hz-state="fail"] .argos-agent-highlight-label { background: #e11d48 !important; }
 `;
 
-const styled = new Set<string>();
-
-/** Insert the stylesheet once per tab + document (a navigation needs it again). */
+/**
+ * Insert the stylesheet unless this very document already has it. Checked inside the page
+ * (html[data-hz-styled]) every time, because a reload keeps the URL but starts a new document.
+ * Called before every page action, so the overlay can never draw in its own orange.
+ */
 export async function stylePage(tabId: number) {
   try {
-    const [t] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => location.href });
-    const key = `${tabId}:${t?.result}`;
-    if (styled.has(key)) return;
+    const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => document.documentElement.hasAttribute('data-hz-styled') });
+    if (r?.result) return;
     await chrome.scripting.insertCSS({ target: { tabId, frameIds: [0] }, css: CSS });
-    styled.add(key);
-  } catch { /* the page is restricted or gone: the overlay keeps its own look */ }
+    await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => { document.documentElement.setAttribute('data-hz-styled', ''); } });
+  } catch { /* restricted page or tab gone: nothing to style */ }
 }
 
 /** 'act' | 'ok' | 'fail' | '' on <html data-hz-state>; ok/fail clear themselves. */

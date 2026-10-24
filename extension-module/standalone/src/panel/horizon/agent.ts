@@ -212,6 +212,19 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
 
 // ---------- the page ----------
 
+/**
+ * Sports pages keep everything but the main lines under sub-tabs ("Exact Score", "Halves",
+ * "Corners", "Goalscorers"). Which one a leg lives in, from its question and slug.
+ */
+export function subTabOf(q: Pick<Quote, 'question' | 'marketSlug'>): string | undefined {
+  const t = `${q.question} ${q.marketSlug}`.toLowerCase();
+  if (/^exact score:|exact-score/.test(t)) return 'Exact Score';
+  if (/\b(1st|2nd|first|second) half\b|halftime|half-time|-1h-|-2h-/.test(t)) return 'Halves';
+  if (/\bcorners?\b/.test(t)) return 'Corners';
+  if (/\bto score\b|goalscorer|anytime scorer/.test(t)) return 'Goalscorers';
+  return undefined;
+}
+
 /** True while Horizon is steering the tab, so the panel does not jump views mid-bet. */
 export const pageDrive = { active: false };
 
@@ -230,7 +243,7 @@ async function openEvent(ctx: Pick<Ctx, 'tabId'>, eventSlug: string) {
 }
 
 const plainPageError = (e: string) => /ticket not found/i.test(e) ? "Polymarket's order box is not on screen"
-  : /wrong outcome/i.test(e) ? "Polymarket's ticket shows a different outcome. Don't press Trade there"
+  : /wrong outcome/i.test(e) ? `Polymarket's ticket is on a different outcome${(e.match(/\(([^)]*)\)/) ?? [])[1] ? ` (${(e.match(/\(([^)]*)\)/) ?? [])[1]})` : ''}. Don't press Trade there`
   : /could not find this market/i.test(e) ? 'Could not find this outcome on the page'
   : /amount field/i.test(e) ? "Could not find Polymarket's amount box"
   : /Sell tab/i.test(e) ? "Could not find Polymarket's Sell tab"
@@ -259,7 +272,7 @@ export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q
     label = (leg?.label ?? q.label).replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
     let cur: ((s: Step['status'], d?: string) => void) | undefined;
     const r = await prepareOrder({ tabId: ctx.tabId, eventSlug: q.eventSlug, marketSlug: q.marketSlug, label,
-      legCount: ev.legs.filter((l) => l.decision).length, side, amount, bid: leg?.bid ?? q.bid, ask: leg?.ask ?? q.ask, mode,
+      legCount: ev.legs.filter((l) => l.decision).length, side, amount, bid: leg?.bid ?? q.bid, ask: leg?.ask ?? q.ask, mode, tab: subTabOf(q),
       onProgress: (t) => { cur?.('ok'); cur = sh(t); } });
     if (r.ok) { cur?.('ok'); void markPage(ctx.tabId, 'ok'); return { ok: true, label }; }
     void markPage(ctx.tabId, 'fail');
