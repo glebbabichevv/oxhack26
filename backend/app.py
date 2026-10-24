@@ -1,8 +1,9 @@
-"""Horizon API. Serves the 3 contract endpoints (see CLAUDE.md, API contract v1).
+"""Horizon API (see CLAUDE.md, API contract).
 
-Each endpoint returns backend/results/<name>.json when the model pipeline has
-written it, otherwise the contract example from backend/examples/<name>.json,
-so the frontend works before the model does.
+/api/live is computed on request from live Polymarket prices with results/model.json (live.py,
+cached ~5 min per instance; the saved snapshot results/live.json only if Gamma fails). The other
+endpoints serve backend/results/<name>.json, written by model.py / refit.py, stamped with
+generated_at + model_version; backend/examples/<name>.json before the pipeline has run.
 """
 import json
 from pathlib import Path
@@ -12,6 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 import horizon_mcp
+import live as live_feed
 
 HERE = Path(__file__).parent
 RESULTS = HERE / "results"
@@ -31,12 +33,16 @@ def load(name: str):
 
 @app.get("/api/health")
 def health():
-    return {name: load(name)[1] for name in ("live", "calibration", "backtest")}
+    out = {name: load(name)[1] for name in ("calibration", "backtest")}
+    return {**out, "live": "computed on request", "model_version": horizon_mcp.model_version()}
 
 
 @app.get("/api/live")
-def live():
-    return load("live")[0]
+def live(response: Response):
+    payload = live_feed.get_live()
+    # Let Vercel's CDN share one fetch across visitors for a minute; each instance also caches ~5 min.
+    response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=240"
+    return payload
 
 
 @app.get("/api/calibration")
@@ -46,7 +52,8 @@ def calibration(domain: str = "all"):
     if "by_domain" in data:
         if domain not in data["by_domain"]:
             raise HTTPException(status_code=404, detail=f"unknown domain {domain}")
-        return data["by_domain"][domain]
+        meta = {k: data.get(k) for k in ("generated_at", "model_version", "cutoff")}
+        return {**meta, **data["by_domain"][domain]}
     return data
 
 
