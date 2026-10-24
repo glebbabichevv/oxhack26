@@ -49,7 +49,7 @@ Same test set and model (M0), same test embargo, one change added at a time:
 Row 1 is not the shipped backend's +3.04: v2 refits M0 with its own bootstrap
 band and event-level validation split, and drops test trades entered before the cutoff.
 Fees are the big cost. The minimum edge raises total return on test but not return per $1
-(it frees capital for later trades rather than picking better ones). The headline is row 4.
+(fewer trades block the caps less; not measured separately). The headline is row 4.
 
 ### Half Kelly (variant, not the headline)
 | Policy | Trades | Return | 90% CI | Per $1 | Max drawdown | Peak exposure |
