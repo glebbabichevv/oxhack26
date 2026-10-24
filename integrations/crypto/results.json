@@ -1,0 +1,119 @@
+{
+ "cutoff": "2026-05-18",
+ "vol_window_hours": 336,
+ "vol_scale": 1.15,
+ "blend_weights": {
+  "const": -0.092,
+  "exchange": 0.117,
+  "market": 0.669
+ },
+ "n_train_rows": 9671,
+ "n_test_rows": 2011,
+ "n_test_markets": 1110,
+ "overall": {
+  "brier_market": 0.1401,
+  "brier_exchange": 0.1472,
+  "brier_blend": 0.141,
+  "logloss_market": 0.4413,
+  "logloss_exchange": 0.4708,
+  "logloss_blend": 0.445
+ },
+ "by_kind": [
+  {
+   "kind": "above",
+   "n": 1552,
+   "brier_market": 0.1452,
+   "brier_exchange": 0.1478,
+   "brier_blend": 0.1458
+  },
+  {
+   "kind": "below",
+   "n": 1,
+   "brier_market": 0.1303,
+   "brier_exchange": 0.0,
+   "brier_blend": 0.0477
+  },
+  {
+   "kind": "between",
+   "n": 52,
+   "brier_market": 0.1426,
+   "brier_exchange": 0.1615,
+   "brier_blend": 0.1493
+  },
+  {
+   "kind": "dip",
+   "n": 224,
+   "brier_market": 0.1088,
+   "brier_exchange": 0.1292,
+   "brier_blend": 0.11
+  },
+  {
+   "kind": "reach",
+   "n": 182,
+   "brier_market": 0.1345,
+   "brier_exchange": 0.1612,
+   "brier_blend": 0.136
+  }
+ ],
+ "by_horizon": [
+  {
+   "horizon_hours": 12,
+   "n": 465,
+   "brier_market": 0.1492,
+   "brier_exchange": 0.1544,
+   "brier_blend": 0.1483
+  },
+  {
+   "horizon_hours": 24,
+   "n": 539,
+   "brier_market": 0.1443,
+   "brier_exchange": 0.1479,
+   "brier_blend": 0.1441
+  },
+  {
+   "horizon_hours": 72,
+   "n": 875,
+   "brier_market": 0.1324,
+   "brier_exchange": 0.1422,
+   "brier_blend": 0.1351
+  },
+  {
+   "horizon_hours": 168,
+   "n": 51,
+   "brier_market": 0.0835,
+   "brier_exchange": 0.0882,
+   "brier_blend": 0.0885
+  },
+  {
+   "horizon_hours": 720,
+   "n": 81,
+   "brier_market": 0.1776,
+   "brier_exchange": 0.1926,
+   "brier_blend": 0.1741
+  }
+ ],
+ "trades": [
+  {
+   "label": "exchange only",
+   "n_trades": 928,
+   "n_events": 335,
+   "mean_return_per_dollar": -0.1602,
+   "ci90": [
+    -0.2868,
+    -0.03
+   ],
+   "hit_rate": 0.3006
+  },
+  {
+   "label": "blend (exchange + market)",
+   "n_trades": 1050,
+   "n_events": 346,
+   "mean_return_per_dollar": 0.0348,
+   "ci90": [
+    -0.1242,
+    0.2052
+   ],
+   "hit_rate": 0.1838
+  }
+ ]
+}

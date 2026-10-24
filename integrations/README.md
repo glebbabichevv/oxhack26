@@ -23,5 +23,20 @@ python integrations/check_data.py                                              #
 - `event_slug` groups legs of the same event (e.g. every Oscars nominee) — their outcomes are correlated, so keep an event's legs on one side of the train/test split.
 - Domains come from Polymarket tags via a priority map in `common.py` (tweet/post-count + mention markets → culture first, then sports > crypto > economics > politics > geopolitics > science_tech > culture > other).
 
+## Crypto: exchange-implied probability (null result)
+`crypto_implied.py` prices Polymarket's crypto threshold markets as options on the coin: "above K on date" = digital call
+N(d2), "between" = digital spread, "reach / dip to K" = one-touch by the reflection principle, with spot and realised
+volatility from Binance hourly candles before the price time (sigma × √time-to-expiry).
+
+```bash
+python integrations/crypto_implied.py fetch      # Binance hourly candles -> data/raw/ (gitignored)
+python integrations/crypto_implied.py evaluate   # -> integrations/crypto/results.json
+```
+
+Out of time (events ending ≥ 2026-05-18; 2,011 rows, 1,110 markets): market Brier 0.1401, exchange 0.1472, blend 0.1410.
+Trading the exchange signal with the 1¢ half-spread + 0.07·p(1−p) crypto fee loses −16%/$ (90% event-bootstrap CI
+[−29%, −3%]); the blend is +3.5% [−12%, +21%], i.e. nothing. Even a spot taken up to an hour *after* the price time only
+ties the market (0.1412). Polymarket's crypto ladders are already priced like options: no edge from spot + volatility.
+
 ## Earlier pipeline (superseded)
 `polymarket.py`, `sanity.py`, `calibration_check.py` (TheMarkz3) built the first 3.1k-market sample. The team dataset is now the one above (Ayaz, 34.7k markets).
