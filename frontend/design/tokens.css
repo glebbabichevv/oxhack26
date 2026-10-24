@@ -1,129 +1,78 @@
-/* Horizon design tokens ("Glass over the Horizon"). Source of truth: /DESIGN.md.
+/* Horizon design tokens ("The Quiet Page": soft matte, no glass). Source of truth: /DESIGN.md.
    Tailwind v4: in app/globals.css put
      @import "tailwindcss";
      @import "../design/tokens.css";
-   Fonts via next/font/google with variables --font-poppins, --font-jakarta, --font-playfair,
-   --font-cormorant (see frontend/design/README.md).
-   Backdrop image: copy assets/backdrop-turner.jpg to public/backdrop.jpg. */
+   Fonts via next/font/google with variables --font-playfair and --font-jakarta (see README.md). */
 
 :root {
-  --backdrop-base: #dedee3;
+  --page: #ffffff;
+  --frame: #fafafa;
   --ink: #0a0a0a;
   --ink-strong: #111113;
   --ink-muted: #676e7e;
-  --ink-faint: rgba(9, 9, 11, 0.42);
+  --ink-faint: #a1a1aa;
   --ink-second: rgba(10, 10, 10, 0.42);
-  --hairline: rgba(9, 9, 11, 0.07);
-  --graphite: #3f3f46;
-  --ash: #a1a1aa;
+  --hairline: rgba(9, 9, 11, 0.08);
+  --hairline-soft: rgba(9, 9, 11, 0.06);
+  --fill-soft: rgba(15, 23, 42, 0.05);
   --up: #16a34a;
   --up-tint: rgba(22, 163, 74, 0.1);
   --down: #e11d48;
   --down-tint: rgba(225, 29, 72, 0.1);
-  --ink-tint: rgba(9, 9, 11, 0.05);
-  --night: #0a0a0a;
 }
 
 @theme inline {
-  --color-backdrop-base: var(--backdrop-base);
+  --color-page: var(--page);
+  --color-frame: var(--frame);
   --color-ink: var(--ink);
   --color-ink-strong: var(--ink-strong);
   --color-ink-muted: var(--ink-muted);
   --color-ink-faint: var(--ink-faint);
   --color-ink-second: var(--ink-second);
-  --color-ink-tint: var(--ink-tint);
   --color-hairline: var(--hairline);
-  --color-graphite: var(--graphite);
-  --color-ash: var(--ash);
+  --color-hairline-soft: var(--hairline-soft);
+  --color-fill-soft: var(--fill-soft);
   --color-up: var(--up);
   --color-up-tint: var(--up-tint);
   --color-down: var(--down);
   --color-down-tint: var(--down-tint);
-  --color-night: var(--night);
 
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
-  --font-display: var(--font-poppins), system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
-  --font-quiet: var(--font-cormorant), Georgia, serif;
 
-  --radius-control: 11px;
-  --radius-tooltip: 12px;
-  --radius-mock: 16px;
-  --radius-card: 22px;
+  --radius-input: 11px;
+  --radius-card: 16px;
+  --radius-frame: 22px;
 
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --shadow-frame: 0 24px 60px -32px rgba(15, 23, 42, 0.18);
+  --shadow-nav: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --shadow-popover: 0 8px 28px rgba(15, 23, 42, 0.1);
 }
 
+html, body { background: var(--page); }
 body {
   color: var(--ink);
   font-family: var(--font-jakarta), system-ui, sans-serif;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
-
-::selection { background: rgba(17, 17, 19, 0.12); }
+::selection { background: rgba(17, 17, 19, 0.1); }
 :focus-visible { outline: 2px solid var(--ink-strong); outline-offset: 2px; }
 
-/* ── Backdrop: base tone, muted drifting painting, scrim. Use <Backdrop/> from components/Glass.tsx. ── */
-.hz-backdrop-base { position: fixed; inset: 0; z-index: -10; background: var(--backdrop-base); pointer-events: none; }
-.hz-backdrop-img {
-  position: fixed; inset: 0; z-index: -10; overflow: hidden; pointer-events: none;
+/* Big CTA: dark pill + separate blurred grounding layer (wrap > .hz-cta-shadow + .hz-cta). */
+.hz-cta-wrap { position: relative; display: inline-flex; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.hz-cta-wrap:hover { transform: translateY(-1px); }
+.hz-cta-wrap:active { transform: scale(0.97); }
+.hz-cta { position: relative; z-index: 1; background: #1c1c1f; color: rgba(255, 255, 255, 0.96); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14); }
+.hz-cta-shadow {
+  position: absolute; inset: 0; z-index: 0; border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.55); filter: blur(14px); opacity: 0.7;
+  transform: translateY(6px) scale(0.94);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.hz-backdrop-img img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%;
-  filter: grayscale(0.5) contrast(1.08) brightness(1.04);
-  animation: hz-drift 60s ease-in-out infinite alternate;
-}
-.hz-backdrop-scrim {
-  position: fixed; inset: 0; z-index: -10; pointer-events: none;
-  background: linear-gradient(to bottom,
-    rgba(244, 244, 247, 0.5) 0%, rgba(244, 244, 247, 0.56) 6%, rgba(244, 244, 247, 0.86) 15%,
-    rgba(244, 244, 247, 0.74) 28%, rgba(244, 244, 247, 0.61) 52%, rgba(244, 244, 247, 0.58) 100%);
-}
-@keyframes hz-drift { from { transform: scale(1.16) translate3d(-1.5%, -1%, 0); } to { transform: scale(1.16) translate3d(1.5%, 1%, 0); } }
-
-/* ── Glass materials ── */
-.hz-glass-card {
-  position: relative;
-  background:
-    linear-gradient(125deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.16) 35%,
-      rgba(255, 255, 255, 0.04) 52%, rgba(255, 255, 255, 0.3) 100%),
-    rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.25),
-    inset 1px 0 0 rgba(255, 255, 255, 0.4), inset -1px 0 0 rgba(255, 255, 255, 0.4),
-    0 2px 10px rgba(15, 23, 42, 0.07), 0 8px 24px rgba(15, 23, 42, 0.05);
-}
-.hz-glass-hover { transition: transform 260ms var(--ease-spring, cubic-bezier(0.34, 1.4, 0.64, 1)), box-shadow 260ms cubic-bezier(0.34, 1.4, 0.64, 1); }
-.hz-glass-hover:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.25),
-    inset 1px 0 0 rgba(255, 255, 255, 0.4), inset -1px 0 0 rgba(255, 255, 255, 0.4),
-    0 4px 14px rgba(15, 23, 42, 0.09), 0 16px 40px rgba(15, 23, 42, 0.09);
-}
-.hz-glass-bar {
-  background: rgba(255, 255, 255, 0.68);
-  backdrop-filter: blur(26px) saturate(200%);
-  -webkit-backdrop-filter: blur(26px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.54);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 rgba(255, 255, 255, 0.22),
-    inset 1px 0 0 rgba(255, 255, 255, 0.3), inset -1px 0 0 rgba(255, 255, 255, 0.3),
-    0 2px 16px rgba(0, 0, 0, 0.06);
-}
-/* Hero CTA: grey glass pill with inner highlight. */
-.hz-cta {
-  background: linear-gradient(180deg, #6b6b70 0%, #4a4a4f 100%);
-  color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 10px 28px rgba(15, 23, 42, 0.22);
-}
+.hz-cta-wrap:hover .hz-cta-shadow { opacity: 0.85; transform: translateY(9px) scale(0.96); }
 
 @media (prefers-reduced-motion: reduce) {
-  .hz-backdrop-img img { animation: none; transform: scale(1.16); }
-  .hz-glass-hover, .hz-glass-hover:hover { transition: none; transform: none; }
+  .hz-cta-wrap, .hz-cta-wrap:hover, .hz-cta-shadow { transition: none; transform: none; }
 }

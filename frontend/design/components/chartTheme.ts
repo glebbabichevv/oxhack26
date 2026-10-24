@@ -1,4 +1,4 @@
-// Recharts styling for "The Ledger" (DESIGN.md → Components → Charts). Spread these into Recharts props.
+// Recharts styling for "The Quiet Page" (DESIGN.md → Components → Charts). Spread these into Recharts props.
 
 export const SEAM = "rgba(9,9,11,0.07)"; // hairline
 export const INK = "#111113"; // primary series: model, with-costs equity
@@ -12,12 +12,10 @@ export const gridProps = { stroke: SEAM, vertical: false } as const;
 
 export const tooltipProps = {
   contentStyle: {
-    background: "rgba(255,255,255,0.72)",
-    backdropFilter: "blur(26px) saturate(200%)",
-    WebkitBackdropFilter: "blur(26px) saturate(200%)",
-    border: "1px solid rgba(255,255,255,0.6)",
+    background: "#ffffff",
+    border: "1px solid rgba(9,9,11,0.08)",
     borderRadius: 12,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 28px rgba(0,0,0,0.10)",
+    boxShadow: "0 8px 28px rgba(15,23,42,0.10)",
     padding: "7px 11px",
     fontSize: 12,
     color: "#0a0a0a",
@@ -45,3 +43,8 @@ export const lineProps = (color: string) => ({
 export const diagonalProps = { stroke: SEAM, strokeDasharray: "4 4", strokeWidth: 1 } as const;
 
 export const CHART_HEIGHT = 240;
+
+/** Observed outcome rate per price bin on the calibration chart: white dot, ink ring. */
+export const observedDotProps = { r: 3.5, fill: "#ffffff", stroke: INK, strokeWidth: 1.5 } as const;
+/** Market = perfect calibration line (dashed Ash). */
+export const marketDiagonalProps = { stroke: ASH, strokeDasharray: "5 5", strokeWidth: 2 } as const;
