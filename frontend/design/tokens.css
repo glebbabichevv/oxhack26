@@ -10,12 +10,12 @@
   --ink: #0a0a0a;
   --ink-strong: #111113;
   --ink-muted: #676e7e;
-  --ink-faint: #a1a1aa;
-  --ink-second: rgba(10, 10, 10, 0.42);
+  --ink-faint: #71717a; /* was #a1a1aa (2.6:1); meta text needs 4.5:1 on white. Chart Ash stays #a1a1aa. */
+  --ink-second: rgba(10, 10, 10, 0.5); /* headline second line: 3.8:1, large text */
   --hairline: rgba(9, 9, 11, 0.08);
   --hairline-soft: rgba(9, 9, 11, 0.06);
   --fill-soft: rgba(15, 23, 42, 0.05);
-  --up: #16a34a;
+  --up: #15803d; /* was #16a34a (3.3:1); small green labels need 4.5:1 */
   --up-tint: rgba(22, 163, 74, 0.1);
   --down: #e11d48;
   --down-tint: rgba(225, 29, 72, 0.1);
