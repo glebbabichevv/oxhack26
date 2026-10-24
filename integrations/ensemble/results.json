@@ -1,0 +1,868 @@
+{
+ "protocol": "Ensemble playoff (Gleb's 23:05 task): which probability q should V3 trade on? VALIDATION ONLY, then one test.\n\n  python integrations/ensemble/ensemble.py [--raw data/raw]          # VALIDATION only -> results.json\n  python integrations/ensemble/ensemble.py [--raw data/raw] --test   # at 01:00: also scores the test ONCE\n\nCandidate list (fixed; Gleb 23:08: no new variants after 00:00, ~9 in total). Ayaz's 5: V3, COH, BETA, ENS,\nAGREE (below). TheMarkz3's 4 are read from members/<name>_val.csv and members/<name>_test.csv (columns\nmarket_id, horizon_hours, q; validation q fitted on the fit slice, test q fitted on all of train, same split\nas here): shin, power, isotonic, hier. Each is scored as its own candidate (V3 rules on that q) and joins the\nensemble. If Mark's shin is missing at 00:00, the built-in SHIN below is used as the ensemble's Shin member\n(stated in results.json). Ayaz's candidates:\n  (a) V3      M0 (backend Calibrator, the shipped model) \u2014 the baseline\n  (b) COH     (a) + event coherence: in neg-risk events, q normalised across the legs priced at that horizon\n              so they sum to 1 (only when the legs' prices sum to 0.95\u20131.25, i.e. the book looks complete),\n              and at most ONE bet per event (the largest net edge)\n  (c) BETA    beta calibration (Kull et al. 2017): logit q = a*ln p - b*ln(1-p) + c, per horizon bucket\n              (log horizon as an extra term), fitted on the fit slice\n  fallback SHIN (ensemble member only, not a candidate): Shin (1993) from all outcome prices of a neg-risk\n              event (books summing to 1.0\u20131.25; otherwise q = p)\n  (e) ENS     mean of M0, M1, M2 (integrations/model_v2), BETA and Mark's members (or the fallback SHIN)\n  (f) AGREE   ENS, trading only when every member's edge has the same sign and the members' q spread is\n              below a threshold chosen on validation from {2, 4, 6, 10}c\n  (g) POOL    time-weighted log pool (Gleb 23:12, Ranjan & Gneiting 2010): logit q = sum_i w_i(h) logit q_i + c,\n              w_i(h) = a_i + b_i log(clip(h,12,720)/24); fitted by log loss on the FIRST half of validation\n              (by resolution time), never extremized. For the test, refitted on all of validation.\n\nSelection (because POOL can only be scored honestly on the second half of validation): EVERY candidate is\nscored on the second half of validation (VAL2) and the winner is the highest VAL2 per-$ return (ties within\n0.5c to the earlier candidate). Full-validation numbers are reported alongside. results.json also holds the\ncorrelation matrix of the members' errors (q_i - outcome) on validation, in-band rows.\n\nEverything else is exactly backend/playoff.py's V3: same split (validation = last 20% of train markets by\nresolution, models fitted on the first 80%; test = shipped cutoff, models refitted on all of train), same\nembargo, same fees (each market's Gamma fee schedule), same decide() with min edge 1c and entry only within\n24 h of the end, same \"ours\" exposure (1/4 Kelly, 5%/trade, open stake <= 1 bankroll). The uncertainty band of\nevery non-M0 candidate is M0's band shifted to that candidate's q (same width), so decide() is not given\na narrower band just by switching models. Selection: highest validation per-$ return; ties within 0.5c go\nto the earlier (simpler) candidate. The test set is scored once, for the winner and for V3 as reference.",
+ "candidates": [
+  "V3",
+  "COH",
+  "BETA",
+  "ENS",
+  "AGREE",
+  "POOL",
+  "shin",
+  "power",
+  "isotonic",
+  "hier"
+ ],
+ "n_candidates_compared": 10,
+ "ensemble_members": [
+  "M0",
+  "M1",
+  "M2",
+  "BETA",
+  "shin",
+  "power",
+  "isotonic",
+  "hier"
+ ],
+ "test_opened": false,
+ "agree_thresholds_tried": [
+  0.02,
+  0.04,
+  0.06,
+  0.1
+ ],
+ "n_validation_markets": 4768,
+ "n_test_markets": 10579,
+ "winner": "COH",
+ "selection_on": "VAL2 (later half of validation by resolution time)",
+ "validation_second_half": {
+  "V3": {
+   "brier": 0.19973,
+   "logloss": 0.58093,
+   "n_trades": 663,
+   "return": 1.4334,
+   "return_ci": [
+    0.84,
+    2.02
+   ],
+   "per_dollar": 0.343,
+   "per_dollar_ci": [
+    0.1998,
+    0.4872
+   ],
+   "hit_rate": 0.2881,
+   "max_drawdown": 0.1497,
+   "peak_open_stake": 0.559,
+   "staked": 4.179,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 566,
+     "return": 1.3972,
+     "per_dollar": 0.3838
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 97,
+     "return": 0.0361,
+     "per_dollar": 0.0672
+    }
+   ]
+  },
+  "COH": {
+   "brier": 0.19918,
+   "logloss": 0.5799,
+   "n_trades": 397,
+   "return": 1.2538,
+   "return_ci": [
+    0.73,
+    1.79
+   ],
+   "per_dollar": 0.431,
+   "per_dollar_ci": [
+    0.2413,
+    0.6179
+   ],
+   "hit_rate": 0.3476,
+   "max_drawdown": 0.1121,
+   "peak_open_stake": 0.4,
+   "staked": 2.909,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 330,
+     "return": 1.2814,
+     "per_dollar": 0.5204
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 67,
+     "return": -0.0275,
+     "per_dollar": -0.0616
+    }
+   ]
+  },
+  "BETA": {
+   "brier": 0.19983,
+   "logloss": 0.5813,
+   "n_trades": 661,
+   "return": 1.1663,
+   "return_ci": [
+    0.67,
+    1.65
+   ],
+   "per_dollar": 0.2766,
+   "per_dollar_ci": [
+    0.1579,
+    0.3932
+   ],
+   "hit_rate": 0.3253,
+   "max_drawdown": 0.1201,
+   "peak_open_stake": 0.567,
+   "staked": 4.217,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 601,
+     "return": 1.0858,
+     "per_dollar": 0.2806
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 60,
+     "return": 0.0805,
+     "per_dollar": 0.2318
+    }
+   ]
+  },
+  "ENS": {
+   "brier": 0.19916,
+   "logloss": 0.57988,
+   "n_trades": 579,
+   "return": 1.2268,
+   "return_ci": [
+    0.71,
+    1.73
+   ],
+   "per_dollar": 0.3084,
+   "per_dollar_ci": [
+    0.1797,
+    0.4347
+   ],
+   "hit_rate": 0.3506,
+   "max_drawdown": 0.0958,
+   "peak_open_stake": 0.511,
+   "staked": 3.978,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 501,
+     "return": 1.1737,
+     "per_dollar": 0.3298
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 78,
+     "return": 0.0531,
+     "per_dollar": 0.1268
+    }
+   ]
+  },
+  "AGREE": {
+   "brier": 0.19916,
+   "logloss": 0.57988,
+   "n_trades": 317,
+   "return": 0.5094,
+   "return_ci": [
+    0.17,
+    0.86
+   ],
+   "per_dollar": 0.3013,
+   "per_dollar_ci": [
+    0.0999,
+    0.5035
+   ],
+   "hit_rate": 0.2871,
+   "max_drawdown": 0.0887,
+   "peak_open_stake": 0.218,
+   "staked": 1.691,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 228,
+     "return": 0.4694,
+     "per_dollar": 0.3862
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 89,
+     "return": 0.04,
+     "per_dollar": 0.0841
+    }
+   ],
+   "threshold": 0.1
+  },
+  "POOL": {
+   "brier": 0.20067,
+   "logloss": 0.58983,
+   "n_trades": 723,
+   "return": 1.1863,
+   "return_ci": [
+    0.06,
+    2.3
+   ],
+   "per_dollar": 0.1461,
+   "per_dollar_ci": [
+    0.0067,
+    0.2841
+   ],
+   "hit_rate": 0.3568,
+   "max_drawdown": 0.3264,
+   "peak_open_stake": 1.0,
+   "staked": 8.121,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 515,
+     "return": 0.0996,
+     "per_dollar": 0.0161
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 208,
+     "return": 1.0867,
+     "per_dollar": 0.5583
+    }
+   ]
+  },
+  "shin": {
+   "brier": 0.20164,
+   "logloss": 0.58752,
+   "n_trades": 7,
+   "return": -0.067,
+   "return_ci": [
+    -0.15,
+    0.01
+   ],
+   "per_dollar": -0.2724,
+   "per_dollar_ci": [
+    -0.6424,
+    0.0488
+   ],
+   "hit_rate": 0.5714,
+   "max_drawdown": 0.077,
+   "peak_open_stake": 0.139,
+   "staked": 0.246,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 5,
+     "return": -0.0627,
+     "per_dollar": -0.3322
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 2,
+     "return": -0.0043,
+     "per_dollar": -0.0756
+    }
+   ]
+  },
+  "power": {
+   "brier": 0.20143,
+   "logloss": 0.58644,
+   "n_trades": 2,
+   "return": -0.0208,
+   "return_ci": [
+    -0.02,
+    -0.02
+   ],
+   "per_dollar": -1.0,
+   "per_dollar_ci": [
+    -1.0,
+    -1.0
+   ],
+   "hit_rate": 0.0,
+   "max_drawdown": 0.01,
+   "peak_open_stake": 0.011,
+   "staked": 0.021,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 2,
+     "return": -0.0208,
+     "per_dollar": -1.0
+    }
+   ]
+  },
+  "isotonic": {
+   "brier": 0.20007,
+   "logloss": 0.58194,
+   "n_trades": 737,
+   "return": 1.8002,
+   "return_ci": [
+    0.95,
+    2.67
+   ],
+   "per_dollar": 0.2318,
+   "per_dollar_ci": [
+    0.121,
+    0.3461
+   ],
+   "hit_rate": 0.3284,
+   "max_drawdown": 0.1704,
+   "peak_open_stake": 1.0,
+   "staked": 7.766,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 618,
+     "return": 1.7672,
+     "per_dollar": 0.2649
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 119,
+     "return": 0.033,
+     "per_dollar": 0.0302
+    }
+   ]
+  },
+  "hier": {
+   "brier": 0.20002,
+   "logloss": 0.58221,
+   "n_trades": 806,
+   "return": 1.3601,
+   "return_ci": [
+    0.52,
+    2.13
+   ],
+   "per_dollar": 0.148,
+   "per_dollar_ci": [
+    0.0563,
+    0.2304
+   ],
+   "hit_rate": 0.34,
+   "max_drawdown": 0.2355,
+   "peak_open_stake": 1.0,
+   "staked": 9.193,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 740,
+     "return": 1.2325,
+     "per_dollar": 0.1412
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 66,
+     "return": 0.1277,
+     "per_dollar": 0.2758
+    }
+   ]
+  }
+ },
+ "validation_full": {
+  "V3": {
+   "brier": 0.19469,
+   "logloss": 0.56846,
+   "n_trades": 1373,
+   "return": 2.3351,
+   "return_ci": [
+    1.47,
+    3.19
+   ],
+   "per_dollar": 0.2553,
+   "per_dollar_ci": [
+    0.161,
+    0.3485
+   ],
+   "hit_rate": 0.2724,
+   "max_drawdown": 0.2416,
+   "peak_open_stake": 0.876,
+   "staked": 9.147,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 1153,
+     "return": 2.1302,
+     "per_dollar": 0.2736
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 220,
+     "return": 0.2049,
+     "per_dollar": 0.1505
+    }
+   ]
+  },
+  "COH": {
+   "brier": 0.1942,
+   "logloss": 0.56744,
+   "n_trades": 851,
+   "return": 1.8132,
+   "return_ci": [
+    1.06,
+    2.62
+   ],
+   "per_dollar": 0.278,
+   "per_dollar_ci": [
+    0.1619,
+    0.4048
+   ],
+   "hit_rate": 0.3102,
+   "max_drawdown": 0.2419,
+   "peak_open_stake": 0.599,
+   "staked": 6.522,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 692,
+     "return": 1.6626,
+     "per_dollar": 0.3161
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 159,
+     "return": 0.1506,
+     "per_dollar": 0.1194
+    }
+   ]
+  },
+  "BETA": {
+   "brier": 0.19476,
+   "logloss": 0.56873,
+   "n_trades": 1408,
+   "return": 1.7611,
+   "return_ci": [
+    1.1,
+    2.46
+   ],
+   "per_dollar": 0.1877,
+   "per_dollar_ci": [
+    0.1175,
+    0.2623
+   ],
+   "hit_rate": 0.3068,
+   "max_drawdown": 0.1588,
+   "peak_open_stake": 0.924,
+   "staked": 9.383,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 1236,
+     "return": 1.5323,
+     "per_dollar": 0.1848
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 172,
+     "return": 0.2288,
+     "per_dollar": 0.2098
+    }
+   ]
+  },
+  "ENS": {
+   "brier": 0.19441,
+   "logloss": 0.56789,
+   "n_trades": 1217,
+   "return": 1.955,
+   "return_ci": [
+    1.19,
+    2.75
+   ],
+   "per_dollar": 0.2168,
+   "per_dollar_ci": [
+    0.1302,
+    0.3067
+   ],
+   "hit_rate": 0.3336,
+   "max_drawdown": 0.2747,
+   "peak_open_stake": 0.834,
+   "staked": 9.018,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 1053,
+     "return": 1.7894,
+     "per_dollar": 0.2246
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 164,
+     "return": 0.1656,
+     "per_dollar": 0.1575
+    }
+   ]
+  },
+  "AGREE": {
+   "brier": 0.19441,
+   "logloss": 0.56789,
+   "n_trades": 92,
+   "return": 0.1144,
+   "return_ci": [
+    -0.04,
+    0.27
+   ],
+   "per_dollar": 0.2825,
+   "per_dollar_ci": [
+    -0.1063,
+    0.6531
+   ],
+   "hit_rate": 0.2717,
+   "max_drawdown": 0.069,
+   "peak_open_stake": 0.042,
+   "staked": 0.405,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 82,
+     "return": 0.125,
+     "per_dollar": 0.3384
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 10,
+     "return": -0.0105,
+     "per_dollar": -0.294
+    }
+   ],
+   "threshold": 0.06
+  },
+  "shin": {
+   "brier": 0.19616,
+   "logloss": 0.5732,
+   "n_trades": 18,
+   "return": -0.0634,
+   "return_ci": [
+    -0.17,
+    0.03
+   ],
+   "per_dollar": -0.1271,
+   "per_dollar_ci": [
+    -0.3488,
+    0.0626
+   ],
+   "hit_rate": 0.6667,
+   "max_drawdown": 0.1049,
+   "peak_open_stake": 0.139,
+   "staked": 0.499,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 10,
+     "return": -0.0587,
+     "per_dollar": -0.1808
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 8,
+     "return": -0.0047,
+     "per_dollar": -0.027
+    }
+   ]
+  },
+  "power": {
+   "brier": 0.19607,
+   "logloss": 0.57272,
+   "n_trades": 11,
+   "return": -0.0335,
+   "return_ci": [
+    -0.07,
+    0.01
+   ],
+   "per_dollar": -0.271,
+   "per_dollar_ci": [
+    -0.7714,
+    0.1359
+   ],
+   "hit_rate": 0.3636,
+   "max_drawdown": 0.0367,
+   "peak_open_stake": 0.066,
+   "staked": 0.124,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 5,
+     "return": -0.0176,
+     "per_dollar": -0.4528
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 6,
+     "return": -0.0159,
+     "per_dollar": -0.1875
+    }
+   ]
+  },
+  "isotonic": {
+   "brier": 0.19503,
+   "logloss": 0.56944,
+   "n_trades": 1475,
+   "return": 3.0448,
+   "return_ci": [
+    1.79,
+    4.29
+   ],
+   "per_dollar": 0.2005,
+   "per_dollar_ci": [
+    0.1176,
+    0.2844
+   ],
+   "hit_rate": 0.3159,
+   "max_drawdown": 0.2426,
+   "peak_open_stake": 1.0,
+   "staked": 15.182,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 1196,
+     "return": 2.8018,
+     "per_dollar": 0.2221
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 279,
+     "return": 0.2429,
+     "per_dollar": 0.0945
+    }
+   ]
+  },
+  "hier": {
+   "brier": 0.19545,
+   "logloss": 0.5705,
+   "n_trades": 1601,
+   "return": 2.1812,
+   "return_ci": [
+    0.97,
+    3.45
+   ],
+   "per_dollar": 0.1233,
+   "per_dollar_ci": [
+    0.0553,
+    0.1972
+   ],
+   "hit_rate": 0.3198,
+   "max_drawdown": 0.364,
+   "peak_open_stake": 1.0,
+   "staked": 17.696,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 1428,
+     "return": 1.9408,
+     "per_dollar": 0.1192
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 173,
+     "return": 0.2404,
+     "per_dollar": 0.1693
+    }
+   ]
+  }
+ },
+ "pool_weights": {
+  "keys": [
+   "M0",
+   "M1",
+   "M2",
+   "BETA",
+   "shin",
+   "power",
+   "isotonic",
+   "hier"
+  ],
+  "w": [
+   -0.0092,
+   0.8559,
+   -1.0924,
+   -0.5049,
+   -0.0113,
+   0.6678,
+   0.0247,
+   0.7369,
+   1.7312,
+   9.3486,
+   -2.0536,
+   -9.3503,
+   1.5888,
+   -0.1145,
+   0.2689,
+   -0.6445,
+   -0.3248
+  ]
+ },
+ "error_correlation": {
+  "members": [
+   "M0",
+   "M1",
+   "M2",
+   "BETA",
+   "shin",
+   "power",
+   "isotonic",
+   "hier"
+  ],
+  "matrix": [
+   [
+    1.0,
+    0.9934,
+    0.9887,
+    0.9999,
+    0.9988,
+    0.9988,
+    0.9986,
+    0.9987
+   ],
+   [
+    0.9934,
+    1.0,
+    0.9954,
+    0.9937,
+    0.992,
+    0.9921,
+    0.9926,
+    0.9956
+   ],
+   [
+    0.9887,
+    0.9954,
+    1.0,
+    0.9889,
+    0.987,
+    0.9871,
+    0.9887,
+    0.9903
+   ],
+   [
+    0.9999,
+    0.9937,
+    0.9889,
+    1.0,
+    0.9987,
+    0.9987,
+    0.9987,
+    0.9989
+   ],
+   [
+    0.9988,
+    0.992,
+    0.987,
+    0.9987,
+    1.0,
+    1.0,
+    0.9972,
+    0.9973
+   ],
+   [
+    0.9988,
+    0.9921,
+    0.9871,
+    0.9987,
+    1.0,
+    1.0,
+    0.9973,
+    0.9974
+   ],
+   [
+    0.9986,
+    0.9926,
+    0.9887,
+    0.9987,
+    0.9972,
+    0.9973,
+    1.0,
+    0.9978
+   ],
+   [
+    0.9987,
+    0.9956,
+    0.9903,
+    0.9989,
+    0.9973,
+    0.9974,
+    0.9978,
+    1.0
+   ]
+  ]
+ },
+ "validation_agree_grid": {
+  "0.02": {
+   "brier": 0.19916,
+   "logloss": 0.57988,
+   "n_trades": 0
+  },
+  "0.04": {
+   "brier": 0.19916,
+   "logloss": 0.57988,
+   "n_trades": 0
+  },
+  "0.06": {
+   "brier": 0.19916,
+   "logloss": 0.57988,
+   "n_trades": 43,
+   "return": -0.0114,
+   "return_ci": [
+    -0.09,
+    0.08
+   ],
+   "per_dollar": -0.0649,
+   "per_dollar_ci": [
+    -0.4921,
+    0.4447
+   ],
+   "hit_rate": 0.2093,
+   "max_drawdown": 0.0397,
+   "peak_open_stake": 0.036,
+   "staked": 0.176,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 36,
+     "return": 0.0138,
+     "per_dollar": 0.0917
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 7,
+     "return": -0.0253,
+     "per_dollar": -1.0
+    }
+   ]
+  },
+  "0.1": {
+   "brier": 0.19916,
+   "logloss": 0.57988,
+   "n_trades": 317,
+   "return": 0.5094,
+   "return_ci": [
+    0.17,
+    0.86
+   ],
+   "per_dollar": 0.3013,
+   "per_dollar_ci": [
+    0.0999,
+    0.5035
+   ],
+   "hit_rate": 0.2871,
+   "max_drawdown": 0.0887,
+   "peak_open_stake": 0.218,
+   "staked": 1.691,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 228,
+     "return": 0.4694,
+     "per_dollar": 0.3862
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 89,
+     "return": 0.04,
+     "per_dollar": 0.0841
+    }
+   ]
+  }
+ },
+ "test": {}
+}
