@@ -5,8 +5,8 @@ Roles are described in CLAUDE.md (A = backend/agent, B = frontend, C = integrati
 
 ## Now
 - [ ] [all] Run `bash scripts/setup.sh`, fill `.env.local`, run `claude` in the repo once
-- [ ] [C] Ask organisers: is the HRT £1,000 per track or overall? → `CLAUDE.md`
-- [ ] [C] Get Delta access for the team at the Zed stand (15-min limit)
+- [ ] [C] Get Delta access for the team at the Zed stand (15-min limit); at least 2 of us must work in it
+- [ ] [A] Grab a Gemini API key at mlh.link/aistudio
 - [ ] [A, all together] `/office-hours` → `/plan-ceo-review` → `/plan-eng-review`; write "What we are building" + API contract in `CLAUDE.md`
 - [ ] [B] Drop the Argos design preset into `DESIGN.md` (repo root; tokens, fonts, spacing)
 - [ ] [B] After the idea is locked: `/impeccable init` once to write `PRODUCT.md`
@@ -22,5 +22,6 @@ Roles are described in CLAUDE.md (A = backend/agent, B = frontend, C = integrati
 - [ ] Devpost page: what it does, how we built it, sponsor tech used, what we brought in vs built here
 - [ ] Collect best Delta thread links (ideation, build, testing) for the Zed track
 - [ ] Rehearse pitch 5x with a timer
+- [ ] Optional: DEV post about the project for the MLH writing challenge ($100, dev.to/mlh-hackathon)
 
 ## Done
