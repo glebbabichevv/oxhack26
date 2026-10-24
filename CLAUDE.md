@@ -34,6 +34,15 @@ TBA — one paragraph, written after the idea is locked (after /office-hours).
 5. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
 6. Feature freeze ~03:00 Sunday. After that: bugs, backup video, Devpost, pitch only.
 
+## Hackathon mindset (applies to every task)
+- The demo is the product. Optimise for what judges see in the 90-second demo, not for code quality.
+- No tests, refactors or abstractions unless they directly unblock the demo.
+- Get the simplest working path end-to-end first, then polish.
+- No mocks or fake data where judges will click; real calls to Gemini / ElevenLabs / Presage.
+- Any UI follows `docs/DESIGN.md`; use the frontend-design skill for every new screen.
+- Before each gate in the timeline, offer to run `/qa`; before feature freeze, offer `/review`.
+- If a task looks like more than 30 minutes, stop and propose a smaller cut first.
+
 ## Skills available
 - Project skills in `.claude/skills/` (auto-loaded): frontend-design, canvas-design, theme-factory, web-artifacts-builder, webapp-testing, mcp-builder, skill-creator, algorithmic-art.
 - gstack (installed per machine by `scripts/setup.sh`): /office-hours, /plan-eng-review, /design-shotgun, /design-html, /design-review, /review, /qa, /ship.
