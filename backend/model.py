@@ -22,6 +22,8 @@ EPS = 0.01
 # Outside this price band a 1¢ cost swamps any edge and tiny prices make logit features unstable:
 # the model is neither trained nor traded there (q = market price, NO_TRADE).
 TRADABLE = (0.03, 0.97)
+# Brier gains smaller than this are reported as "no lift" (the UI says "about equal" for the same gap).
+NO_LIFT_MARGIN = 0.0005
 KELLY_SCALE = 0.25
 KELLY_CAP = 0.05
 N_BOOT = 40
@@ -62,7 +64,9 @@ def split_by_time(df, cutoff):
         cutoff = per_event.iloc[int(len(per_event) * 0.7)].normalize()
     else:
         cutoff = pd.Timestamp(cutoff, tz="UTC")
-    return df[event_end < cutoff], df[event_end >= cutoff], cutoff
+    # Test = events still running at the cutoff, and only their markets that resolved after it:
+    # a leg that resolved before the cutoff would be scored by a model trained on later data.
+    return df[event_end < cutoff], df[(event_end >= cutoff) & (df["resolved_at"] >= cutoff)], cutoff
 
 
 # ---------- model ----------
@@ -253,6 +257,16 @@ def return_ci(trades, rng, n=1000, level=90):
     return [round(float(np.percentile(sums, tail)), 2), round(float(np.percentile(sums, 100 - tail)), 2)]
 
 
+def by_domain(trades, rng):
+    """With-costs P&L of the main policy split by domain (additive, starting-bankroll units)."""
+    out = []
+    for dom, g in trades.groupby("domain"):
+        pnl = g["kelly"] * g["ret"]
+        out.append({"domain": dom, "n_trades": int(len(g)), "return": round(float(pnl.sum()), 4),
+                    "hit_rate": round(float((g["ret"] > 0).mean()), 4), "return_ci": return_ci(g, rng)})
+    return sorted(out, key=lambda d: -d["return"])
+
+
 def by_horizon(test, q, cost, lo, hi):
     """If you could only act at one fixed horizon: is the edge tradable there?"""
     rows = []
@@ -283,7 +297,7 @@ def failures(test, q, cal, trades):
     out = []
     for dom, rep in cal.items():
         for h in rep["horizons"]:
-            if h["n"] >= 30 and h["brier_model"] >= h["brier_market"]:
+            if h["n"] >= 30 and h["brier_model"] > h["brier_market"] - NO_LIFT_MARGIN:
                 out.append({"kind": "no_lift", "domain": dom, "horizon_hours": h["horizon_hours"], "n": h["n"],
                             "text": f"{dom}, {h['horizon_hours']}h: model Brier {h['brier_model']} vs market {h['brier_market']} — no lift"})
             elif h["n"] < 30:
@@ -374,6 +388,7 @@ def main():
         "model_selection": selection,
         "with_costs": equity_stats(with_c, with_c["kelly"].to_numpy()),
         "return_ci": return_ci(with_c, rng),
+        "by_domain": by_domain(with_c, rng),
         "without_costs": equity_stats(without_c, without_c["kelly"].to_numpy()),
         "naive_favourite": naive_favourite(test, cost),
         "overall": {"brier_market": round(brier(test["price_yes"], y), 4), "brier_model": round(brier(q, y), 4),
@@ -381,7 +396,7 @@ def main():
         "by_horizon": by_horizon(test, q, cost, lo, hi),
         "failures": fails, "worst_trades": worst,
         "assumptions": [
-            "Split by time: train on markets resolved before the cutoff, test on markets resolved after it.",
+            "Split by time: train on events that ended before the cutoff; test on markets of the remaining events that resolved after it (legs resolved earlier are dropped). Legs of one event never straddle the split.",
             f"Cost per contract = max(spread / 2, {a.min_half_spread}) + fee {a.fee}; spread is the market's quoted spread, not the historical one.",
             "One trade per market, at the earliest horizon with positive net edge, held to resolution.",
             f"Only prices in {TRADABLE[0]:.0%}–{TRADABLE[1]:.0%} are modelled or traded; edge must survive the model's 10–90% bootstrap interval (resampled by event).",

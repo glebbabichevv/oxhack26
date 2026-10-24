@@ -8,14 +8,14 @@ colors:
   ink: "#0a0a0a"
   ink-strong: "#111113"
   ink-muted: "#676e7e"
-  ink-faint: "#a1a1aa"
-  ink-second-line: "rgba(10,10,10,0.42)"
+  ink-faint: "#71717a"
+  ink-second-line: "rgba(10,10,10,0.50)"
   hairline: "rgba(9,9,11,0.08)"
   hairline-soft: "rgba(9,9,11,0.06)"
   fill-soft: "rgba(15,23,42,0.05)"
   ash: "#a1a1aa"
-  up: "#16a34a"
-  up-tint: "rgba(22,163,74,0.10)"
+  up: "#15803d"
+  up-tint: "rgba(21,128,61,0.10)"
   down: "#e11d48"
   down-tint: "rgba(225,29,72,0.10)"
 typography:
@@ -164,13 +164,13 @@ White and zinc with two signal hues.
 - **Page White** (#ffffff): page and card surface.
 - **Frame Grey** (#fafafa): the 8px frame around each evidence card.
 - **Slate Muted** (#676e7e): lead paragraphs, labels, secondary text.
-- **Faint** (#a1a1aa): meta text (n = 573, dates), axis labels; also the market / baseline series (Ash).
-- **Second-Line Grey** (rgba(10,10,10,0.42)): the second line of a serif headline.
+- **Faint** (#71717a): meta text (n = 573, dates), axis labels; passes 4.5:1 on white. **Ash** (#a1a1aa) stays for the market / baseline chart series only.
+- **Second-Line Grey** (rgba(10,10,10,0.50), 3.8:1, large text only): the second line of a serif headline.
 - **Hairline** (rgba(9,9,11,0.08)): KPI row rules, card borders, nav border; soft hairline 6% for rows inside cards.
 - **Soft Fill** (rgba(15,23,42,0.05)): quiet chips, quiet buttons, hover wash.
 
 ### Semantic
-- **Signal Green** (#16a34a, tint 10%): up, profit, BUY YES.
+- **Signal Green** (#15803d, tint 10%; #16a34a failed 4.5:1 for small labels): up, profit, BUY YES.
 - **Signal Rose** (#e11d48, tint 10%): down, loss, BUY NO, "no lift".
 
 ### Named Rules
