@@ -31,3 +31,29 @@ How to read it:
 - With all 15 trials counted as independent, V3's validation Sharpe sits at the luck threshold, so the selection itself proves nothing.
 - The trials are not independent: every model reads the same price (error correlations ~0.99), so N=15 overstates luck and N=4 understates it.
 - The clean evidence is the test row. It was not used to choose, and it gives P(true Sharpe > 0) = 0.999996 on 3,653 trades.
+
+## 4. Cost sensitivity on test (`costs_and_time.py`, `costs.png`) — descriptive, not used for selection
+The shipped model and V3 are re-run under higher costs: taker fee ×{1, 1.5, 2}, half-spread floor {1, 2, 3}¢ and Kelly ×{⅛, ¼, ½}. Higher costs also change which trades pass, as they would live.
+- **The edge survives 2× Polymarket's fees and a 2¢ half-spread floor:**
+  - fee ×2, 1¢ floor: +15.7¢ [+9, +22] (3,104 trades);
+  - fee ×2, 2¢ floor: +13.8¢ [+5, +22] (1,638 trades).
+- **At a 3¢ floor, almost nothing clears:** 700, 305 or 36 trades, and the CI touches 0 at fee ×1.5.
+- Kelly changes drawdown, not ¢ per $1 (a ratio): ⅛ → DD 0.19, ¼ → 0.38, ½ → 0.79 at shipped costs.
+
+## 5. Shin's z by horizon (`shin_time.png`) — the TIME slide
+Shin's insider share is fitted per horizon on all of train (23,838 markets), with 90% CIs from 200 event-bootstrap refits:
+
+| horizon | 30 days | 7 days | 3 days | 1 day | 12 hours |
+|---|---|---|---|---|---|
+| z | −0.012 [−0.032, +0.013] | −0.048 [−0.063, −0.033] | −0.064 [−0.081, −0.047] | −0.073 [−0.090, −0.055] | −0.072 [−0.089, −0.052] |
+
+Shin assumes z > 0 (overpriced longshots). Polymarket is the opposite, increasingly so as the end nears; a month out it is indistinguishable from fair.
+
+## 6. Capacity from live books (`capacity.py`, `capacity.json`) — live snapshot 2026-10-24 22:30 UTC, not historical
+For each market, we walk the CLOB asks of the side bought at $10 / $100 / $1k / $10k and recompute the net edge with the average fill price + fee.
+- **Tonight's 3 V3 trades** (Barcelona–Real draw, Real Madrid win, Brighton win): the edge holds flat at **+2.3 to +3.2¢ per share even at $10k each**, the top of the test. These are deep football books.
+- **Plus the 15 WAIT markets' would-be side** (their book will differ when they enter):
+  - median capacity ~$1k per market;
+  - many go negative at $10k (Brazil/Serbia elections, BTC, Bank of Canada);
+  - sum of positive-edge sizes ≈ $70k.
+- Headline: "edge survives up to ~$10k per market on liquid football books, ~$1k on typical ones; tonight's eligible trades take ~$30k". One snapshot, small n.

@@ -1,0 +1,370 @@
+{
+ "note": "A's 00:40 items (2) and ",
+ "base": {
+  "fee_x": 1.0,
+  "half_spread_floor": 0.01,
+  "kelly": 0.25,
+  "n_trades": 3653,
+  "per_dollar": 0.1723,
+  "per_dollar_ci": [
+   0.1184,
+   0.2346
+  ],
+  "ret": 4.0081,
+  "max_drawdown": 0.3806
+ },
+ "grid": [
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.01,
+   "kelly": 0.125,
+   "n_trades": 3653,
+   "per_dollar": 0.1723,
+   "per_dollar_ci": [
+    0.1184,
+    0.2346
+   ],
+   "ret": 2.0041,
+   "max_drawdown": 0.1903
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.01,
+   "kelly": 0.25,
+   "n_trades": 3653,
+   "per_dollar": 0.1723,
+   "per_dollar_ci": [
+    0.1184,
+    0.2346
+   ],
+   "ret": 4.0081,
+   "max_drawdown": 0.3806
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.01,
+   "kelly": 0.5,
+   "n_trades": 3596,
+   "per_dollar": 0.1773,
+   "per_dollar_ci": [
+    0.1238,
+    0.2385
+   ],
+   "ret": 7.7415,
+   "max_drawdown": 0.79
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.02,
+   "kelly": 0.125,
+   "n_trades": 2666,
+   "per_dollar": 0.1213,
+   "per_dollar_ci": [
+    0.0592,
+    0.1821
+   ],
+   "ret": 0.7269,
+   "max_drawdown": 0.1212
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.02,
+   "kelly": 0.25,
+   "n_trades": 2666,
+   "per_dollar": 0.1213,
+   "per_dollar_ci": [
+    0.0592,
+    0.1821
+   ],
+   "ret": 1.4538,
+   "max_drawdown": 0.2425
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.02,
+   "kelly": 0.5,
+   "n_trades": 2666,
+   "per_dollar": 0.1213,
+   "per_dollar_ci": [
+    0.0592,
+    0.1821
+   ],
+   "ret": 2.9077,
+   "max_drawdown": 0.485
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.03,
+   "kelly": 0.125,
+   "n_trades": 700,
+   "per_dollar": 0.1361,
+   "per_dollar_ci": [
+    0.0182,
+    0.263
+   ],
+   "ret": 0.1746,
+   "max_drawdown": 0.0578
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.03,
+   "kelly": 0.25,
+   "n_trades": 700,
+   "per_dollar": 0.1361,
+   "per_dollar_ci": [
+    0.0182,
+    0.263
+   ],
+   "ret": 0.3491,
+   "max_drawdown": 0.1157
+  },
+  {
+   "fee_x": 1.0,
+   "half_spread_floor": 0.03,
+   "kelly": 0.5,
+   "n_trades": 700,
+   "per_dollar": 0.1361,
+   "per_dollar_ci": [
+    0.0182,
+    0.263
+   ],
+   "ret": 0.6982,
+   "max_drawdown": 0.2313
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.01,
+   "kelly": 0.125,
+   "n_trades": 3420,
+   "per_dollar": 0.164,
+   "per_dollar_ci": [
+    0.1087,
+    0.2289
+   ],
+   "ret": 1.6107,
+   "max_drawdown": 0.1846
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.01,
+   "kelly": 0.25,
+   "n_trades": 3420,
+   "per_dollar": 0.164,
+   "per_dollar_ci": [
+    0.1087,
+    0.2289
+   ],
+   "ret": 3.2213,
+   "max_drawdown": 0.3693
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.01,
+   "kelly": 0.5,
+   "n_trades": 3410,
+   "per_dollar": 0.1702,
+   "per_dollar_ci": [
+    0.1153,
+    0.2328
+   ],
+   "ret": 6.4615,
+   "max_drawdown": 0.7322
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.02,
+   "kelly": 0.125,
+   "n_trades": 2111,
+   "per_dollar": 0.1437,
+   "per_dollar_ci": [
+    0.0727,
+    0.2174
+   ],
+   "ret": 0.6254,
+   "max_drawdown": 0.09
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.02,
+   "kelly": 0.25,
+   "n_trades": 2111,
+   "per_dollar": 0.1437,
+   "per_dollar_ci": [
+    0.0727,
+    0.2174
+   ],
+   "ret": 1.2509,
+   "max_drawdown": 0.18
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.02,
+   "kelly": 0.5,
+   "n_trades": 2111,
+   "per_dollar": 0.1437,
+   "per_dollar_ci": [
+    0.0727,
+    0.2174
+   ],
+   "ret": 2.5017,
+   "max_drawdown": 0.36
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.03,
+   "kelly": 0.125,
+   "n_trades": 305,
+   "per_dollar": -0.0254,
+   "per_dollar_ci": [
+    -0.2006,
+    0.1505
+   ],
+   "ret": -0.0133,
+   "max_drawdown": 0.0857
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.03,
+   "kelly": 0.25,
+   "n_trades": 305,
+   "per_dollar": -0.0254,
+   "per_dollar_ci": [
+    -0.2006,
+    0.1505
+   ],
+   "ret": -0.0267,
+   "max_drawdown": 0.1715
+  },
+  {
+   "fee_x": 1.5,
+   "half_spread_floor": 0.03,
+   "kelly": 0.5,
+   "n_trades": 305,
+   "per_dollar": -0.0254,
+   "per_dollar_ci": [
+    -0.2006,
+    0.1505
+   ],
+   "ret": -0.0533,
+   "max_drawdown": 0.3429
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.01,
+   "kelly": 0.125,
+   "n_trades": 3104,
+   "per_dollar": 0.1566,
+   "per_dollar_ci": [
+    0.0906,
+    0.2221
+   ],
+   "ret": 1.2751,
+   "max_drawdown": 0.1731
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.01,
+   "kelly": 0.25,
+   "n_trades": 3104,
+   "per_dollar": 0.1566,
+   "per_dollar_ci": [
+    0.0906,
+    0.2221
+   ],
+   "ret": 2.5502,
+   "max_drawdown": 0.3462
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.01,
+   "kelly": 0.5,
+   "n_trades": 3099,
+   "per_dollar": 0.1598,
+   "per_dollar_ci": [
+    0.0945,
+    0.2251
+   ],
+   "ret": 5.1345,
+   "max_drawdown": 0.6861
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.02,
+   "kelly": 0.125,
+   "n_trades": 1638,
+   "per_dollar": 0.1381,
+   "per_dollar_ci": [
+    0.0507,
+    0.2232
+   ],
+   "ret": 0.4438,
+   "max_drawdown": 0.0875
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.02,
+   "kelly": 0.25,
+   "n_trades": 1638,
+   "per_dollar": 0.1381,
+   "per_dollar_ci": [
+    0.0507,
+    0.2232
+   ],
+   "ret": 0.8876,
+   "max_drawdown": 0.1749
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.02,
+   "kelly": 0.5,
+   "n_trades": 1638,
+   "per_dollar": 0.1381,
+   "per_dollar_ci": [
+    0.0507,
+    0.2232
+   ],
+   "ret": 1.7752,
+   "max_drawdown": 0.3498
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.03,
+   "kelly": 0.125,
+   "n_trades": 36,
+   "per_dollar": 0.1767,
+   "per_dollar_ci": [
+    -0.3399,
+    0.7149
+   ],
+   "ret": 0.013,
+   "max_drawdown": 0.0233
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.03,
+   "kelly": 0.25,
+   "n_trades": 36,
+   "per_dollar": 0.1767,
+   "per_dollar_ci": [
+    -0.3399,
+    0.7149
+   ],
+   "ret": 0.0259,
+   "max_drawdown": 0.0465
+  },
+  {
+   "fee_x": 2.0,
+   "half_spread_floor": 0.03,
+   "kelly": 0.5,
+   "n_trades": 36,
+   "per_dollar": 0.1767,
+   "per_dollar_ci": [
+    -0.3399,
+    0.7149
+   ],
+   "ret": 0.0519,
+   "max_drawdown": 0.0931
+  }
+ ],
+ "all_quarter_kelly_cells_ci_above_0": false
+}

@@ -1,0 +1,846 @@
+{
+ "note": "Capacity from LIVE order books (A's 00:40 item 1) -> integrations/robustness/capacity.json\n\n  python integrations/robustness/capacity.py [--api https://oxhack26-production.up.railway.app]\n\nLive snapshot, not historical. Markets: every row of the shipped /api/live with a trade now (V3: BUY_YES / BUY_NO),\nplus the WAIT rows' would-be side, reported separately (their book will be different by the time they enter).\nFor each, walk Polymarket's CLOB book of the side bought (YES token asks for BUY_YES, NO token asks for BUY_NO) to\nfill $10 / $100 / $1k / $10k, and recompute the net edge per share exactly as decide() does, with the fill's\naverage price instead of the quoted one:  net = conservative value (q_low for YES, 1 - q_high for NO)\n- avg fill price - taker fee per share (rate x p(1-p) at each level, rate from the market's live fee).",
+ "snapshot_utc": "2026-10-24T22:30:58+00:00",
+ "model_version": "2026-10-24-390c312",
+ "n_markets_scanned": 406,
+ "markets": [
+  {
+   "question": "Will FC Barcelona vs. Real Madrid CF end in a draw?",
+   "domain": "sports",
+   "hours_to_resolution": 21.5,
+   "status": "trade now",
+   "side": "BUY_YES",
+   "value_per_share": 0.1984,
+   "best_ask": 0.16,
+   "ask_depth_usd": 169407.73,
+   "volume_usd": 111242.08,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.16,
+     "fee_per_share": 0.0067,
+     "net_edge_per_share": 0.0317,
+     "net_edge_per_dollar": 0.1904
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.16,
+     "fee_per_share": 0.0067,
+     "net_edge_per_share": 0.0317,
+     "net_edge_per_dollar": 0.1904
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.16,
+     "fee_per_share": 0.0067,
+     "net_edge_per_share": 0.0317,
+     "net_edge_per_dollar": 0.1904
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.16,
+     "fee_per_share": 0.0067,
+     "net_edge_per_share": 0.0317,
+     "net_edge_per_dollar": 0.1904
+    }
+   ],
+   "max_size_with_positive_edge": 10000
+  },
+  {
+   "question": "Will Real Madrid CF win on 2026-10-25?",
+   "domain": "sports",
+   "hours_to_resolution": 21.5,
+   "status": "trade now",
+   "side": "BUY_YES",
+   "value_per_share": 0.296,
+   "best_ask": 0.26,
+   "ask_depth_usd": 117263.36,
+   "volume_usd": 386513.87,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.26,
+     "fee_per_share": 0.0096,
+     "net_edge_per_share": 0.0264,
+     "net_edge_per_dollar": 0.0978
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.26,
+     "fee_per_share": 0.0096,
+     "net_edge_per_share": 0.0264,
+     "net_edge_per_dollar": 0.0978
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.26,
+     "fee_per_share": 0.0096,
+     "net_edge_per_share": 0.0264,
+     "net_edge_per_dollar": 0.0978
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.26,
+     "fee_per_share": 0.0096,
+     "net_edge_per_share": 0.0264,
+     "net_edge_per_dollar": 0.0978
+    }
+   ],
+   "max_size_with_positive_edge": 10000
+  },
+  {
+   "question": "Will Brighton & Hove Albion FC win on 2026-10-25?",
+   "domain": "sports",
+   "hours_to_resolution": 15.5,
+   "status": "trade now",
+   "side": "BUY_YES",
+   "value_per_share": 0.3441,
+   "best_ask": 0.31,
+   "ask_depth_usd": 187340.33,
+   "volume_usd": 236493.83,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.31,
+     "fee_per_share": 0.0107,
+     "net_edge_per_share": 0.0234,
+     "net_edge_per_dollar": 0.073
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.31,
+     "fee_per_share": 0.0107,
+     "net_edge_per_share": 0.0234,
+     "net_edge_per_dollar": 0.073
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.31,
+     "fee_per_share": 0.0107,
+     "net_edge_per_share": 0.0234,
+     "net_edge_per_dollar": 0.073
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.31,
+     "fee_per_share": 0.0107,
+     "net_edge_per_share": 0.0234,
+     "net_edge_per_dollar": 0.073
+    }
+   ],
+   "max_size_with_positive_edge": 10000
+  },
+  {
+   "question": "Will Ilija Srdanović be the next prime minister of Serbia?",
+   "domain": "politics",
+   "hours_to_resolution": 25.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.1252,
+   "best_ask": 0.1,
+   "ask_depth_usd": 214320.85,
+   "volume_usd": 335416.29,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.1,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0252,
+     "net_edge_per_dollar": 0.252
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.1035,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0217,
+     "net_edge_per_dollar": 0.2096
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.1164,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0088,
+     "net_edge_per_dollar": 0.076
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.225,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0998,
+     "net_edge_per_dollar": -0.4436
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Student List – Students Win win the most seats in the 2026 Serbian parliamentary election?",
+   "domain": "politics",
+   "hours_to_resolution": 25.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.3135,
+   "best_ask": 0.28,
+   "ask_depth_usd": 388268.38,
+   "volume_usd": 2716247.76,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.28,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0335,
+     "net_edge_per_dollar": 0.1196
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.2845,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.029,
+     "net_edge_per_dollar": 0.102
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.2894,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0241,
+     "net_edge_per_dollar": 0.0831
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.2943,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0192,
+     "net_edge_per_dollar": 0.0653
+    }
+   ],
+   "max_size_with_positive_edge": 10000
+  },
+  {
+   "question": "Will Iliana Iotova win the next Bulgarian presidential election?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_NO",
+   "value_per_share": 0.1451,
+   "best_ask": 0.13,
+   "ask_depth_usd": 248883.1,
+   "volume_usd": 603296.58,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.13,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0151,
+     "net_edge_per_dollar": 0.1162
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.13,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0151,
+     "net_edge_per_dollar": 0.1162
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.13,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0151,
+     "net_edge_per_dollar": 0.1162
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.1589,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0138,
+     "net_edge_per_dollar": -0.0868
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Аndrey Gyurov win the next Bulgarian presidential election?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.1642,
+   "best_ask": 0.13,
+   "ask_depth_usd": 228593.37,
+   "volume_usd": 477787.89,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.13,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0342,
+     "net_edge_per_dollar": 0.2631
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.13,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0342,
+     "net_edge_per_dollar": 0.2631
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.134,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0302,
+     "net_edge_per_dollar": 0.2254
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.1548,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0094,
+     "net_edge_per_dollar": 0.0609
+    }
+   ],
+   "max_size_with_positive_edge": 10000
+  },
+  {
+   "question": "Will Lula win the most votes in the second round of the Brazil presidential election from Amapá?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.2558,
+   "best_ask": 0.22,
+   "ask_depth_usd": 278793.23,
+   "volume_usd": 274185.04,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.22,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0358,
+     "net_edge_per_dollar": 0.1627
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.22,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0358,
+     "net_edge_per_dollar": 0.1627
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.2307,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0251,
+     "net_edge_per_dollar": 0.1088
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.3377,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0819,
+     "net_edge_per_dollar": -0.2424
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Flávio Bolsonaro win the second round of the 2026 Brazilian presidential election by 8–12%?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.0784,
+   "best_ask": 0.054,
+   "ask_depth_usd": 185643.72,
+   "volume_usd": 1327756.12,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.0549,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0235,
+     "net_edge_per_dollar": 0.428
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.0611,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0173,
+     "net_edge_per_dollar": 0.2825
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.0936,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0152,
+     "net_edge_per_dollar": -0.1623
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.2345,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.1561,
+     "net_edge_per_dollar": -0.6657
+    }
+   ],
+   "max_size_with_positive_edge": 100
+  },
+  {
+   "question": "Will Flávio Bolsonaro win the second round of the 2026 Brazilian presidential election by 4–8%?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.4328,
+   "best_ask": 0.43,
+   "ask_depth_usd": 254994.71,
+   "volume_usd": 1004486.17,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.4344,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0016,
+     "net_edge_per_dollar": -0.0036
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.4478,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.015,
+     "net_edge_per_dollar": -0.0335
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.4545,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0217,
+     "net_edge_per_dollar": -0.0478
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.5466,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.1138,
+     "net_edge_per_dollar": -0.2082
+    }
+   ],
+   "max_size_with_positive_edge": 0
+  },
+  {
+   "question": "Will Flávio Bolsonaro win the second round of the 2026 Brazilian presidential election by less than 4%?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.393,
+   "best_ask": 0.36,
+   "ask_depth_usd": 328546.56,
+   "volume_usd": 809611.67,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.36,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.033,
+     "net_edge_per_dollar": 0.0917
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.36,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.033,
+     "net_edge_per_dollar": 0.0917
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.3739,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0191,
+     "net_edge_per_dollar": 0.051
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.4707,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0777,
+     "net_edge_per_dollar": -0.1651
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Luiz Inácio Lula da Silva win the second round of the 2026 Brazilian presidential election by less than 4%?",
+   "domain": "politics",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.1859,
+   "best_ask": 0.15,
+   "ask_depth_usd": 252853.85,
+   "volume_usd": 690434.62,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.15,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0359,
+     "net_edge_per_dollar": 0.2393
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.15,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0359,
+     "net_edge_per_dollar": 0.2393
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.156,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0299,
+     "net_edge_per_dollar": 0.1919
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.2223,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0364,
+     "net_edge_per_dollar": -0.1638
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Bitcoin dip to $78,000 October 19-25?",
+   "domain": "crypto",
+   "hours_to_resolution": 29.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.1239,
+   "best_ask": 0.089,
+   "ask_depth_usd": 287376.38,
+   "volume_usd": 248345.03,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.089,
+     "fee_per_share": 0.0057,
+     "net_edge_per_share": 0.0292,
+     "net_edge_per_dollar": 0.3087
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.0914,
+     "fee_per_share": 0.0058,
+     "net_edge_per_share": 0.0267,
+     "net_edge_per_dollar": 0.2741
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.0999,
+     "fee_per_share": 0.0063,
+     "net_edge_per_share": 0.0177,
+     "net_edge_per_dollar": 0.1665
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.2144,
+     "fee_per_share": 0.0103,
+     "net_edge_per_share": -0.1008,
+     "net_edge_per_dollar": -0.4486
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Kylian Mbappé win the 2026 Ballon d'Or?",
+   "domain": "sports",
+   "hours_to_resolution": 53.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.222,
+   "best_ask": 0.184,
+   "ask_depth_usd": 12396021.09,
+   "volume_usd": 6352089.47,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.1845,
+     "fee_per_share": 0.0045,
+     "net_edge_per_share": 0.033,
+     "net_edge_per_dollar": 0.1748
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.1849,
+     "fee_per_share": 0.0045,
+     "net_edge_per_share": 0.0326,
+     "net_edge_per_dollar": 0.1718
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.1934,
+     "fee_per_share": 0.0047,
+     "net_edge_per_share": 0.0239,
+     "net_edge_per_dollar": 0.1208
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.2374,
+     "fee_per_share": 0.0054,
+     "net_edge_per_share": -0.0208,
+     "net_edge_per_dollar": -0.0856
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Lamine Yamal win the 2026 Ballon d'Or?",
+   "domain": "sports",
+   "hours_to_resolution": 53.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.1354,
+   "best_ask": 0.103,
+   "ask_depth_usd": 4279737.94,
+   "volume_usd": 5798373.19,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.1038,
+     "fee_per_share": 0.0028,
+     "net_edge_per_share": 0.0288,
+     "net_edge_per_dollar": 0.2697
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.1101,
+     "fee_per_share": 0.003,
+     "net_edge_per_share": 0.0223,
+     "net_edge_per_dollar": 0.1976
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.1295,
+     "fee_per_share": 0.0034,
+     "net_edge_per_share": 0.0024,
+     "net_edge_per_dollar": 0.0184
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.1597,
+     "fee_per_share": 0.0041,
+     "net_edge_per_share": -0.0284,
+     "net_edge_per_dollar": -0.1735
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Brad Bradford win the 2026 Toronto mayoral election?",
+   "domain": "politics",
+   "hours_to_resolution": 53.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.3931,
+   "best_ask": 0.38,
+   "ask_depth_usd": 335165.12,
+   "volume_usd": 266553.0,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.38,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0131,
+     "net_edge_per_dollar": 0.0345
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.38,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0131,
+     "net_edge_per_dollar": 0.0345
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.38,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0131,
+     "net_edge_per_dollar": 0.0345
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.4044,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.0113,
+     "net_edge_per_dollar": -0.0279
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will the Bank of Canada make no change to the target for the overnight rate at the October interest rate announcement?",
+   "domain": "economics",
+   "hours_to_resolution": 73.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.221,
+   "best_ask": 0.191,
+   "ask_depth_usd": 39122.02,
+   "volume_usd": 181714.46,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.1919,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0291,
+     "net_edge_per_dollar": 0.1518
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.1938,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0272,
+     "net_edge_per_dollar": 0.1406
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.2066,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0144,
+     "net_edge_per_dollar": 0.0694
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.3764,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": -0.1554,
+     "net_edge_per_dollar": -0.4128
+    }
+   ],
+   "max_size_with_positive_edge": 1000
+  },
+  {
+   "question": "Will Benjamin Netanyahu be the next Prime Minister of Israel?",
+   "domain": "politics",
+   "hours_to_resolution": 77.5,
+   "status": "wait (would-be side)",
+   "side": "BUY_YES",
+   "value_per_share": 0.3054,
+   "best_ask": 0.28,
+   "ask_depth_usd": 584145.89,
+   "volume_usd": 10813339.26,
+   "by_size": [
+    {
+     "usd": 10,
+     "fills": true,
+     "avg_price": 0.28,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0254,
+     "net_edge_per_dollar": 0.0907
+    },
+    {
+     "usd": 100,
+     "fills": true,
+     "avg_price": 0.28,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0254,
+     "net_edge_per_dollar": 0.0907
+    },
+    {
+     "usd": 1000,
+     "fills": true,
+     "avg_price": 0.28,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0254,
+     "net_edge_per_dollar": 0.0907
+    },
+    {
+     "usd": 10000,
+     "fills": true,
+     "avg_price": 0.2803,
+     "fee_per_share": 0.0,
+     "net_edge_per_share": 0.0251,
+     "net_edge_per_dollar": 0.0895
+    }
+   ],
+   "max_size_with_positive_edge": 10000
+  }
+ ],
+ "trade_now": {
+  "n_markets": 3,
+  "per_market_median_max_size": 10000,
+  "sum_max_size_usd": 30000
+ },
+ "trade_now_and_waits": {
+  "n_markets": 18,
+  "per_market_median_max_size": 1000,
+  "sum_max_size_usd": 70100
+ }
+}

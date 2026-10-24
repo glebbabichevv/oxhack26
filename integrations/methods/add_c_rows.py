@@ -55,6 +55,31 @@ def main():
             rows.append(row("walkforward_models", k, v["per_dollar"], *v["per_dollar_ci"], v["n_trades"], "walkforward",
                             f"V3 ¢/$; Δ vs M0 {v['d_per_dollar_vs_M0']} [{v['d_per_dollar_vs_M0_ci'][0]}, "
                             f"{v['d_per_dollar_vs_M0_ci'][1]}]; log loss {m['logloss']} (Δ vs M0 {m['d_logloss_vs_M0']})"))
+    rb = ROOT / "integrations/robustness"
+    if (rb / "costs.json").exists():
+        for c in json.loads((rb / "costs.json").read_text(encoding="utf-8"))["grid"]:
+            if c.get("n_trades"):
+                lo, hi = c["per_dollar_ci"]
+                rows.append(row("costs", f"fee x{c['fee_x']:g} | floor {c['half_spread_floor'] * 100:.0f}c | kelly x{c['kelly']:g}",
+                                c["per_dollar"], lo, hi, c["n_trades"], "test",
+                                f"descriptive, not for selection; max drawdown {c['max_drawdown']}"))
+    if (rb / "capacity.json").exists():
+        cap = json.loads((rb / "capacity.json").read_text(encoding="utf-8"))
+        for m in cap["markets"]:
+            for b in m["by_size"]:
+                if b.get("fills"):
+                    rows.append(row("capacity", f"{m['question'][:70]} | ${b['usd']:,}", b["net_edge_per_share"], n=b["usd"],
+                                    split="live", note=f"{m['status']}, {m['side']}, live snapshot {cap['snapshot_utc']}; "
+                                                       f"net edge per share after fill price + fee"))
+        for k in ("trade_now", "trade_now_and_waits"):
+            rows.append(row("capacity", f"{k}: sum of max size with positive edge (USD, tested up to $10k)",
+                            cap[k]["sum_max_size_usd"], n=cap[k]["n_markets"], split="live",
+                            note=f"median per market ${cap[k]['per_market_median_max_size']:,}; live snapshot {cap['snapshot_utc']}"))
+    if (rb / "shin_time.json").exists():
+        for h in json.loads((rb / "shin_time.json").read_text(encoding="utf-8"))["by_horizon"]:
+            rows.append(row("shin_time", f"{h['horizon_hours']}h", h["z"], *h["ci"], split="train",
+                            note="Shin insider share z fitted per horizon (ML), 90% CI from 200 event-bootstrap refits; "
+                                 "z<0 = longshots under-priced (opposite of Shin)"))
     old = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else []
     keep = [r for r in old if r.get("source") != "C"]
     OUT.parent.mkdir(parents=True, exist_ok=True)
