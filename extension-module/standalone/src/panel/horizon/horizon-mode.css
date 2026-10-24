@@ -1,53 +1,232 @@
-/* Horizon mode: the panel as an analysis instrument. Fonts are bundled (no network). */
+/*
+ * Horizon panel. Visual language ported from the Argos panel (same family): Cormorant Garamond
+ * display over the system sans, light glass surfaces with a faint ambient tint, the house curve
+ * cubic-bezier(0.22, 1, 0.36, 1), three durations, the thinking-orb pill with a shimmer label.
+ * Green and rose carry meaning only (good bet / losing). Fonts are bundled (no network).
+ */
 @font-face {
-  font-family: 'Playfair Display';
+  font-family: 'Cormorant Garamond';
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 300;
   font-display: swap;
-  src: url('./fonts/playfair-display-latin.woff2') format('woff2');
+  src: url('./fonts/cormorant-300-latin.woff2') format('woff2');
 }
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url('./fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+
+:root {
+  --adaptive-h: 150;
+  --adaptive-s: 22%;
+  --adaptive-l: 70%;
+  --motion-fast: 140ms;
+  --motion-base: 240ms;
+  --motion-slow: 420ms;
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --primary-rgb: 82 82 91;
 }
 
 .hz-mode {
-  --hz-ink: #111113;
+  --hz-ink: #0f172a;
   --hz-market: #a1a1aa;
   --hz-up: #15803d;
   --hz-down: #e11d48;
-  --hz-muted: #71717a;
-  --hz-rule: rgba(17, 17, 19, 0.08);
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --hz-muted: #64748b;
+  --hz-rule: rgba(15, 23, 42, 0.07);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  font-optical-sizing: auto;
   color: var(--hz-ink);
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
-.hz-serif { font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif; }
-.hz-rule { border-top: 1px solid var(--hz-rule); }
-.hz-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hz-muted); }
+.hz-ambient {
+  background:
+    radial-gradient(120% 50% at 50% -8%, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.18), transparent 70%),
+    #fff;
+}
+.hz-mode ::selection { background: rgba(82, 82, 91, 0.18); color: inherit; }
+.hz-mode :focus { outline: none; }
+.hz-mode :focus-visible { outline: 2px solid rgb(var(--primary-rgb) / 0.75); outline-offset: 2px; }
+.hz-mode h1, .hz-mode h2, .hz-mode h3 { text-wrap: balance; }
+.hz-mode p { text-wrap: pretty; }
+.hz-mode ::-webkit-scrollbar { width: 6px; height: 6px; }
+.hz-mode ::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.12); border-radius: 9999px; }
 
-/* The one authored moment: the Horizon curve draws once. */
-.hz-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hz-draw 1100ms cubic-bezier(0.22, 1, 0.36, 1) 150ms forwards; }
+.hz-display, .hz-serif { font-family: 'Cormorant Garamond', 'Iowan Old Style', Georgia, serif; font-weight: 300; letter-spacing: -0.01em; }
+.hz-rule { border-top: 1px solid var(--hz-rule); }
+.hz-eyebrow { font-size: 12px; font-weight: 500; color: var(--hz-muted); }
+
+/* ── Glass (Argos .argos-glass-*) ─────────────────────────────── */
+.hz-card {
+  background:
+    linear-gradient(125deg, rgba(255,255,255,0.60) 0%, rgba(255,255,255,0.16) 35%, rgba(255,255,255,0.04) 52%, rgba(255,255,255,0.30) 100%),
+    linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.07), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.07)),
+    rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.25),
+    0 2px 10px rgba(15, 23, 42, 0.07), 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+.hz-chip {
+  background:
+    linear-gradient(125deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0.14) 40%, rgba(255,255,255,0.04) 58%, rgba(255,255,255,0.28) 100%),
+    linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.06), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.06)),
+    rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 6px rgba(0,0,0,0.05);
+  transition: transform var(--motion-fast) var(--ease-soft), box-shadow var(--motion-fast) var(--ease-soft), background-color var(--motion-fast) ease;
+}
+.hz-chip:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), 0 4px 14px rgba(0,0,0,0.09); }
+.hz-chip:active { transform: translateY(0) scale(0.97); }
+.hz-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 9999px;
+  background: linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.07), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.07)), rgba(255,255,255,0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 10px rgba(0,0,0,0.05);
+}
+.hz-seg { background: rgba(15, 23, 42, 0.045); box-shadow: inset 0 1px 2px rgba(15,23,42,0.05); }
+.hz-seg-on { background: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(15,23,42,0.08), 0 4px 12px -4px rgba(15,23,42,0.12); }
+
+/* ── Composer (Argos .argos-composer) ─────────────────────────── */
+.hz-composer {
+  position: relative;
+  background:
+    linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.06), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.06)),
+    rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.35),
+    0 2px 10px rgba(15, 23, 42, 0.05), 0 10px 30px rgba(15, 23, 42, 0.07);
+  transition: box-shadow var(--motion-base) var(--ease-soft), background-color var(--motion-base) var(--ease-soft);
+}
+.hz-composer:focus-within {
+  background:
+    linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.09), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.09)),
+    rgba(255, 255, 255, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,1), inset 0 -1px 0 rgba(255,255,255,0.4),
+    0 2px 10px rgba(15, 23, 42, 0.06), 0 14px 40px rgba(15, 23, 42, 0.12);
+}
+.hz-composer input::placeholder { color: rgba(15, 23, 42, 0.45); }
+/* The capsule states focus itself (like Argos); no ring around the bare field inside it. */
+.hz-mode .hz-composer input:focus-visible { outline: none; }
+
+/* ── Primary action ───────────────────────────────────────────── */
+.hz-cta {
+  transition: transform var(--motion-fast) var(--ease-soft), box-shadow var(--motion-fast) var(--ease-soft), filter var(--motion-fast) ease, opacity var(--motion-fast) ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(15,23,42,0.18), 0 6px 18px -6px rgba(15,23,42,0.35);
+}
+.hz-cta:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+.hz-cta:active:not(:disabled) { transform: scale(0.98); }
+
+/* ── Reasoning pill + shimmer label (Argos .argos-reason-pill / .argos-orb-label) ── */
+.hz-reason-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px; border-radius: 9999px; max-width: 100%;
+  background: linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.07), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.07)), rgba(255,255,255,0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.2), 0 2px 10px rgba(0,0,0,0.06);
+  animation: hz-reason-in 0.34s var(--ease-soft) both;
+}
+.hz-orb-label {
+  --shimmer-base: rgba(7, 7, 7, 0.5);
+  --shimmer-highlight: #0d0d0d;
+  position: relative; display: block; white-space: nowrap; color: var(--shimmer-base);
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.hz-orb-label::before {
+  content: attr(data-text); position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(90deg, transparent 0%, transparent 40%, var(--shimmer-highlight) 50%, transparent 60%, transparent 100%);
+  background-size: 400% 100%; background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  animation: hz-orb-shimmer 2000ms linear infinite;
+}
+@keyframes hz-orb-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0% 0; } }
+@keyframes hz-reason-in { from { opacity: 0; transform: translateY(5px) scale(0.92); } to { opacity: 1; transform: none; } }
+
+/* Loader dots (Argos .argos-loader) */
+.hz-loader { display: inline-flex; align-items: center; gap: calc(var(--dot, 5px) * 0.62); }
+.hz-loader i { width: var(--dot, 5px); height: var(--dot, 5px); border-radius: 50%; background: currentColor; opacity: 0.28; animation: hz-flow 1.05s ease-in-out infinite; }
+.hz-loader i:nth-child(2) { animation-delay: 0.14s; }
+.hz-loader i:nth-child(3) { animation-delay: 0.28s; }
+@keyframes hz-flow { 0%, 100% { opacity: 0.25; transform: translateY(0) scale(0.82); } 40% { opacity: 1; transform: translateY(calc(var(--dot, 5px) * -0.34)) scale(1); } }
+
+/* Skeleton sweep (Argos .argos-skeleton) */
+.hz-skeleton { position: relative; overflow: hidden; background: rgba(0, 0, 0, 0.045); }
+.hz-skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%); animation: hz-sweep 1.6s ease-in-out infinite; }
+@keyframes hz-sweep { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(100%); } }
+
+/* Agent step: arrives once, then only its status mark changes. */
+.hz-step { animation: hz-step-in 0.36s var(--ease-soft) both; }
+@keyframes hz-step-in { from { opacity: 0; transform: translateY(4px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+.hz-pulse-dot { animation: hz-pulse-dot 2.1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+@keyframes hz-pulse-dot { 0%, 100% { opacity: 0.45; transform: scale(0.82); } 50% { opacity: 1; transform: scale(1); } }
+
+/* Bars on the best-bet card: grow once from zero. */
+.hz-bar { transform-origin: left center; animation: hz-bar 0.9s var(--ease-soft) 0.1s both; }
+@keyframes hz-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Screen change */
+.hz-enter { animation: hz-enter var(--motion-slow) var(--ease-soft) both; }
+@keyframes hz-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Expanders: grid-rows trick, content-sized */
+.hz-drawer { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 260ms var(--ease-soft), opacity 160ms linear; }
+.hz-drawer > * { overflow: hidden; min-height: 0; }
+.hz-drawer.is-open { grid-template-rows: 1fr; opacity: 1; }
+
+/* The time curve draws once (This market). */
+.hz-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hz-draw 1100ms var(--ease-soft) 150ms forwards; }
 .hz-fade { opacity: 0; animation: hz-fade 500ms ease-out 700ms forwards; }
 @keyframes hz-draw { to { stroke-dashoffset: 0; } }
 @keyframes hz-fade { to { opacity: 1; } }
+
+.hz-row-link { transition: background-color var(--motion-fast) ease; }
+.hz-row-link:hover { background: rgba(15, 23, 42, 0.03); }
+
 @media (prefers-reduced-motion: reduce) {
   .hz-draw { animation: none; stroke-dashoffset: 0; }
   .hz-fade { animation: none; opacity: 1; }
+  .hz-orb-label::before, .hz-loader i, .hz-skeleton::after, .hz-pulse-dot, .hz-step, .hz-bar, .hz-enter, .hz-reason-pill { animation: none !important; }
+  .hz-drawer, .hz-chip, .hz-cta, .hz-composer { transition: none; }
 }
 
-.hz-switch { width: 30px; height: 18px; border-radius: 999px; background: #e4e4e7; position: relative; transition: background-color 160ms ease; flex-shrink: 0; }
-.hz-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: transform 160ms ease; }
-.hz-switch[data-on='true'] { background: #111113; }
-.hz-switch[data-on='true']::after { transform: translateX(12px); }
-@media (prefers-reduced-motion: reduce) { .hz-switch, .hz-switch::after { transition: none; } }
+/* ── Messages (Argos .argos-bubble-user / .ai-message-content / .argos-w) ── */
+.hz-bubble-user {
+  background:
+    linear-gradient(125deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.14) 40%, rgba(255,255,255,0.05) 58%, rgba(255,255,255,0.28) 100%),
+    linear-gradient(0deg, hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.10), hsla(var(--adaptive-h), var(--adaptive-s), var(--adaptive-l), 0.10)),
+    rgba(244, 245, 247, 0.9);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(255,255,255,0.22), 0 2px 12px rgba(15, 23, 42, 0.08);
+  animation: hz-reason-in 0.34s var(--ease-soft) both;
+}
+.hz-msg { font-size: 13px; line-height: 1.62; letter-spacing: -0.006em; color: var(--hz-ink); }
+.hz-w { animation: hz-w-in 420ms cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+@keyframes hz-w-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hz-w, .hz-bubble-user { animation: none; } }
 
-.hz-row-link { transition: background-color 120ms ease; }
-.hz-row-link:hover { background: rgba(17, 17, 19, 0.03); }
-
-/* Agent step in progress */
-@keyframes pulse { 50% { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .hz-mode li span[style*='pulse'] { animation: none !important; } }
+/* ── Argos assistant message typography (styles.css .ai-message-content, .argos-w) ── */
+.ai-message-content .prose { font-size: 13px; line-height: 1.62; }
+/* Scoped to the markdown block, so Horizon's own cards inside a message keep their sizes. */
+.ai-message-content .prose h1 { font-size: 17px; line-height: 1.32; letter-spacing: -0.021em; }
+.ai-message-content .prose h2 { font-size: 15px; line-height: 1.4; letter-spacing: -0.014em; }
+.ai-message-content .prose h3 { font-size: 13px; line-height: 1.45; font-weight: 600; }
+.ai-message-content .prose p, .ai-message-content .prose li, .ai-message-content .prose td, .ai-message-content .prose th, .ai-message-content .prose blockquote { font-size: 13px; line-height: 1.62; }
+.ai-message-content code { font-size: 12px; }
+.ai-message-content :not(pre) > code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-weight: 500; padding: 1px 5px; border-radius: 5px; background: rgba(15, 23, 42, 0.06); color: #0f172a; overflow-wrap: anywhere; }
+.ai-message-content code::before, .ai-message-content code::after { content: none; }
+.ai-message-content .katex { font-size: 1.05em; }
+.ai-message-content .katex-display { margin: 0.6em 0; overflow-x: auto; overflow-y: hidden; }
+.argos-w { animation: argos-w-in 420ms cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+@keyframes argos-w-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .argos-w { animation: none; } }
