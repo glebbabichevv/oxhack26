@@ -23,14 +23,16 @@ export default function InvestPage() {
   }, []);
 
   const refresh = useCallback(async () => {
-    try {
-      const [p, e, n] = await Promise.all([
-        getTrader<PlansPayload>("/api/plans"), getTrader<InvestEvent[]>("/api/orders?limit=30"), getTrader<Pnl>("/api/pnl"),
-      ]);
-      setPlans(p); setEvents(e); setPnl(n); setError(null);
-    } catch {
-      setError("Can't reach the trading server right now. Numbers below may be out of date.");
-    }
+    const [p, e, n] = await Promise.allSettled([
+      getTrader<PlansPayload>("/api/plans"), getTrader<InvestEvent[]>("/api/orders?limit=30"), getTrader<Pnl>("/api/pnl"),
+    ]);
+    if (p.status === "fulfilled") setPlans(p.value);
+    if (e.status === "fulfilled") setEvents(e.value);
+    if (n.status === "fulfilled") setPnl(n.value);
+    if (p.status === "rejected") setError("Can't reach the trading server right now. Numbers below may be out of date.");
+    else if (e.status === "rejected" || n.status === "rejected") {
+      setError("Some details (recent bets or the profit chart) could not be loaded. Your plans are up to date.");
+    } else setError(null);
   }, []);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function InvestPage() {
           </label>
           {active.map((p) => <PlanCard key={p.id} plan={p} intervalMin={plans?.interval_min ?? 10} pin={pin} onChange={refresh} />)}
           <FramedCard title="Start investing">
-            <StartPlan ceiling={plans?.max_bet_ceiling ?? 25} pin={pin} onDone={refresh} />
+            <StartPlan ceiling={plans?.max_bet_ceiling ?? 25} totalCap={plans?.max_total_exposure} mode={plans?.mode ?? "paper"} pin={pin} onDone={refresh} />
           </FramedCard>
         </div>
       </Section>

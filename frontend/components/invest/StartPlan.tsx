@@ -9,7 +9,8 @@ const field = "mt-1.5 h-12 w-full rounded-xl border border-hairline bg-white px-
 // Inputs are kept as raw strings so a cleared field stays empty (invalid) instead of snapping to 0.
 const num = (s: string) => (s.trim() === "" ? NaN : Number(s));
 
-export function StartPlan({ ceiling, pin, onDone }: { ceiling: number; pin: string; onDone: () => void }) {
+export function StartPlan({ ceiling, totalCap, mode, pin, onDone }:
+  { ceiling: number; totalCap?: number; mode: "paper" | "live"; pin: string; onDone: () => void }) {
   const [budget, setBudget] = useState("1000");
   const [maxBet, setMaxBet] = useState(String(Math.min(25, ceiling)));
   const [stop, setStop] = useState("100");
@@ -67,8 +68,9 @@ export function StartPlan({ ceiling, pin, onDone }: { ceiling: number; pin: stri
       ) : (
         <div className="rounded-2xl bg-fill-soft p-5" role="alertdialog" aria-labelledby="confirm-text">
           <p id="confirm-text" className="text-[16px] leading-[1.5] text-ink-strong">
-            This uses <b>real money</b>: up to {money(b)} in bets of up to {money(m)} each, only when the model sees an
+            This uses <b>{mode === "live" ? "real money" : "practice money"}</b>: up to {money(b)} in bets of up to {money(m)} each, only when the model sees an
             edge after fees. It checks every 10 minutes and stops for the day after a {money(s)} loss.
+            {totalCap ? ` At most ${money(totalCap)} is in open bets at any time across all plans.` : ""}
           </p>
           <div className="mt-4 flex gap-3">
             <Button type="button" className="h-11" onClick={start} disabled={busy || !valid || !pin}>{busy ? "Starting…" : "Yes, start"}</Button>

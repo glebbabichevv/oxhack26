@@ -40,7 +40,7 @@ export function ProfitChart({ pnl }: { pnl: Pnl }) {
       </div>
       <figcaption className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-ink-muted">
         <span className="inline-flex items-center gap-2"><svg width="20" height="3" aria-hidden><line x1="0" y1="1.5" x2="20" y2="1.5" stroke={INK} strokeWidth="2.5" /></svg>Our real money</span>
-        <span className="inline-flex items-center gap-2"><svg width="20" height="3" aria-hidden><line x1="0" y1="1.5" x2="20" y2="1.5" stroke={ASH} strokeWidth="2" strokeDasharray="5 4" /></svg>If we'd followed the model since May (test, after costs, on {money(pnl.backtest_budget)})</span>
+        <span className="inline-flex items-center gap-2"><svg width="20" height="3" aria-hidden><line x1="0" y1="1.5" x2="20" y2="1.5" stroke={ASH} strokeWidth="2" strokeDasharray="5 4" /></svg>If we'd followed the model since May (test, after costs, on {money(pnl.backtest_budget)}; ignores per-bet and per-market limits)</span>
       </figcaption>
       <p className="mt-2 text-[13px] text-ink-faint">The dashed line is a test on past markets, not money we made. The solid line is real.</p>
     </figure>

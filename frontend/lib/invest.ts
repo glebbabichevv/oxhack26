@@ -10,7 +10,7 @@ export type PlanSummary = {
   daily_loss_stop: number; cash: number; value: number; profit: number; profit_pct: number;
   open_bets: number; last_check: string | null; created_at: string;
 };
-export type PlansPayload = { mode: "paper" | "live"; interval_min: number; max_bet_ceiling: number; plans: PlanSummary[] };
+export type PlansPayload = { mode: "paper" | "live"; interval_min: number; max_bet_ceiling: number; max_total_exposure: number; plans: PlanSummary[] };
 export type InvestEvent = {
   id: string; plan_id: string | null; kind: "start" | "buy" | "skip" | "settle" | "pause" | "resume" | "stop" | "error";
   t: string; question?: string; side?: "YES" | "NO"; cost?: number; price?: number; p_model?: number;
