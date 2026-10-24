@@ -168,8 +168,10 @@ def trades_for(d, name, qs, dlo, dhi, agree=None):
     action, kelly, edge = B.decide(p, q, cost, lo, hi, d["horizon_hours"].to_numpy(), MIN_EDGE, ENTER_FROM)
     if agree is not None:
         members = np.stack([qs[k] for k in ens])
-        sign = np.sign(members - p)
-        same = (np.abs(sign.sum(0)) == len(members)) & ((sign[0] > 0) == (action == "BUY_YES"))
+        sign = np.sign(np.where(np.abs(members - p) < 1e-9, 0.0, members - p))
+        voting = (sign != 0).sum(0)  # a member with q == price (e.g. Shin on a binary market) has no opinion
+        want = np.where(action == "BUY_YES", 1.0, -1.0)
+        same = (voting > 0) & ((sign * want == 1) | (sign == 0)).all(0)
         ok = same & ((members.max(0) - members.min(0)) < agree)
         action, kelly = np.where(ok, action, "NO_TRADE"), np.where(ok, kelly, 0.0)
     c = d.assign(q=q, cost=cost, action=action, kelly=kelly, edge=edge)
