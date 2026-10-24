@@ -33,8 +33,8 @@ We pulled resolved yes/no markets from Polymarket's public APIs and recorded the
 - **Split by time and keep events together.** "Who wins the Ballon d'Or?" is thirty correlated yes/no markets. A random
   split puts some in train and some in test, and the test score becomes fiction.
 
-The final dataset has 34,677 markets. We trained on events that ended before 18 May 2026 and tested on the 10,839
-that ended after.
+The final dataset has 34,677 markets. We trained on events that ended before 18 May 2026 and tested on the 10,579
+that resolved after.
 
 ## Our first result was wrong
 
@@ -52,26 +52,38 @@ you more for showing it.
 
 On the held-out markets:
 
-- Prices are overconfident at every horizon (calibration slope ≈ 0.85).
+- Prices get overconfident as resolution nears: about fair a month out, clearly too extreme from a week out.
 - A four-coefficient calibration model (logistic regression on logit(price), log(horizon) and their product) beats the market
-  price itself: **Brier 0.1274 vs 0.1281**. That's a small gain, but the market price is a hard baseline.
-- Trading only where the edge clears a 1¢ cost and the model's bootstrap interval, at a quarter-Kelly stake:
-  **7,228 trades, +2.77 starting bankrolls**, 90% CI [1.41, 4.07]. Max drawdown 42%. Hit rate 24%: lots of small
-  losses, a few large wins.
-- "Always back the favourite" on the same markets: **−7.1**.
+  price itself: **Brier 0.1297 vs 0.1305**. That's a small gain, but the market price is a hard baseline.
+- Trading only where the edge clears the spread, Polymarket's own taker fee and the model's bootstrap interval, at a
+  quarter-Kelly stake, never more than one bankroll at risk: **6,013 trades, +190% of the starting bankroll**, 90% CI
+  [+94%, +285%], +11.9% per dollar staked. Max drawdown 31%. Hit rate 21%: lots of small losses, a few large wins.
+- "Always back the favourite" on the same markets: **−908%**.
+
+Our first version had no fees and showed +304%. A teammate's agent audited the model, found that 93% of our test
+markets charge takers a fee, and the number dropped to +190%. The edge survived; the headline got honest.
 
 And the part that fits the theme:
 
 ![Mean return per trade after costs by time to resolution](integrations/pitch/when_to_trade.png)
 <!-- replace with the raw GitHub URL -->
 
-30 days out, the correction buys nothing. The edge shows up in the last week, mostly in sports.
+After fees, a trade a month out loses 19%; a day out it makes 12.6%. By market type, only sports is solid on its own;
+everything else has an interval that includes zero.
+
+## A test we can't overfit
+
+An out-of-time backtest is still history, and we had looked at it many times by Saturday afternoon. So at 15:43 we
+froze the model's calls on every open market ending in the next 48 hours, 163 markets, and pushed them to GitHub before
+any of them resolved, then again every two hours. On Sunday we scored only the markets whose scheduled end date had
+passed: [N resolved, n trades, hit rate, P&L]. That's far too few trades to prove an edge, and we say so. What it shows
+is that the calls are real and made before the answer existed.
 
 ## What doesn't work
 
-Every page needs an honest "where it fails" section, so ours is on the screen too: no lift 30 days out, none in crypto at
-1–7 days, little in politics, and too few test markets in "other" to say anything. Historical spreads aren't available
-from the API, so a 1¢ cost floor stands in for real costs. That's the first thing we'd fix.
+Every page needs an honest "where it fails" section, so ours is on the screen too: no Brier lift 30 days out, none in crypto or
+culture at any horizon, and too few test markets in "other" to say anything. Historical spreads aren't available
+from the API, so a 1¢ floor stands in for the historical spread (fees are real, from each market's schedule). That's the first thing we'd fix.
 
 ## How we worked
 
@@ -82,6 +94,6 @@ pitch in under an hour. [One line about Delta, if used.]
 
 **Stack:** Python, pandas, scikit-learn, FastAPI, Next.js, Tailwind, Recharts.
 
-Repo: [GitHub URL] · Demo: [public URL] · Devpost: [Devpost URL]
+Repo: https://github.com/glebbabichevv/oxhack26 · Demo: https://horizon-two-gilt.vercel.app · Devpost: [Devpost URL]
 
 *Built at OxHack '26, Mathematical Institute, Oxford, by [team names].*
