@@ -1,0 +1,8 @@
+{"cutoff": "2025-06-01", "n_trades": 412,
+ "with_costs": {"return": 0.08, "hit_rate": 0.56, "max_drawdown": 0.11,
+   "equity": [{"t": "2025-06-03", "value": 1.0}, {"t": "2025-07-01", "value": 1.03}, {"t": "2025-08-01", "value": 0.98},
+              {"t": "2025-09-01", "value": 1.05}, {"t": "2025-10-01", "value": 1.08}]},
+ "without_costs": {"return": 0.21, "hit_rate": 0.56, "max_drawdown": 0.09,
+   "equity": [{"t": "2025-06-03", "value": 1.0}, {"t": "2025-07-01", "value": 1.06}, {"t": "2025-08-01", "value": 1.04},
+              {"t": "2025-09-01", "value": 1.14}, {"t": "2025-10-01", "value": 1.21}]},
+ "naive_favourite": {"return": -0.02}}
