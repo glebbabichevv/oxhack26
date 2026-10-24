@@ -23,7 +23,7 @@
   "isotonic",
   "hier"
  ],
- "test_opened": false,
+ "test_opened": true,
  "agree_thresholds_tried": [
   0.02,
   0.04,
@@ -864,5 +864,72 @@
    ]
   }
  },
- "test": {}
+ "test": {
+  "V3": {
+   "brier": 0.18208,
+   "logloss": 0.53911,
+   "n_trades": 3840,
+   "return": 4.4738,
+   "return_ci": [
+    3.1,
+    6.01
+   ],
+   "per_dollar": 0.1713,
+   "per_dollar_ci": [
+    0.1181,
+    0.2318
+   ],
+   "hit_rate": 0.2253,
+   "max_drawdown": 0.4467,
+   "peak_open_stake": 0.769,
+   "staked": 26.121,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 3372,
+     "return": 4.1598,
+     "per_dollar": 0.1774
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 468,
+     "return": 0.314,
+     "per_dollar": 0.1175
+    }
+   ]
+  },
+  "COH": {
+   "brier": 0.1818,
+   "logloss": 0.53808,
+   "n_trades": 1899,
+   "return": 4.7976,
+   "return_ci": [
+    3.51,
+    6.11
+   ],
+   "per_dollar": 0.3119,
+   "per_dollar_ci": [
+    0.2276,
+    0.3982
+   ],
+   "hit_rate": 0.3123,
+   "max_drawdown": 0.2319,
+   "peak_open_stake": 0.455,
+   "staked": 15.38,
+   "by_horizon": [
+    {
+     "horizon_hours": 24,
+     "n_trades": 1621,
+     "return": 4.5407,
+     "per_dollar": 0.3392
+    },
+    {
+     "horizon_hours": 12,
+     "n_trades": 278,
+     "return": 0.2569,
+     "per_dollar": 0.1289
+    }
+   ]
+  }
+ }
 }
