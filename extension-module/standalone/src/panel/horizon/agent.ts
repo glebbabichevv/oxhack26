@@ -1,12 +1,12 @@
 /**
  * Horizon agent: plain-language tasks → a plan list of bets (or sells). Planning
  * uses Gemini via our API (POST /api/agent) with a deterministic parser as fallback. Every bet goes
- * through checkBet (Horizon's call, suggested-bet cap, daily loss limit). The plan is shown as a
+ * through checkBet (Horizon's call; at least $1, at most the budget). The plan is shown as a
  * list; the panel sets up Polymarket's ticket for the top few, one at a time; the user presses Trade.
  */
 import { decide, decideEvent, domainOf, feeOf, type Decision, type Model } from './horizon';
 import {
-  checkBet, getAccount, inPlay, lossToday, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
+  checkBet, getAccount, inPlay, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
   type Position, type Quote, type Side,
 } from './ledger';
 import { fallbackHint, prepareOrder } from './prepareOrder';
@@ -19,7 +19,7 @@ const GAMMA = 'https://gamma-api.polymarket.com';
 export type StepKind = 'searching' | 'working' | 'shaping' | 'solving';
 export type Step = { id: number; text: string; status: 'run' | 'ok' | 'fail' | 'info'; detail?: string; kind?: StepKind };
 export type PlanItem =
-  | { kind: 'buy'; q: Quote; side: Side; amount: number; name: string }
+  | { kind: 'buy'; q: Quote; side: Side; amount: number; name: string; suggested?: number }
   | { kind: 'sell'; q: Quote; pos: Position; fraction: number; name: string };
 export type Ctx = { model: Model; tabId?: number; onStep: (s: Step) => void; signal: { stop: boolean }; plan: PlanItem[] };
 
@@ -131,8 +131,9 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const a = await getAccount();
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
-      ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question });
-      return { added_to_plan: true, amount: c.amount, capped_from: c.capped, note: 'Horizon will set up this ticket on Polymarket; the user presses Trade' };
+      ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });
+      return { added_to_plan: true, amount: c.amount, horizon_suggests: c.suggested, above_suggestion: c.above, capped_to_budget_from: c.capped,
+        note: 'Horizon will set up this ticket on Polymarket; the user presses Trade' };
     }
     case 'adjust_stake': {
       const p = await findPosition(String(args.position ?? ''));
@@ -202,8 +203,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const open = a.positions.filter((x) => x.status === 'open');
       await refresh(await quotes(m, open.map((p) => p.marketSlug)));
       const a2 = await getAccount();
-      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2),
-        loss_today: +lossToday(a2).loss.toFixed(2), daily_loss_limit: +lossToday(a2).limit.toFixed(2) };
+      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2) };
     }
     default:
       return { error: `unknown tool ${name}` };
@@ -373,7 +373,7 @@ export async function llmAvailable(): Promise<boolean> {
 export async function planWithLLM(ctx: Ctx, text: string): Promise<string | undefined> {
   const contents: Content[] = [{ role: 'user', parts: [{ text }] }];
   const a = await getAccount();
-  const context = `the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up; daily loss limit ${Math.round(a.lossLimitPct * 100)}% of the budget. Horizon only sets up tickets; the user presses Trade on Polymarket.`;
+  const context = `the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up. Horizon only sets up tickets; the user presses Trade on Polymarket.`;
   for (let i = 0; i < 25 && !ctx.signal.stop; i++) {
     let res: Response;
     try {

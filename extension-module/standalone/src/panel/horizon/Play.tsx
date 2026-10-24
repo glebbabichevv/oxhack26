@@ -238,13 +238,38 @@ export function Doer({ model, tabId, items, source, onFinish }: { model: Model; 
   );
 }
 
+// ---------- the amount: Horizon suggests, the user decides ----------
+
+const stepOf = (v: number) => (v < 10 ? 1 : v < 50 ? 5 : 10);
+
+/** "− $2 +" with tap-to-type. Min $1 (Polymarket's minimum), max the budget. */
+export function AmountControl({ value, onChange, max, compact = false, label }: { value: number; onChange: (v: number) => void; max: number; compact?: boolean; label?: string }) {
+  const [text, setText] = useState<string>();
+  const clamp = (v: number) => Math.min(Math.max(1, Math.round(v * 100) / 100), Math.max(1, max));
+  const commit = () => { if (text !== undefined) { const n = Number(text.replace(/[$,\s]/g, '')); if (n > 0) onChange(clamp(n)); setText(undefined); } };
+  const h = compact ? 'h-8' : 'h-12', w = compact ? 'w-7' : 'w-10';
+  return (
+    <div className={`flex shrink-0 items-center rounded-control border border-[rgba(15,23,42,0.12)] bg-white/80 ${h}`} aria-label={label ?? 'Amount'}>
+      <button type="button" aria-label="Less" onClick={() => onChange(clamp(value - stepOf(value - 0.01)))} disabled={value <= 1} className={`flex ${h} ${w} items-center justify-center text-[#334155] disabled:opacity-30`}><Icon d="M6 12h12" size={compact ? 13 : 16} /></button>
+      <span className={`flex items-center font-semibold ${compact ? 'text-footnote' : 'text-subhead'}`}>
+        $<input inputMode="decimal" aria-label="Amount in dollars" value={text ?? String(value)} onFocus={(e) => { setText(String(value)); e.currentTarget.select(); }}
+          onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+          className="bg-transparent text-center outline-none" style={{ width: `${Math.max(2, String(text ?? value).length) + 0.5}ch` }} />
+      </span>
+      <button type="button" aria-label="More" onClick={() => onChange(clamp(value + stepOf(value)))} disabled={value >= max} className={`flex ${h} ${w} items-center justify-center text-[#334155] disabled:opacity-30`}><Icon d="M12 6v12M6 12h12" size={compact ? 13 : 16} /></button>
+    </div>
+  );
+}
+
 // ---------- the main card: one line, one button ----------
 
 export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   model: Model; a?: Account; marketSlug: string; title: string; d: Decision; tabId?: number; onDetails?: () => void;
 }) {
   const side = sideOf(d);
-  const amount = stakeFor(a, d);
+  const sug = stakeFor(a, d);
+  const [chosen, setChosen] = useState<number>();
+  const amount = chosen ?? sug;
   const [doing, setDoing] = useState<PlanItem[]>();
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
   const [quote, setQuote] = useState<Quote>();
@@ -265,7 +290,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
     if (!q || !side) { setMsg({ ok: false, text: 'Could not get a live price. Try again.' }); return; }
     const c = checkBet(await getAccount(), q, side, amount);
     if (!c.ok) { setMsg({ ok: false, text: `${c.error}.` }); return; }
-    setDoing([{ kind: 'buy', q, side, amount: c.amount, name: title }]);
+    setDoing([{ kind: 'buy', q, side, amount: c.amount, name: title, suggested: c.suggested }]);
   };
   return (
     <article className="hz-card hz-enter rounded-panel p-4">
@@ -275,9 +300,17 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
       </p>
       {side ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
       {side && !doing ? (
-        <button type="button" onClick={() => void start()} className="hz-cta mt-4 h-12 w-full rounded-control text-subhead font-semibold text-white" style={{ background: UP }}>
-          Set up {money(amount)} bet on {side === 'YES' ? 'Yes' : 'No'}
-        </button>
+        <>
+          <div className="mt-4 flex items-stretch gap-2">
+            <AmountControl value={amount} onChange={setChosen} max={a?.bankroll ?? 1000} />
+            <button type="button" onClick={() => void start()} className="hz-cta h-12 flex-1 rounded-control px-2 text-subhead font-semibold text-white" style={{ background: UP }}>
+              Set up {money(amount)} bet on {side === 'YES' ? 'Yes' : 'No'}
+            </button>
+          </div>
+          <p className="mt-1.5 text-caption text-[#94a3b8]">
+            Horizon suggests {money(sug)} (¼ Kelly of your {money(a?.bankroll ?? 1000)} budget){amount > sug ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}
+          </p>
+        </>
       ) : null}
       {msg ? <p className="mt-2 text-footnote font-medium" style={{ color: msg.ok ? UP : DOWN }}>{msg.text}</p> : null}
       {doing ? <Doer model={model} tabId={tabId} items={doing} source="card" onFinish={(n) => { setDoing(undefined); setMsg({ ok: true, text: n ? 'Saved in My decisions.' : 'Skipped. Saved in My decisions.' }); }} /> : null}
@@ -507,7 +540,10 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
 }
 
 /** The plan as a list: decision, size, one plain reason. The top few are set up live on the page. */
-function PlanList({ model, tabId, plan }: { model: Model; tabId?: number; plan: PlanItem[] }) {
+function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?: number; plan: PlanItem[]; budget: number }) {
+  // The user can change any amount; a row picks up its new amount when it is set up.
+  const [amounts, setAmounts] = useState<Record<number, number>>({});
+  const plan = plan0.map((p, k) => (p.kind === 'buy' && amounts[k] !== undefined ? { ...p, amount: amounts[k] } : p));
   const LIVE = Math.min(3, plan.filter((x) => !subTabOf(x.q)).length);
   const [liveDone, setLiveDone] = useState(LIVE === 0);
   const [one, setOne] = useState<number>();
@@ -523,8 +559,16 @@ function PlanList({ model, tabId, plan }: { model: Model; tabId?: number; plan: 
               <li key={k} className="hz-rule py-2.5">
                 <div className="flex items-start justify-between gap-3">
                   <span className="min-w-0 text-body font-medium leading-snug">{clean(p.name)}</span>
-                  <span className="shrink-0 text-body font-semibold">{p.kind === 'buy' ? `${money(p.amount)} ${p.side === 'YES' ? 'Yes' : 'No'}` : p.fraction >= 0.999 ? 'Sell all' : 'Sell part'}</span>
+                  {p.kind === 'buy' ? (
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <AmountControl compact value={p.amount} max={budget} onChange={(v) => setAmounts((x) => ({ ...x, [k]: v }))} label={`Amount for bet ${k + 1}`} />
+                      <span className="text-footnote font-semibold">{p.side === 'YES' ? 'Yes' : 'No'}</span>
+                    </span>
+                  ) : <span className="shrink-0 text-body font-semibold">{p.fraction >= 0.999 ? 'Sell all' : 'Sell part'}</span>}
                 </div>
+                {p.kind === 'buy' && p.suggested !== undefined ? (
+                  <p className="mt-0.5 text-caption text-[#94a3b8]">Horizon suggests {money(p.suggested)}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
+                ) : null}
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
                 {k >= LIVE && liveDone && one !== k ? (subTabOf(p.q) ? (
                   <a href={`https://polymarket.com/event/${p.q.eventSlug}`} target="_blank" rel="noreferrer" className="hz-chip mt-1.5 inline-flex items-center gap-1 rounded-control px-3 py-1 text-footnote font-semibold">Open <Icon d={I.external} size={12} /></a>
@@ -547,7 +591,7 @@ function PlanList({ model, tabId, plan }: { model: Model; tabId?: number; plan: 
   );
 }
 
-export function AgentRun({ model, tabId, run, onBack }: { model: Model; tabId?: number; run: Run; onBack: () => void }) {
+export function AgentRun({ model, tabId, run, onBack, budget = 1000 }: { model: Model; tabId?: number; run: Run; onBack: () => void; budget?: number }) {
   const endRef = useRef<HTMLDivElement>(null);
   // Scroll only the panel's own scroller, never the document (which would slide under the header).
   useEffect(() => {
@@ -565,7 +609,7 @@ export function AgentRun({ model, tabId, run, onBack }: { model: Model; tabId?: 
             <Steps steps={run.steps} />
           </div>
         ) : null}
-        {!run.busy && run.plan.length ? <PlanList model={model} tabId={tabId} plan={run.plan} /> : null}
+        {!run.busy && run.plan.length ? <PlanList model={model} tabId={tabId} plan={run.plan} budget={budget} /> : null}
       </AssistantMessage>
       <div ref={endRef} />
     </div>

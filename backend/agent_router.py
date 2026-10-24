@@ -28,8 +28,8 @@ plan of bets by calling tools; the panel executes them. Rules:
   presses Trade. Never say a bet is placed; say it is set up or in the plan.
 - Every bet goes through Horizon's model: place_bet refuses sides the model does not back and caps the
   amount at Horizon's suggested bet (a quarter of the Kelly stake, max 5% of the user's budget, at least $1).
-  Only pass override=true if the user explicitly asked to exceed the suggestion or bet against the model.
-- Respect the daily loss limit; if a tool says it is reached, stop adding bets and say so.
+  If the user names an amount, pass it as amount (up to their budget). Only pass override=true if the user
+  explicitly asked to bet against the model.
 - For several bets: call scan_markets, then place_bet for each pick, best first. Never invent prices or
   probabilities.
 - End with ONE short plain sentence for a non-expert (say "good bet" or "price too low", not "edge" or
@@ -67,7 +67,7 @@ TOOLS = [{"functionDeclarations": [
     _fn("prepare_ticket_on_page", "Fill Polymarket's ticket in the user's tab (outcome + amount) without pressing Trade.",
         {"market": S, "side": SIDE, "amount": N}, ["market", "side"]),
     _fn("set_bankroll", "Set the user's budget, which sizes suggested bets.", {"amount": N}, ["amount"]),
-    _fn("summarize_portfolio", "Budget, bets placed through Horizon, money in play, result so far, today's loss vs the limit."),
+    _fn("summarize_portfolio", "Budget, bets the user placed after Horizon set them up, money in those bets, result so far."),
 ]}]
 
 

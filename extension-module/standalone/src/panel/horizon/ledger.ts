@@ -1,7 +1,7 @@
 /**
  * Bets placed through Horizon, kept in chrome.storage.local: what Polymarket confirmed, marked to
  * the live mid price, settled at $1/$0 per share when Gamma reports the market resolved. The
- * user's budget ("bankroll") only sizes suggested bets (¼ Kelly, max 5%) and the daily loss limit.
+ * user's budget ("bankroll") sizes suggested bets (¼ Kelly, max 5%) and caps a single bet.
  * Horizon only fills Polymarket's ticket; the user presses Trade. Nothing here moves money.
  */
 import { decide, domainOf, feeOf, type Decision, type Fee, type Model } from './horizon';
@@ -14,8 +14,7 @@ export type Position = {
   mark?: number; markAt?: string; endDate?: string; feesPaid?: number; pmMessage?: string;
 };
 export type Account = {
-  bankroll: number; positions: Position[]; lossLimitPct: number;
-  day: { date: string; pnl: number };
+  bankroll: number; positions: Position[];
 };
 export type Quote = {
   marketSlug: string; eventSlug: string; question: string; label: string; bid: number; ask: number;
@@ -24,8 +23,13 @@ export type Quote = {
 
 const KEY = 'horizonLedger';
 const GAMMA = 'https://gamma-api.polymarket.com';
-const today = () => new Date().toLocaleDateString('en-CA');
-export const fresh = (bankroll = 1000): Account => ({ bankroll, positions: [], lossLimitPct: 0.2, day: { date: today(), pnl: 0 } });
+export const fresh = (bankroll = 1000): Account => ({ bankroll, positions: [] });
+
+/** Older builds stored a daily loss limit (and a demo account) that could block betting: drop them. */
+export function migrate() {
+  void chrome.storage.local.remove(['horizonDemo', 'horizonBankroll']).catch(() => {});
+  return mutate((a) => { const x = a as Account & { lossLimitPct?: number; day?: unknown }; delete x.lossLimitPct; delete x.day; });
+}
 
 // ---------- storage, serialised so parallel calls never clobber each other ----------
 
@@ -105,16 +109,6 @@ export function pnlTotal(a: Account) {
   return a.positions.reduce((s, p) => s + (p.pnl ?? 0) + (p.status === 'open' ? markValue(p) - p.stake : 0), 0);
 }
 export const inPlay = (a: Account) => a.positions.filter((p) => p.status === 'open').reduce((s, p) => s + p.stake, 0);
-export function rollDay(a: Account) {
-  if (a.day.date !== today()) a.day = { date: today(), pnl: pnlTotal(a) };
-}
-/** Today's loss on Horizon bets against the limit (a share of the budget). */
-export function lossToday(a: Account) {
-  const base = a.day.date === today() ? a.day.pnl : pnlTotal(a);
-  const loss = Math.max(0, base - pnlTotal(a));
-  const limit = a.bankroll * a.lossLimitPct;
-  return { loss, limit, hit: loss >= limit - 1e-9 };
-}
 /** Horizon's suggested bet in dollars: ¼ Kelly of the budget (already capped at 5%). */
 export const suggested = (a: Account, d: Decision) => Math.floor(d.kelly * a.bankroll * 100) / 100;
 
@@ -134,9 +128,10 @@ export const pWinOf = (d: Decision, side: Side) => (side === 'YES' ? d.q : 1 - d
 
 // ---------- guardrails (checked BEFORE anything happens on Polymarket) ----------
 
-export type Check = { ok: true; amount: number; capped?: number; against?: boolean } | { ok: false; error: string };
+export type Check = { ok: true; amount: number; suggested: number; above: boolean; capped?: number; against?: boolean } | { ok: false; error: string };
 
-/** The model must back the side, the amount stays ≤ the suggested bet, the daily loss limit holds. */
+/** The model must back the side (unless overridden). The amount is the user's: at least $1,
+ *  never more than the budget, and it may exceed Horizon's suggestion (flagged as `above`). */
 export function checkBet(a: Account, q: Quote, side: Side, amount: number | undefined, override = false): Check {
   const d = q.decision;
   if (q.closed || !d) return { ok: false, error: 'This market is closed or has no live price' };
@@ -144,22 +139,20 @@ export function checkBet(a: Account, q: Quote, side: Side, amount: number | unde
   if (!backs && !override) {
     return { ok: false, error: d.action === 'NO_TRADE' ? 'Horizon sees no advantage here after costs' : `Horizon backs ${d.action === 'BUY_YES' ? 'Yes' : 'No'} here, not ${side === 'YES' ? 'Yes' : 'No'}` };
   }
-  if (lossToday(a).hit) return { ok: false, error: `Today's loss limit (${Math.round(a.lossLimitPct * 100)}% of your budget) is reached` };
   // Polymarket's minimum is $1: a smaller suggestion becomes a $1 bet rather than none.
   const sug = backs ? Math.max(1, suggested(a, d)) : 0;
   let amt = amount ?? sug;
   let capped: number | undefined;
-  if (!override && amt > sug + 0.005) { capped = amt; amt = sug; }
+  if (amt > a.bankroll) { capped = amt; amt = a.bankroll; }
   amt = Math.floor(amt * 100) / 100;
   if (!(amt >= 1)) return { ok: false, error: 'The bet would be under $1, the smallest Polymarket takes' };
-  return { ok: true, amount: amt, capped, against: !backs };
+  return { ok: true, amount: amt, suggested: sug, above: amt > sug + 0.005, capped, against: !backs };
 }
 
 // ---------- recording what Polymarket confirmed ----------
 
 export function recordBuy(q: Quote, side: Side, amount: number, by: 'you' | 'agent', pmMessage: string) {
   return mutate((a) => {
-    rollDay(a);
     const d = q.decision;
     const px = fillPrice(q, side, true);
     const fee = feePerShare(q, px);
@@ -180,7 +173,6 @@ export function recordBuy(q: Quote, side: Side, amount: number, by: 'you' | 'age
 /** Record a sale of `fraction` of a position that Polymarket confirmed. */
 export function recordSell(q: Quote, id: string, fraction: number, pmMessage: string) {
   return mutate((a) => {
-    rollDay(a);
     const p = a.positions.find((x) => x.id === id && x.status === 'open');
     if (!p) return undefined;
     const f = Math.min(Math.max(fraction, 0), 1);
@@ -218,13 +210,9 @@ export function refresh(map: Map<string, Quote>) {
         p.markAt = new Date().toISOString();
       }
     }
-    rollDay(a);
   });
 }
 
 export function setBankroll(n: number) {
   return mutate((a) => { a.bankroll = Math.min(Math.max(n, 1), 1e7); });
-}
-export function setLossLimit(pct: number) {
-  return mutate((a) => { a.lossLimitPct = Math.min(Math.max(pct, 0.01), 1); });
 }
