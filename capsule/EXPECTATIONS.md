@@ -41,3 +41,7 @@ Reference numbers from the out-of-time test set (10,579 markets, results in `bac
 2. **Sports:** same direction, by about 0.0015.
 3. **Crypto:** no difference.
 4. **Noise:** a gap of ~0.001 is about the size of one day's sampling noise at these sample sizes (tens to a few hundred markets). An **inconclusive or reversed result is a likely outcome**, and we will report it as such, with its interval. The capsule tests whether we say in advance what we will see; one day of markets cannot prove or disprove the edge.
+
+## Amendment 1 (Sat 24 Oct, ~19:00 London, before any seal is opened)
+Stricter rule, decided by the team lead: a sealed market counts only if it **resolved after the moment its seal's SHA-256 was posted publicly in the event Discord**. The Discord message time is recorded in `capsule/posts.json` (`{"seal-<ts>.json": "2026-10-24T18:05:00+00:00"}`, UTC ISO). Markets that resolved between the seal and the post are excluded and their number is reported. This only removes markets; it cannot add any.
+More seals: Seal 2 around 01:30 Sunday, Seal 3 around 08:00 Sunday (more Sunday markets); each hash is posted as soon as it is sealed. Seal 1 stays primary; all seals are always reported. Opening at 12:30 Sunday.

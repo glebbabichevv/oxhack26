@@ -1,6 +1,6 @@
 """Backup demo video: walks the live site in DEMO_SCRIPT.md order and records it (silent .webm, 1440x900).
 
-  python integrations/pitch/record_demo.py [--url https://horizon-two-gilt.vercel.app]
+  python integrations/pitch/record_demo.py [--url https://web-production-c7376.up.railway.app]
 
 Re-record on Sunday morning, once the sealed section shows results. Add the voice-over on top (read DEMO_SCRIPT.md)
 or play this while speaking live if the Wi-Fi dies. Needs `pip install playwright` and Microsoft Edge (no browser download).
@@ -38,7 +38,7 @@ def scroll_to(page, target):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="https://horizon-two-gilt.vercel.app")
+    ap.add_argument("--url", default="https://web-production-c7376.up.railway.app")
     a = ap.parse_args()
     tmp = OUT / "_video"
     with sync_playwright() as pw:
