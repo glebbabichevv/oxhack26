@@ -1,0 +1,237 @@
+{
+ "protocol": "Exit before resolution (Gleb 23:35 + 23:50): sell at a later horizon instead of holding to the outcome.\n\n  python integrations/ensemble/exit.py [--raw data/raw] [--test]   # -> integrations/ensemble/exit.json\n\nSame model (M0, backend Calibrator), same entry rule as V3 (net edge >= 1c after costs, conservative band,\n1/4 Kelly capped 5%), same split as ensemble.py (validation = last 20% of train markets; VAL1 / VAL2 = earlier /\nlater half by resolution time), same \"ours\" exposure (open stake <= 1 bankroll), with a position's exit time\nreplacing its resolution time while it is open.\n\nPrices come from the hourly paths: the last print at or before the target time and at most 1 h before it\n(prior-only). We have no historical order books, so selling \"at the bid\" = last print minus the cost; costs\non EVERY leg = max(quoted half-spread, 1c) + the market's taker fee at that price (Gamma fee schedule).\n\n  HOLD(h)      enter at h hours before the scheduled end, hold to the outcome           (baseline per entry h)\n  FIX(h, x)    enter at h, sell at x < h hours before the end; if the market resolved by then, or there is no\n               print within 1 h of the exit time, the position is settled at the outcome\n               pairs: (72,24) (72,12) (48,24) (48,12) (24,12)\n  DYNAMIC      the V3 positions (horizons.csv rows, entry within 24 h); at every later hourly print recompute\n               M0's q at that time-to-end and sell as soon as the sale value after costs >= q\n               (YES: p - c >= q; NO: (1 - p) - c >= 1 - q): the market has caught up with Horizon. Else hold.\n  V3           the shipped policy, held to resolution (reference)\n\nSelection: the FIX pair with the best return / max drawdown on VAL1; then FIX*, DYNAMIC and V3 are compared on\nVAL2. The test is opened (--test, once) only if FIX* or DYNAMIC beats V3 on VAL2 return / max drawdown.",
+ "fixed_pair_chosen_on_val1": "FIX(48,12)",
+ "val1": {
+  "HOLD(72)": {
+   "n_trades": 497,
+   "per_dollar": 0.2034,
+   "per_dollar_ci": [
+    0.0622,
+    0.3544
+   ],
+   "return": 0.5885,
+   "max_drawdown": 0.184,
+   "ret_per_dd": 3.199,
+   "hit_rate": 0.2495,
+   "pnl_std_per_trade": 2.4086,
+   "share_sold_before_end": 0.0
+  },
+  "HOLD(48)": {
+   "n_trades": 464,
+   "per_dollar": 0.2523,
+   "per_dollar_ci": [
+    0.0836,
+    0.4203
+   ],
+   "return": 0.7382,
+   "max_drawdown": 0.1476,
+   "ret_per_dd": 5.001,
+   "hit_rate": 0.2565,
+   "pnl_std_per_trade": 2.525,
+   "share_sold_before_end": 0.0
+  },
+  "HOLD(24)": {
+   "n_trades": 408,
+   "per_dollar": 0.2437,
+   "per_dollar_ci": [
+    0.0755,
+    0.4267
+   ],
+   "return": 0.7155,
+   "max_drawdown": 0.1022,
+   "ret_per_dd": 6.998,
+   "hit_rate": 0.2745,
+   "pnl_std_per_trade": 2.5498,
+   "share_sold_before_end": 0.0
+  },
+  "FIX(72,24)": {
+   "n_trades": 497,
+   "per_dollar": -0.0901,
+   "per_dollar_ci": [
+    -0.1641,
+    -0.0137
+   ],
+   "return": -0.2606,
+   "max_drawdown": 0.3885,
+   "ret_per_dd": -0.671,
+   "hit_rate": 0.2052,
+   "pnl_std_per_trade": 1.1438,
+   "share_sold_before_end": 0.7384
+  },
+  "FIX(72,12)": {
+   "n_trades": 497,
+   "per_dollar": -0.0081,
+   "per_dollar_ci": [
+    -0.1011,
+    0.0837
+   ],
+   "return": -0.0235,
+   "max_drawdown": 0.3194,
+   "ret_per_dd": -0.074,
+   "hit_rate": 0.2294,
+   "pnl_std_per_trade": 1.4452,
+   "share_sold_before_end": 0.7787
+  },
+  "FIX(48,24)": {
+   "n_trades": 464,
+   "per_dollar": -0.056,
+   "per_dollar_ci": [
+    -0.1336,
+    0.0261
+   ],
+   "return": -0.1638,
+   "max_drawdown": 0.2458,
+   "ret_per_dd": -0.666,
+   "hit_rate": 0.2177,
+   "pnl_std_per_trade": 1.1029,
+   "share_sold_before_end": 0.7414
+  },
+  "FIX(48,12)": {
+   "n_trades": 464,
+   "per_dollar": 0.0438,
+   "per_dollar_ci": [
+    -0.0555,
+    0.1436
+   ],
+   "return": 0.1281,
+   "max_drawdown": 0.2748,
+   "ret_per_dd": 0.466,
+   "hit_rate": 0.2155,
+   "pnl_std_per_trade": 1.5451,
+   "share_sold_before_end": 0.7716
+  },
+  "FIX(24,12)": {
+   "n_trades": 408,
+   "per_dollar": 0.0194,
+   "per_dollar_ci": [
+    -0.0678,
+    0.1299
+   ],
+   "return": 0.0569,
+   "max_drawdown": 0.2941,
+   "ret_per_dd": 0.194,
+   "hit_rate": 0.1789,
+   "pnl_std_per_trade": 1.3598,
+   "share_sold_before_end": 0.7843
+  },
+  "V3": {
+   "n_trades": 710,
+   "per_dollar": 0.1815,
+   "per_dollar_ci": [
+    0.0546,
+    0.3069
+   ],
+   "return": 0.9018,
+   "max_drawdown": 0.2416,
+   "ret_per_dd": 3.733,
+   "hit_rate": 0.2577,
+   "pnl_std_per_trade": 2.5506,
+   "share_sold_before_end": 0.0
+  },
+  "DYNAMIC": {
+   "n_trades": 710,
+   "per_dollar": 0.1803,
+   "per_dollar_ci": [
+    0.0578,
+    0.3144
+   ],
+   "return": 0.8957,
+   "max_drawdown": 0.2131,
+   "ret_per_dd": 4.202,
+   "hit_rate": 0.2648,
+   "pnl_std_per_trade": 2.5267,
+   "share_sold_before_end": 0.062
+  }
+ },
+ "val2": {
+  "HOLD(72)": {
+   "n_trades": 469,
+   "per_dollar": 0.2924,
+   "per_dollar_ci": [
+    0.141,
+    0.4548
+   ],
+   "return": 0.7002,
+   "max_drawdown": 0.2063,
+   "ret_per_dd": 3.394,
+   "hit_rate": 0.2665,
+   "pnl_std_per_trade": 2.5004,
+   "share_sold_before_end": 0.0
+  },
+  "HOLD(48)": {
+   "n_trades": 516,
+   "per_dollar": 0.3597,
+   "per_dollar_ci": [
+    0.1882,
+    0.5254
+   ],
+   "return": 1.0363,
+   "max_drawdown": 0.1175,
+   "ret_per_dd": 8.821,
+   "hit_rate": 0.2674,
+   "pnl_std_per_trade": 2.5457,
+   "share_sold_before_end": 0.0
+  },
+  "HOLD(24)": {
+   "n_trades": 515,
+   "per_dollar": 0.3902,
+   "per_dollar_ci": [
+    0.2141,
+    0.5617
+   ],
+   "return": 1.2903,
+   "max_drawdown": 0.1272,
+   "ret_per_dd": 10.141,
+   "hit_rate": 0.2893,
+   "pnl_std_per_trade": 2.7424,
+   "share_sold_before_end": 0.0
+  },
+  "FIX(48,12)": {
+   "n_trades": 516,
+   "per_dollar": -0.1131,
+   "per_dollar_ci": [
+    -0.1684,
+    -0.0584
+   ],
+   "return": -0.3259,
+   "max_drawdown": 0.3723,
+   "ret_per_dd": -0.875,
+   "hit_rate": 0.1395,
+   "pnl_std_per_trade": 0.9908,
+   "share_sold_before_end": 0.9516
+  },
+  "V3": {
+   "n_trades": 663,
+   "per_dollar": 0.343,
+   "per_dollar_ci": [
+    0.1998,
+    0.4872
+   ],
+   "return": 1.4334,
+   "max_drawdown": 0.1497,
+   "ret_per_dd": 9.576,
+   "hit_rate": 0.2881,
+   "pnl_std_per_trade": 2.6887,
+   "share_sold_before_end": 0.0
+  },
+  "DYNAMIC": {
+   "n_trades": 663,
+   "per_dollar": 0.336,
+   "per_dollar_ci": [
+    0.196,
+    0.4709
+   ],
+   "return": 1.4039,
+   "max_drawdown": 0.1512,
+   "ret_per_dd": 9.287,
+   "hit_rate": 0.2971,
+   "pnl_std_per_trade": 2.625,
+   "share_sold_before_end": 0.0437
+  }
+ },
+ "beats_v3_on_val2_ret_per_dd": {
+  "FIX(48,12)": false,
+  "DYNAMIC": false
+ },
+ "test_opened": false
+}

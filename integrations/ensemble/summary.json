@@ -1,0 +1,326 @@
+{
+ "label": "descriptive - not used for selection",
+ "protocol": "Descriptive breakdowns on TEST (Gleb 00:40) \u2014 DESCRIPTIVE, NOT USED FOR SELECTION.\n\n  python integrations/ensemble/breakdowns.py   # -> integrations/ensemble/summary.json (blocks domain, volume, price_bucket)\n\nShipped policy V3 (M0 fitted on all train, min edge 1c, entry within 24 h, fees on, \"ours\" exposure) and COH\n(V3 + event coherence + one bet per event), on the embargoed test set, same code as ensemble.py. Per group:\ntrades, cents per $1 staked [90% event-bootstrap CI], hit rate, return in starting bankrolls.\nVolume tiers use the market's LIFETIME volume (volume_usd): volume at the moment of entry is not in our\ndata, so a market's tier partly reflects trading after the entry. Price bucket = the price paid for the side\nbought (YES: p, NO: 1 - p), before costs.",
+ "test_from": "2026-05-18",
+ "V3": {
+  "overall": {
+   "n_trades": 3840,
+   "per_dollar": 0.1713
+  },
+  "domain": [
+   {
+    "domain": "crypto",
+    "n_trades": 340,
+    "per_dollar": 0.0473,
+    "per_dollar_ci": [
+     -0.227,
+     0.3368
+    ],
+    "hit_rate": 0.1529,
+    "return": 0.0994
+   },
+   {
+    "domain": "culture",
+    "n_trades": 296,
+    "per_dollar": -0.1024,
+    "per_dollar_ci": [
+     -0.2716,
+     0.0937
+    ],
+    "hit_rate": 0.1723,
+    "return": -0.2067
+   },
+   {
+    "domain": "economics",
+    "n_trades": 51,
+    "per_dollar": 0.3822,
+    "per_dollar_ci": [
+     -0.2578,
+     1.0845
+    ],
+    "hit_rate": 0.1961,
+    "return": 0.1242
+   },
+   {
+    "domain": "geopolitics",
+    "n_trades": 51,
+    "per_dollar": 0.6568,
+    "per_dollar_ci": [
+     -0.169,
+     1.5964
+    ],
+    "hit_rate": 0.1765,
+    "return": 0.1816
+   },
+   {
+    "domain": "other",
+    "n_trades": 1,
+    "per_dollar": 1.751,
+    "per_dollar_ci": [
+     1.751,
+     1.751
+    ],
+    "hit_rate": 1.0,
+    "return": 0.0161
+   },
+   {
+    "domain": "politics",
+    "n_trades": 187,
+    "per_dollar": 0.3005,
+    "per_dollar_ci": [
+     -0.0231,
+     0.6716
+    ],
+    "hit_rate": 0.2086,
+    "return": 0.371
+   },
+   {
+    "domain": "science_tech",
+    "n_trades": 49,
+    "per_dollar": 1.1672,
+    "per_dollar_ci": [
+     0.4326,
+     1.9704
+    ],
+    "hit_rate": 0.3673,
+    "return": 0.369
+   },
+   {
+    "domain": "sports",
+    "n_trades": 2865,
+    "per_dollar": 0.1774,
+    "per_dollar_ci": [
+     0.116,
+     0.2426
+    ],
+    "hit_rate": 0.2391,
+    "return": 3.5191
+   }
+  ],
+  "volume": [
+   {
+    "volume_tier": "$100k-1M",
+    "n_trades": 3339,
+    "per_dollar": 0.1647,
+    "per_dollar_ci": [
+     0.1007,
+     0.2297
+    ],
+    "hit_rate": 0.2252,
+    "return": 3.7152
+   },
+   {
+    "volume_tier": ">$1M",
+    "n_trades": 501,
+    "per_dollar": 0.2126,
+    "per_dollar_ci": [
+     0.0563,
+     0.3848
+    ],
+    "hit_rate": 0.2255,
+    "return": 0.7586
+   }
+  ],
+  "price_bucket": [
+   {
+    "price_bucket": "<=10c",
+    "n_trades": 1246,
+    "per_dollar": 0.1227,
+    "per_dollar_ci": [
+     -0.051,
+     0.2933
+    ],
+    "hit_rate": 0.0851,
+    "return": 0.7817
+   },
+   {
+    "price_bucket": "10-25c",
+    "n_trades": 1446,
+    "per_dollar": 0.2127,
+    "per_dollar_ci": [
+     0.1245,
+     0.3105
+    ],
+    "hit_rate": 0.2213,
+    "return": 2.5462
+   },
+   {
+    "price_bucket": "25-50c",
+    "n_trades": 1148,
+    "per_dollar": 0.1473,
+    "per_dollar_ci": [
+     0.0779,
+     0.215
+    ],
+    "hit_rate": 0.3824,
+    "return": 1.1459
+   }
+  ]
+ },
+ "COH": {
+  "overall": {
+   "n_trades": 1899,
+   "per_dollar": 0.3119
+  },
+  "domain": [
+   {
+    "domain": "crypto",
+    "n_trades": 263,
+    "per_dollar": 0.0076,
+    "per_dollar_ci": [
+     -0.2513,
+     0.2942
+    ],
+    "hit_rate": 0.1521,
+    "return": 0.0132
+   },
+   {
+    "domain": "culture",
+    "n_trades": 127,
+    "per_dollar": -0.1354,
+    "per_dollar_ci": [
+     -0.3514,
+     0.1097
+    ],
+    "hit_rate": 0.2835,
+    "return": -0.1735
+   },
+   {
+    "domain": "economics",
+    "n_trades": 34,
+    "per_dollar": 0.6281,
+    "per_dollar_ci": [
+     -0.2141,
+     1.5363
+    ],
+    "hit_rate": 0.2647,
+    "return": 0.1481
+   },
+   {
+    "domain": "geopolitics",
+    "n_trades": 30,
+    "per_dollar": 0.129,
+    "per_dollar_ci": [
+     -0.5102,
+     0.9617
+    ],
+    "hit_rate": 0.2,
+    "return": 0.032
+   },
+   {
+    "domain": "other",
+    "n_trades": 1,
+    "per_dollar": 1.751,
+    "per_dollar_ci": [
+     1.751,
+     1.751
+    ],
+    "hit_rate": 1.0,
+    "return": 0.0161
+   },
+   {
+    "domain": "politics",
+    "n_trades": 116,
+    "per_dollar": 0.653,
+    "per_dollar_ci": [
+     0.1417,
+     1.186
+    ],
+    "hit_rate": 0.2414,
+    "return": 0.5582
+   },
+   {
+    "domain": "science_tech",
+    "n_trades": 44,
+    "per_dollar": 1.4015,
+    "per_dollar_ci": [
+     0.4767,
+     2.2702
+    ],
+    "hit_rate": 0.3864,
+    "return": 0.4985
+   },
+   {
+    "domain": "sports",
+    "n_trades": 1284,
+    "per_dollar": 0.3471,
+    "per_dollar_ci": [
+     0.2496,
+     0.4517
+    ],
+    "hit_rate": 0.3551,
+    "return": 3.7049
+   }
+  ],
+  "volume": [
+   {
+    "volume_tier": "$100k-1M",
+    "n_trades": 1664,
+    "per_dollar": 0.3452,
+    "per_dollar_ci": [
+     0.2525,
+     0.4396
+    ],
+    "hit_rate": 0.3125,
+    "return": 4.4441
+   },
+   {
+    "volume_tier": ">$1M",
+    "n_trades": 235,
+    "per_dollar": 0.1411,
+    "per_dollar_ci": [
+     -0.085,
+     0.3539
+    ],
+    "hit_rate": 0.3106,
+    "return": 0.3535
+   }
+  ],
+  "price_bucket": [
+   {
+    "price_bucket": "<=10c",
+    "n_trades": 339,
+    "per_dollar": 0.625,
+    "per_dollar_ci": [
+     0.2315,
+     1.0436
+    ],
+    "hit_rate": 0.1209,
+    "return": 1.1003
+   },
+   {
+    "price_bucket": "10-25c",
+    "n_trades": 762,
+    "per_dollar": 0.3991,
+    "per_dollar_ci": [
+     0.2508,
+     0.5484
+    ],
+    "hit_rate": 0.2625,
+    "return": 2.6504
+   },
+   {
+    "price_bucket": "25-50c",
+    "n_trades": 763,
+    "per_dollar": 0.1629,
+    "per_dollar_ci": [
+     0.0707,
+     0.2522
+    ],
+    "hit_rate": 0.4299,
+    "return": 1.0074
+   },
+   {
+    "price_bucket": ">50c",
+    "n_trades": 35,
+    "per_dollar": 0.0496,
+    "per_dollar_ci": [
+     -0.0629,
+     0.1639
+    ],
+    "hit_rate": 0.6857,
+    "return": 0.0395
+   }
+  ]
+ }
+}

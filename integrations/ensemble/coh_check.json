@@ -1,0 +1,41 @@
+{
+ "n_coherence_events": 173,
+ "n_complete": 110,
+ "median_share_legs_missing": 0.0,
+ "COH_all_books": {
+  "V3": {
+   "per_dollar": 0.343,
+   "return": 1.4334,
+   "brier": 0.1997,
+   "max_dd": 0.1497
+  },
+  "COH": {
+   "per_dollar": 0.431,
+   "return": 1.2538,
+   "brier": 0.1992,
+   "max_dd": 0.1121
+  },
+  "n_trades": {
+   "V3": 663,
+   "COH": 397
+  }
+ },
+ "COH_complete_books_only": {
+  "V3": {
+   "per_dollar": 0.343,
+   "return": 1.4334,
+   "brier": 0.1997,
+   "max_dd": 0.1497
+  },
+  "COH": {
+   "per_dollar": 0.4236,
+   "return": 1.1467,
+   "brier": 0.1994,
+   "max_dd": 0.0943
+  },
+  "n_trades": {
+   "V3": 663,
+   "COH": 396
+  }
+ }
+}

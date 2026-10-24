@@ -1,0 +1,49 @@
+{
+ "protocol": "Paired event-bootstrap of COH - V3 on VAL2 (Gleb 23:30), BEFORE the test is opened.\n\n  python integrations/ensemble/paired.py [--raw data/raw]   # -> integrations/ensemble/paired.json\n\nSame members, split, fees, V3 rules and exposure as ensemble.py. Each bootstrap draw resamples VAL2 EVENTS\n(the same draw for both candidates), then recomputes, on the trades and rows of the drawn events:\ndelta cents per $1 staked, delta total return (starting bankrolls), delta Brier (in-band rows), delta max\ndrawdown (resolved P&L in resolution order). Rule stated before the test (Gleb): if the 90% CI of delta\ncents per $1 includes 0, COH is chosen on RISK grounds, not because it earns more.",
+ "n_boot": 2000,
+ "n_val2_events": 824,
+ "n_trades": {
+  "V3": 663,
+  "COH": 397
+ },
+ "point": {
+  "V3": {
+   "per_dollar": 0.343,
+   "return": 1.4334,
+   "brier": 0.1997,
+   "max_dd": 0.1497
+  },
+  "COH": {
+   "per_dollar": 0.431,
+   "return": 1.2538,
+   "brier": 0.1992,
+   "max_dd": 0.1121
+  }
+ },
+ "delta_coh_minus_v3": {
+  "per_dollar": 0.0879,
+  "return": -0.1795,
+  "brier": -0.0005,
+  "max_dd": -0.0376
+ },
+ "delta_ci90": {
+  "per_dollar": [
+   0.0068,
+   0.1727
+  ],
+  "return": [
+   -0.4363,
+   0.0677
+  ],
+  "brier": [
+   -0.0009,
+   -0.0002
+  ],
+  "max_dd": [
+   -0.1115,
+   0.0366
+  ]
+ },
+ "per_dollar_ci_includes_zero": false,
+ "verdict": "COH earns more per $1 (delta CI excludes 0)"
+}
