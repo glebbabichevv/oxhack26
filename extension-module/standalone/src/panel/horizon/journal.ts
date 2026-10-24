@@ -30,11 +30,12 @@ export async function installId(): Promise<string> {
 }
 export const webUrl = (id: string) => `${SITE}/journal?me=${encodeURIComponent(id)}`;
 
-async function post(entries: Entry[]): Promise<boolean> {
+/** true = stored (or rejected as malformed, so never retried); false = try again later. */
+async function post(e: Entry): Promise<boolean> {
   try {
     const r = await fetch(`${API}/api/journal`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entries.length === 1 ? entries[0] : { entries }), signal: AbortSignal.timeout(5000) });
-    return r.ok;
+      body: JSON.stringify(e), signal: AbortSignal.timeout(5000) });
+    return r.ok || (r.status >= 400 && r.status < 500 && r.status !== 404 && r.status !== 408 && r.status !== 429);
   } catch { return false; }
 }
 
@@ -47,7 +48,7 @@ export async function flush() {
     const r = await chrome.storage.local.get(QUEUE_KEY);
     const queue = (r[QUEUE_KEY] as Entry[] | undefined) ?? [];
     let sent = 0;
-    for (const e of queue) { if (!(await post([e]))) break; sent++; }
+    for (const e of queue) { if (!(await post(e))) break; sent++; }
     if (sent) {
       const r2 = await chrome.storage.local.get(QUEUE_KEY);
       await chrome.storage.local.set({ [QUEUE_KEY]: ((r2[QUEUE_KEY] as Entry[] | undefined) ?? []).slice(sent) });
@@ -65,7 +66,7 @@ export async function record(x: {
   const key = `${x.slug}:${side}`;
   if (x.status === 'shown') { if (seenShown.has(key)) return; seenShown.add(key); }
   const e: Entry = {
-    install_id: await installId(), ts: new Date().toISOString(), market_id: x.marketId ?? '', slug: x.slug, question: x.question, side,
+    install_id: await installId(), ts: new Date().toISOString(), market_id: x.marketId || x.slug, slug: x.slug, question: x.question, side,
     price: +x.d.price.toFixed(4), q: +x.d.q.toFixed(4), q_low: +x.d.lo.toFixed(4), q_high: +x.d.hi.toFixed(4), action: x.d.action,
     stake_usd: +x.stake.toFixed(2), kelly_fraction: +x.d.kelly.toFixed(5), source: x.source, status: x.status,
   };
@@ -76,7 +77,7 @@ export async function record(x: {
     await chrome.storage.local.set({ [LOG_KEY]: log.slice(0, 500) });
   } catch { /* local copy is best effort */ }
   void (async () => {
-    if (await post([e])) { void flush(); return; }
+    if (await post(e)) { void flush(); return; }
     const r = await chrome.storage.local.get(QUEUE_KEY).catch(() => ({} as Record<string, unknown>));
     const queue = ((r[QUEUE_KEY] as Entry[] | undefined) ?? []);
     queue.push(e);
