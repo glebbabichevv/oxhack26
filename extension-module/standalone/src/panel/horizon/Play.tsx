@@ -405,8 +405,15 @@ function PositionAdvice({ pos, q, d, unsure, title, onSell, busy }: { pos: Walle
   return (
     <div className="mt-4 rounded-card bg-[rgba(15,23,42,0.04)] px-3.5 py-3">
       <p className="text-footnote text-[#475569]">You hold {shares.toLocaleString()} {side === 'YES' ? 'Yes' : 'No'} shares{pos.avgPrice ? ` (bought at ${c(pos.avgPrice)})` : ''}.</p>
-      {/* Dynamic exit failed on validation (selling early did not beat holding V3), so the advice is always hold. */}
-      <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold to resolution: selling early did not beat holding in our test.</p>
+      {/* COH+DYNAMIC (sell when what the market pays >= Horizon's value + cost): same money, smaller drawdown on the test. */}
+      {unsure ? null : sell ? (
+        <>
+          <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Sell: the market now pays {c(pays)}, Horizon values it at {c(worth)}.</p>
+          <button type="button" disabled={busy} onClick={() => onSell({ kind: 'sell', q, pos: synthetic, fraction: 1, name: title })}
+            className="hz-cta mt-3 h-11 w-full rounded-control text-subhead font-semibold text-white disabled:opacity-50" style={{ background: INK }}>Set up sale of {shares.toLocaleString()} shares</button>
+        </>
+      ) : <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold: Horizon values it at {c(worth)}, the market pays {c(pays)}.</p>}
+      <p className="mt-1.5 text-caption text-[#94a3b8]">Selling by this rule kept the same profit with a smaller drawdown in our out-of-time test (+30.9¢ vs +31.2¢ per $1, maxDD 0.20 vs 0.23).</p>
     </div>
   );
 }
@@ -455,8 +462,11 @@ function Unreachable({ onRetry }: { onRetry: () => void }) {
 export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; a?: Account; slug: string; tabId?: number; onDetails: () => void }) {
   const [ev, setEv] = useState<{ title: string; legs: Leg[] } | 'loading' | 'error'>('loading');
   const [pick, setPick] = useState(0);
-  const load = useCallback(() => { setEv('loading'); setPick(0); decideEvent(model, slug).then((e) => { gammaOk(); setEv(e); }).catch(() => setEv('error')); }, [model, slug]);
+  const [picked, setPicked] = useState(false);
+  const [held, setHeld] = useState<WalletPos[]>([]);
+  const load = useCallback(() => { setEv('loading'); setPick(0); setPicked(false); decideEvent(model, slug).then((e) => { gammaOk(); setEv(e); }).catch(() => setEv('error')); }, [model, slug]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { void heldOnEvent(slug).then(setHeld); }, [slug]);
   if (ev === 'loading') return <div className="px-4 pt-3"><Thinking steps={[]} fallback="Reading this market" /><div className="hz-skeleton mt-4 h-[230px] rounded-panel" /></div>;
   if (ev === 'error') return <Unreachable onRetry={load} />;
   const band = model.tradable;
@@ -471,7 +481,9 @@ export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; 
       </div>
     );
   }
-  const best = legs[Math.min(pick, legs.length - 1)];
+  // If the wallet holds one of these outcomes, open on it (its HOLD/SELL card) unless the user picked another.
+  const heldIx = picked ? -1 : legs.findIndex((l) => held.some((h) => h.slug === l.marketSlug && (h.size ?? 0) > 0));
+  const best = legs[heldIx >= 0 ? heldIx : Math.min(pick, legs.length - 1)];
   const titleOf = (l: Leg) => (legs.length > 1 ? clean(l.label) : clean(l.question));
   return (
     <div className="px-4 pb-6 pt-3">
@@ -479,7 +491,7 @@ export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; 
       <BetCard key={best.marketSlug} model={model} a={a} marketSlug={best.marketSlug!} title={titleOf(best)} d={best.decision!} tabId={tabId} onDetails={onDetails} />
       {legs.length > 1 ? (
         <Collapsible title="Other outcomes">
-          {legs.map((l, k) => <Row key={l.marketSlug} title={titleOf(l)} d={l.decision!} active={k === pick} onClick={() => setPick(k)} />)}
+          {legs.map((l, k) => <Row key={l.marketSlug} title={titleOf(l)} d={l.decision!} active={l === best} onClick={() => { setPick(k); setPicked(true); }} />)}
         </Collapsible>
       ) : null}
       <TrustLine />

@@ -66,7 +66,7 @@ export async function openMyResults() {
   await chrome.tabs.create({ url: await meUrl() });
 }
 
-export type WalletPos = { eventSlug?: string; conditionId?: string; outcome?: string; size?: number; avgPrice?: number };
+export type WalletPos = { eventSlug?: string; slug?: string; conditionId?: string; outcome?: string; size?: number; avgPrice?: number };
 /** Open positions on one event, from the user's public wallet (Polymarket data API, read only). [] without a wallet or on error. */
 let held: { wallet: string; at: number; rows: Promise<WalletPos[]> } | undefined;
 export async function heldOnEvent(eventSlug?: string): Promise<WalletPos[]> {
