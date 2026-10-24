@@ -101,7 +101,7 @@ export default function MePage() {
   useEffect(() => {
     if (!ready || (!id && !wallet)) return;
     const qs = new URLSearchParams({ ...(id ? { install_id: id } : {}), ...(wallet ? { wallet } : {}) });
-    getJSON<Me>(`/api/me?${qs}`).then((d) => { setData(d); setError(undefined); }).catch((e) => setError(String(e)));
+    getJSON<Me>(`/api/me?${qs}`).catch(() => new Promise((ok) => setTimeout(ok, 3000)).then(() => getJSON<Me>(`/api/me?${qs}`))).then((d) => { setData(d); setError(undefined); }).catch((e) => setError(String(e)));
   }, [ready, id, wallet]);
 
   const submitWallet = (e: React.FormEvent) => {
