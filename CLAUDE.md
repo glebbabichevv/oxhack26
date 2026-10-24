@@ -133,6 +133,7 @@ Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. 
 5. **Sync with the team often.** Open a small PR into `main` as soon as something works (aim for every ~45–60 min); Role A merges quickly. Before each new task: `git pull origin main` (merge it into your branch) so you see everyone's latest work.
 6. To look at a teammate's unmerged work: `git fetch` then `git log origin/<their-branch>` / `git diff main...origin/<their-branch>`. Read it, never edit it.
 7. Changing the API or data contract? Update it in this file first, in its own small PR, and tell the team.
+7b. **Agents talk through inboxes — see `team/README.md`.** At the start of every task read `team/inbox/<your role>.md` and handle unchecked messages first. When you spot a problem in another role's work (contract mismatch, leakage, fake numbers, broken screen), append a blunt, specific one-liner to *their* inbox and push it straight to `main`. Every PR is reviewed by an agent of a different role (`/review`) before merge.
 8. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
 9. Feature freeze ~02:00 Sunday. After that: bugs, backup video, Devpost, pitch only. Submission by 11:30 Sunday.
 

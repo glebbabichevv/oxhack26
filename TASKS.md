@@ -25,6 +25,7 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 
 ### Everyone
 - [ ] `git pull`, read CLAUDE.md "What we are building" + contracts
+- [ ] Read `team/README.md`; check your inbox `team/inbox/<role>.md` before every task
 - [ ] Delta: at least 2 of us collaborate in a Delta thread (Zed track requirement); save links
 
 ## Gate 16:30
