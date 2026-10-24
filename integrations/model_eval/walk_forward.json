@@ -1,0 +1,1008 @@
+{
+ "protocol": "Walk-forward over ALL of train: more out-of-sample markets per model, and paired comparisons vs M0.\n-> integrations/model_eval/walk_forward.json + WALK_FORWARD.md\n\n  python integrations/model_eval/walk_forward.py\n\nTest is never touched. Train events (split_by_time at the shipped cutoff) are ordered by when they end and cut\ninto blocks at date boundaries: the first FIRST_FIT share is only ever fitted on, then each of N_BLOCKS blocks is\npredicted by every member of evaluate_all.py fitted on everything that ended before the block started. Per block\nthe split is model.split_by_time (events stay whole, legs resolved before the block start are dropped) and the\nplayoff embargo (entry time >= block start). Predictions of all blocks are concatenated in time and scored once.\n\nWhy: validation alone is 4,768 markets (~1,300 V3 trades). V3 takes at most one trade per market, and only ~28%\nof markets get one, so even all of train cannot give 10,000 V3 trades per model; walk-forward roughly quadruples\nthe scored markets. V0 (any horizon, any positive net edge) is reported too: it trades more markets.\nPaired: every member vs M0 on the SAME resampled events (1,000 event-bootstrap draws, seed 0): \u0394 log loss and\n\u0394 \u00a2 per $1. A pair CI that excludes 0 is a real difference; two separate CIs overlapping says little.",
+ "cutoff": "2026-05-18",
+ "blocks": [
+  {
+   "block": 1,
+   "start": "2025-07-01",
+   "end": "2025-10-01",
+   "n_fit_markets": 5896,
+   "n_markets": 1977
+  },
+  {
+   "block": 2,
+   "start": "2025-10-01",
+   "end": "2025-11-26",
+   "n_fit_markets": 8188,
+   "n_markets": 2489
+  },
+  {
+   "block": 3,
+   "start": "2025-11-26",
+   "end": "2026-01-01",
+   "n_fit_markets": 10814,
+   "n_markets": 2274
+  },
+  {
+   "block": 4,
+   "start": "2026-01-01",
+   "end": "2026-01-30",
+   "n_fit_markets": 13265,
+   "n_markets": 1977
+  },
+  {
+   "block": 5,
+   "start": "2026-01-30",
+   "end": "2026-03-01",
+   "n_fit_markets": 15952,
+   "n_markets": 2610
+  },
+  {
+   "block": 6,
+   "start": "2026-03-01",
+   "end": "2026-04-16",
+   "n_fit_markets": 18811,
+   "n_markets": 2255
+  },
+  {
+   "block": 7,
+   "start": "2026-04-16",
+   "end": "2026-05-17",
+   "n_fit_markets": 21347,
+   "n_markets": 2258
+  }
+ ],
+ "n_markets_scored": 15840,
+ "n_events_scored": 5750,
+ "n_rows_scored": 30875,
+ "models": {
+  "market": {
+   "brier": 0.19173,
+   "logloss": 0.56407,
+   "brier_le24h": 0.19676,
+   "logloss_le24h": 0.57688,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55581,
+    0.57317
+   ],
+   "d_logloss_vs_M0": 0.004,
+   "d_logloss_vs_M0_ci": [
+    0.00297,
+    0.00508
+   ],
+   "moved_rows": {
+    "n_rows": 0
+   },
+   "V3": {
+    "n_trades": 0
+   },
+   "V0": {
+    "n_trades": 0
+   }
+  },
+  "M0": {
+   "brier": 0.19056,
+   "logloss": 0.56007,
+   "brier_le24h": 0.19538,
+   "logloss_le24h": 0.57199,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55265,
+    0.5682
+   ],
+   "d_logloss_vs_M0": -0.0,
+   "d_logloss_vs_M0_ci": [
+    0.0,
+    0.0
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.004,
+    "ci": [
+     -0.00508,
+     -0.00297
+    ]
+   },
+   "V3": {
+    "n_trades": 4298,
+    "per_dollar": 0.1935,
+    "per_dollar_ci": [
+     0.1428,
+     0.241
+    ],
+    "return": 5.782,
+    "d_per_dollar_vs_M0": 0.0,
+    "d_per_dollar_vs_M0_ci": [
+     0.0,
+     0.0
+    ]
+   },
+   "V0": {
+    "n_trades": 8056,
+    "per_dollar": 0.1698,
+    "per_dollar_ci": [
+     0.1223,
+     0.2171
+    ],
+    "return": 4.263,
+    "d_per_dollar_vs_M0": 0.0,
+    "d_per_dollar_vs_M0_ci": [
+     0.0,
+     0.0
+    ]
+   }
+  },
+  "M0_domain": {
+   "brier": 0.19034,
+   "logloss": 0.55987,
+   "brier_le24h": 0.19526,
+   "logloss_le24h": 0.57181,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55263,
+    0.56793
+   ],
+   "d_logloss_vs_M0": -0.0002,
+   "d_logloss_vs_M0_ci": [
+    -0.00129,
+    0.00078
+   ],
+   "moved_rows": {
+    "n_rows": 30873,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.0042,
+    "ci": [
+     -0.00581,
+     -0.00267
+    ]
+   },
+   "V3": {
+    "n_trades": 5218,
+    "per_dollar": 0.1627,
+    "per_dollar_ci": [
+     0.1242,
+     0.2031
+    ],
+    "return": 11.266,
+    "d_per_dollar_vs_M0": -0.0308,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0716,
+     0.0129
+    ]
+   },
+   "V0": {
+    "n_trades": 5967,
+    "per_dollar": 0.1487,
+    "per_dollar_ci": [
+     0.1045,
+     0.1957
+    ],
+    "return": 5.938,
+    "d_per_dollar_vs_M0": -0.021,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0709,
+     0.0307
+    ]
+   }
+  },
+  "beta": {
+   "brier": 0.19057,
+   "logloss": 0.56018,
+   "brier_le24h": 0.19552,
+   "logloss_le24h": 0.5726,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55281,
+    0.56857
+   ],
+   "d_logloss_vs_M0": 0.00011,
+   "d_logloss_vs_M0_ci": [
+    -0.00014,
+    0.00035
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00389,
+    "ci": [
+     -0.00492,
+     -0.0029
+    ]
+   },
+   "V3": {
+    "n_trades": 3923,
+    "per_dollar": 0.1554,
+    "per_dollar_ci": [
+     0.1141,
+     0.1969
+    ],
+    "return": 3.908,
+    "d_per_dollar_vs_M0": -0.0381,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0634,
+     -0.0103
+    ]
+   },
+   "V0": {
+    "n_trades": 8199,
+    "per_dollar": 0.1287,
+    "per_dollar_ci": [
+     0.0899,
+     0.17
+    ],
+    "return": 3.653,
+    "d_per_dollar_vs_M0": -0.0411,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0769,
+     -0.0064
+    ]
+   }
+  },
+  "beta_h": {
+   "brier": 0.19057,
+   "logloss": 0.56013,
+   "brier_le24h": 0.19542,
+   "logloss_le24h": 0.57219,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.5528,
+    0.56843
+   ],
+   "d_logloss_vs_M0": 6e-05,
+   "d_logloss_vs_M0_ci": [
+    -0.00014,
+    0.00024
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00394,
+    "ci": [
+     -0.00499,
+     -0.0029
+    ]
+   },
+   "V3": {
+    "n_trades": 5104,
+    "per_dollar": 0.1493,
+    "per_dollar_ci": [
+     0.1112,
+     0.1879
+    ],
+    "return": 5.652,
+    "d_per_dollar_vs_M0": -0.0442,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0697,
+     -0.018
+    ]
+   },
+   "V0": {
+    "n_trades": 8483,
+    "per_dollar": 0.127,
+    "per_dollar_ci": [
+     0.0897,
+     0.1672
+    ],
+    "return": 3.56,
+    "d_per_dollar_vs_M0": -0.0428,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0671,
+     -0.0176
+    ]
+   }
+  },
+  "isotonic": {
+   "brier": 0.19115,
+   "logloss": 0.56555,
+   "brier_le24h": 0.19604,
+   "logloss_le24h": 0.57651,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55748,
+    0.57436
+   ],
+   "d_logloss_vs_M0": 0.00548,
+   "d_logloss_vs_M0_ci": [
+    0.00376,
+    0.00741
+   ],
+   "moved_rows": {
+    "n_rows": 30825,
+    "n_events": 5266,
+    "d_logloss_vs_market": 0.00149,
+    "ci": [
+     -0.00045,
+     0.00342
+    ]
+   },
+   "V3": {
+    "n_trades": 3505,
+    "per_dollar": 0.1159,
+    "per_dollar_ci": [
+     0.0787,
+     0.1551
+    ],
+    "return": 4.331,
+    "d_per_dollar_vs_M0": -0.0776,
+    "d_per_dollar_vs_M0_ci": [
+     -0.1204,
+     -0.0334
+    ]
+   },
+   "V0": {
+    "n_trades": 6513,
+    "per_dollar": 0.024,
+    "per_dollar_ci": [
+     -0.004,
+     0.0549
+    ],
+    "return": 1.105,
+    "d_per_dollar_vs_M0": -0.1457,
+    "d_per_dollar_vs_M0_ci": [
+     -0.1907,
+     -0.0982
+    ]
+   }
+  },
+  "M1_lite": {
+   "brier": 0.18873,
+   "logloss": 0.55599,
+   "brier_le24h": 0.19388,
+   "logloss_le24h": 0.56861,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.54843,
+    0.56439
+   ],
+   "d_logloss_vs_M0": -0.00408,
+   "d_logloss_vs_M0_ci": [
+    -0.00562,
+    -0.0026
+   ],
+   "moved_rows": {
+    "n_rows": 30874,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00808,
+    "ci": [
+     -0.00995,
+     -0.00617
+    ]
+   },
+   "V3": {
+    "n_trades": 4826,
+    "per_dollar": 0.2152,
+    "per_dollar_ci": [
+     0.1734,
+     0.2606
+    ],
+    "return": 15.57,
+    "d_per_dollar_vs_M0": 0.0217,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0313,
+     0.0741
+    ]
+   },
+   "V0": {
+    "n_trades": 5769,
+    "per_dollar": 0.2256,
+    "per_dollar_ci": [
+     0.1742,
+     0.279
+    ],
+    "return": 9.259,
+    "d_per_dollar_vs_M0": 0.0558,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0098,
+     0.1235
+    ]
+   }
+  },
+  "M2_lite": {
+   "brier": 0.188,
+   "logloss": 0.5547,
+   "brier_le24h": 0.19345,
+   "logloss_le24h": 0.56797,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.54736,
+    0.56283
+   ],
+   "d_logloss_vs_M0": -0.00537,
+   "d_logloss_vs_M0_ci": [
+    -0.00748,
+    -0.00335
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00937,
+    "ci": [
+     -0.01184,
+     -0.00688
+    ]
+   },
+   "V3": {
+    "n_trades": 3562,
+    "per_dollar": 0.224,
+    "per_dollar_ci": [
+     0.1796,
+     0.2731
+    ],
+    "return": 14.752,
+    "d_per_dollar_vs_M0": 0.0304,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0224,
+     0.0865
+    ]
+   },
+   "V0": {
+    "n_trades": 4654,
+    "per_dollar": 0.1972,
+    "per_dollar_ci": [
+     0.1491,
+     0.248
+    ],
+    "return": 8.945,
+    "d_per_dollar_vs_M0": 0.0275,
+    "d_per_dollar_vs_M0_ci": [
+     -0.031,
+     0.0897
+    ]
+   }
+  },
+  "shin": {
+   "brier": 0.19178,
+   "logloss": 0.56437,
+   "brier_le24h": 0.19677,
+   "logloss_le24h": 0.57707,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55599,
+    0.57346
+   ],
+   "d_logloss_vs_M0": 0.0043,
+   "d_logloss_vs_M0_ci": [
+    0.00321,
+    0.00546
+   ],
+   "moved_rows": {
+    "n_rows": 9335,
+    "n_events": 1113,
+    "d_logloss_vs_market": 0.00101,
+    "ci": [
+     -3e-05,
+     0.00229
+    ]
+   },
+   "V3": {
+    "n_trades": 207,
+    "per_dollar": -0.0241,
+    "per_dollar_ci": [
+     -0.0886,
+     0.0352
+    ],
+    "return": -0.116,
+    "d_per_dollar_vs_M0": -0.2176,
+    "d_per_dollar_vs_M0_ci": [
+     -0.3026,
+     -0.1375
+    ]
+   },
+   "V0": {
+    "n_trades": 670,
+    "per_dollar": -0.0692,
+    "per_dollar_ci": [
+     -0.1188,
+     -0.0202
+    ],
+    "return": -0.556,
+    "d_per_dollar_vs_M0": -0.2389,
+    "d_per_dollar_vs_M0_ci": [
+     -0.3112,
+     -0.1697
+    ]
+   }
+  },
+  "power": {
+   "brier": 0.19175,
+   "logloss": 0.56413,
+   "brier_le24h": 0.19676,
+   "logloss_le24h": 0.57693,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.5559,
+    0.5732
+   ],
+   "d_logloss_vs_M0": 0.00406,
+   "d_logloss_vs_M0_ci": [
+    0.00303,
+    0.00515
+   ],
+   "moved_rows": {
+    "n_rows": 9335,
+    "n_events": 1113,
+    "d_logloss_vs_market": 0.00021,
+    "ci": [
+     -0.00012,
+     0.00062
+    ]
+   },
+   "V3": {
+    "n_trades": 206,
+    "per_dollar": -0.0334,
+    "per_dollar_ci": [
+     -0.0884,
+     0.0239
+    ],
+    "return": -0.091,
+    "d_per_dollar_vs_M0": -0.2269,
+    "d_per_dollar_vs_M0_ci": [
+     -0.2993,
+     -0.1566
+    ]
+   },
+   "V0": {
+    "n_trades": 723,
+    "per_dollar": -0.0104,
+    "per_dollar_ci": [
+     -0.0656,
+     0.0576
+    ],
+    "return": -0.059,
+    "d_per_dollar_vs_M0": -0.1802,
+    "d_per_dollar_vs_M0_ci": [
+     -0.2512,
+     -0.1009
+    ]
+   }
+  },
+  "shin_spread": {
+   "brier": 0.19173,
+   "logloss": 0.56407,
+   "brier_le24h": 0.19676,
+   "logloss_le24h": 0.57688,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55581,
+    0.57317
+   ],
+   "d_logloss_vs_M0": 0.004,
+   "d_logloss_vs_M0_ci": [
+    0.00297,
+    0.00508
+   ],
+   "moved_rows": {
+    "n_rows": 0
+   },
+   "V3": {
+    "n_trades": 0
+   },
+   "V0": {
+    "n_trades": 0
+   }
+  },
+  "power_spread": {
+   "brier": 0.19194,
+   "logloss": 0.5651,
+   "brier_le24h": 0.19698,
+   "logloss_le24h": 0.57801,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55669,
+    0.57429
+   ],
+   "d_logloss_vs_M0": 0.00503,
+   "d_logloss_vs_M0_ci": [
+    0.00384,
+    0.00627
+   ],
+   "moved_rows": {
+    "n_rows": 30686,
+    "n_events": 5264,
+    "d_logloss_vs_market": 0.00103,
+    "ci": [
+     0.00083,
+     0.00126
+    ]
+   },
+   "V3": {
+    "n_trades": 0
+   },
+   "V0": {
+    "n_trades": 0
+   }
+  },
+  "shin_fit": {
+   "brier": 0.19107,
+   "logloss": 0.5617,
+   "brier_le24h": 0.196,
+   "logloss_le24h": 0.57388,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55402,
+    0.57024
+   ],
+   "d_logloss_vs_M0": 0.00163,
+   "d_logloss_vs_M0_ci": [
+    0.0011,
+    0.00212
+   ],
+   "moved_rows": {
+    "n_rows": 30686,
+    "n_events": 5264,
+    "d_logloss_vs_market": -0.00238,
+    "ci": [
+     -0.00322,
+     -0.00163
+    ]
+   },
+   "V3": {
+    "n_trades": 758,
+    "per_dollar": 0.2333,
+    "per_dollar_ci": [
+     -0.0195,
+     0.507
+    ],
+    "return": 0.631,
+    "d_per_dollar_vs_M0": 0.0398,
+    "d_per_dollar_vs_M0_ci": [
+     -0.203,
+     0.2955
+    ]
+   },
+   "V0": {
+    "n_trades": 5566,
+    "per_dollar": 0.1449,
+    "per_dollar_ci": [
+     0.0484,
+     0.2506
+    ],
+    "return": 1.906,
+    "d_per_dollar_vs_M0": -0.0248,
+    "d_per_dollar_vs_M0_ci": [
+     -0.1095,
+     0.0739
+    ]
+   }
+  },
+  "power_fit": {
+   "brier": 0.19061,
+   "logloss": 0.56025,
+   "brier_le24h": 0.19551,
+   "logloss_le24h": 0.5724,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55284,
+    0.5684
+   ],
+   "d_logloss_vs_M0": 0.00018,
+   "d_logloss_vs_M0_ci": [
+    -0.0002,
+    0.00054
+   ],
+   "moved_rows": {
+    "n_rows": 30686,
+    "n_events": 5264,
+    "d_logloss_vs_market": -0.00384,
+    "ci": [
+     -0.00501,
+     -0.00276
+    ]
+   },
+   "V3": {
+    "n_trades": 4193,
+    "per_dollar": 0.2013,
+    "per_dollar_ci": [
+     0.1435,
+     0.2649
+    ],
+    "return": 4.345,
+    "d_per_dollar_vs_M0": 0.0078,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0285,
+     0.0475
+    ]
+   },
+   "V0": {
+    "n_trades": 8808,
+    "per_dollar": 0.1648,
+    "per_dollar_ci": [
+     0.111,
+     0.2185
+    ],
+    "return": 5.13,
+    "d_per_dollar_vs_M0": -0.005,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0488,
+     0.0412
+    ]
+   }
+  },
+  "hierarchical": {
+   "brier": 0.19019,
+   "logloss": 0.55934,
+   "brier_le24h": 0.19525,
+   "logloss_le24h": 0.57181,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55201,
+    0.56739
+   ],
+   "d_logloss_vs_M0": -0.00073,
+   "d_logloss_vs_M0_ci": [
+    -0.00159,
+    8e-05
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00473,
+    "ci": [
+     -0.00618,
+     -0.00326
+    ]
+   },
+   "V3": {
+    "n_trades": 5259,
+    "per_dollar": 0.155,
+    "per_dollar_ci": [
+     0.1166,
+     0.1933
+    ],
+    "return": 9.63,
+    "d_per_dollar_vs_M0": -0.0385,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0779,
+     0.0028
+    ]
+   },
+   "V0": {
+    "n_trades": 6223,
+    "per_dollar": 0.1744,
+    "per_dollar_ci": [
+     0.129,
+     0.2261
+    ],
+    "return": 6.77,
+    "d_per_dollar_vs_M0": 0.0046,
+    "d_per_dollar_vs_M0_ci": [
+     -0.044,
+     0.0576
+    ]
+   }
+  },
+  "M0_coherent": {
+   "brier": 0.19009,
+   "logloss": 0.55917,
+   "brier_le24h": 0.19483,
+   "logloss_le24h": 0.5709,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.55179,
+    0.56721
+   ],
+   "d_logloss_vs_M0": -0.0009,
+   "d_logloss_vs_M0_ci": [
+    -0.0013,
+    -0.00046
+   ],
+   "moved_rows": {
+    "n_rows": 30864,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.0049,
+    "ci": [
+     -0.00615,
+     -0.00376
+    ]
+   },
+   "V3": {
+    "n_trades": 2686,
+    "per_dollar": 0.2541,
+    "per_dollar_ci": [
+     0.1926,
+     0.3151
+    ],
+    "return": 6.457,
+    "d_per_dollar_vs_M0": 0.0606,
+    "d_per_dollar_vs_M0_ci": [
+     0.0307,
+     0.0916
+    ]
+   },
+   "V0": {
+    "n_trades": 3936,
+    "per_dollar": 0.2164,
+    "per_dollar_ci": [
+     0.1616,
+     0.272
+    ],
+    "return": 4.774,
+    "d_per_dollar_vs_M0": 0.0467,
+    "d_per_dollar_vs_M0_ci": [
+     0.0127,
+     0.0835
+    ]
+   }
+  },
+  "mix_4": {
+   "brier": 0.18877,
+   "logloss": 0.55599,
+   "brier_le24h": 0.19385,
+   "logloss_le24h": 0.56849,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.54868,
+    0.56414
+   ],
+   "d_logloss_vs_M0": -0.00408,
+   "d_logloss_vs_M0_ci": [
+    -0.00495,
+    -0.00323
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00808,
+    "ci": [
+     -0.00959,
+     -0.0066
+    ]
+   },
+   "V3": {
+    "n_trades": 3955,
+    "per_dollar": 0.2638,
+    "per_dollar_ci": [
+     0.216,
+     0.3143
+    ],
+    "return": 10.373,
+    "d_per_dollar_vs_M0": 0.0703,
+    "d_per_dollar_vs_M0_ci": [
+     0.0267,
+     0.1164
+    ]
+   },
+   "V0": {
+    "n_trades": 5937,
+    "per_dollar": 0.2704,
+    "per_dollar_ci": [
+     0.2204,
+     0.3209
+    ],
+    "return": 8.648,
+    "d_per_dollar_vs_M0": 0.1006,
+    "d_per_dollar_vs_M0_ci": [
+     0.0486,
+     0.155
+    ]
+   }
+  },
+  "mix_4+shin": {
+   "brier": 0.18913,
+   "logloss": 0.55689,
+   "brier_le24h": 0.19415,
+   "logloss_le24h": 0.56929,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.54941,
+    0.56511
+   ],
+   "d_logloss_vs_M0": -0.00318,
+   "d_logloss_vs_M0_ci": [
+    -0.00386,
+    -0.00248
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00718,
+    "ci": [
+     -0.00843,
+     -0.006
+    ]
+   },
+   "V3": {
+    "n_trades": 3344,
+    "per_dollar": 0.2827,
+    "per_dollar_ci": [
+     0.2316,
+     0.3356
+    ],
+    "return": 7.616,
+    "d_per_dollar_vs_M0": 0.0891,
+    "d_per_dollar_vs_M0_ci": [
+     0.0434,
+     0.1407
+    ]
+   },
+   "V0": {
+    "n_trades": 5751,
+    "per_dollar": 0.2738,
+    "per_dollar_ci": [
+     0.2245,
+     0.3233
+    ],
+    "return": 7.072,
+    "d_per_dollar_vs_M0": 0.1041,
+    "d_per_dollar_vs_M0_ci": [
+     0.0544,
+     0.1578
+    ]
+   }
+  },
+  "mix_4_agree": {
+   "brier": 0.18877,
+   "logloss": 0.55599,
+   "brier_le24h": 0.19385,
+   "logloss_le24h": 0.56849,
+   "n_rows": 30875,
+   "n_rows_le24h": 15976,
+   "logloss_ci": [
+    0.54868,
+    0.56414
+   ],
+   "d_logloss_vs_M0": -0.00408,
+   "d_logloss_vs_M0_ci": [
+    -0.00495,
+    -0.00323
+   ],
+   "moved_rows": {
+    "n_rows": 30875,
+    "n_events": 5267,
+    "d_logloss_vs_market": -0.00808,
+    "ci": [
+     -0.00959,
+     -0.0066
+    ]
+   },
+   "V3": {
+    "n_trades": 1511,
+    "per_dollar": 0.2615,
+    "per_dollar_ci": [
+     0.1782,
+     0.3466
+    ],
+    "return": 2.623,
+    "d_per_dollar_vs_M0": 0.068,
+    "d_per_dollar_vs_M0_ci": [
+     -0.0007,
+     0.1395
+    ]
+   },
+   "V0": {
+    "n_trades": 2598,
+    "per_dollar": 0.3052,
+    "per_dollar_ci": [
+     0.2214,
+     0.3883
+    ],
+    "return": 2.743,
+    "d_per_dollar_vs_M0": 0.1355,
+    "d_per_dollar_vs_M0_ci": [
+     0.0607,
+     0.2079
+    ]
+   }
+  }
+ }
+}

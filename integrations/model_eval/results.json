@@ -1,0 +1,373 @@
+{
+ "protocol": "Every candidate model scored on its own, same harness -> integrations/model_eval/results.json + README.md\n\n  python integrations/model_eval/evaluate_all.py [--test-q]\n\nEvaluation only: nothing here changes backend/, the site or the shipped model.\nSplit, costs, policy and exposure are exactly backend/playoff.py's:\n  validation = last 20% of TRAIN markets by resolution time, models fitted on the first 80% (seed 0);\n  test       = model.split_by_time at the shipped cutoff, models fitted on all of train (predictions only);\n  embargo    = a trade counts only if its entry time is at or after the start of the scored period;\n  policy V3  = min net edge 1\u00a2, enter only within 24 h of the scheduled end, one trade per market;\n  costs      = max(spread/2, 1\u00a2) + each market's Polymarket taker fee; \u00bc Kelly capped 5%, open stake <= 1 bankroll.\nEvery member gets its own 10\u201390% band from refits on events resampled with replacement (Shin has no fit: band = q).\nVALIDATION ONLY (A, 23:08): every member is scored on validation; the test set is not scored here.\n`--test-q` also writes unscored test predictions for whoever opens the test once. No member is promoted from here.\nA's 23:08 list for C: shin, power, isotonic, hierarchical. The rest are reference rows in the same harness.\n\nMembers (all predict only inside the 3\u201397\u00a2 band; outside it q = price):\n  market      q = price (the baseline)\n  M0          shipped model: logistic on logit(p), log h, logit(p)\u00b7log h\n  M0_domain   M0 + per-domain intercept and slopes (backend's \"full\")\n  beta        Kull et al. 2017 beta calibration: logistic on ln p, ln(1\u2212p)  (asymmetric favourite/longshot)\n  beta_h      beta + log h and both log-price terms \u00d7 log h\n  isotonic    monotone price \u2192 frequency map, one per horizon (non-parametric)\n  M1_lite     logistic on M0 terms + by-date question flag, legs in the event, leg's share of the book, domain\n  M2_lite     gradient boosting on the M1_lite features, anchored to the market (log-odds shift <= 0.7)\n  shin        Shin (1993) fair probabilities from all legs of a neg-risk event at the same horizon\n              (books summing 0.9\u20131.15 only; z = 0 when the book is not overround; elsewhere q = price)\n  power       power method: q_i = p_i^k, k solved so the same near-complete book sums to 1\n  hierarchical M0 + per-domain intercept and logit(p) slope, L2-shrunk toward the pooled fit (partial pooling)\n  M0_coherent M0, then q normalised to sum 1 over the same near-complete books, max one bet per event\nMixes (reported as extra rows, same harness): mean of M0, M1_lite, M2_lite, beta_h (+ shin), and the\nagreement filter (trade only if every member's q is on the same side of the price and their spread < 3\u00a2).\nM1_lite / M2_lite drop model_v2's momentum and volatility features: the hourly paths for all 34,677 markets\nare not on this machine. model_v2's full M1 / M2 lost to M0 on validation log loss (its README).",
+ "cutoff": "2026-05-18",
+ "n_validation_markets": 4768,
+ "validation": {
+  "market": {
+   "brier": 0.19605,
+   "logloss": 0.57265,
+   "brier_le24h": 0.2045,
+   "logloss_le24h": 0.59527,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 0
+   }
+  },
+  "M0": {
+   "brier": 0.19469,
+   "logloss": 0.56846,
+   "brier_le24h": 0.20276,
+   "logloss_le24h": 0.58907,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1315,
+    "per_dollar": 0.2565,
+    "per_dollar_ci": [
+     0.1586,
+     0.3556
+    ],
+    "return": 2.11,
+    "return_ci": [
+     1.3,
+     2.89
+    ],
+    "hit_rate": 0.2783,
+    "max_drawdown": 0.214
+   }
+  },
+  "M0_domain": {
+   "brier": 0.19572,
+   "logloss": 0.57118,
+   "brier_le24h": 0.20369,
+   "logloss_le24h": 0.59141,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1472,
+    "per_dollar": 0.076,
+    "per_dollar_ci": [
+     0.0191,
+     0.1399
+    ],
+    "return": 1.3508,
+    "return_ci": [
+     0.33,
+     2.48
+    ],
+    "hit_rate": 0.3281,
+    "max_drawdown": 0.3513
+   }
+  },
+  "beta": {
+   "brier": 0.19477,
+   "logloss": 0.56882,
+   "brier_le24h": 0.20296,
+   "logloss_le24h": 0.58986,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1246,
+    "per_dollar": 0.1904,
+    "per_dollar_ci": [
+     0.1036,
+     0.276
+    ],
+    "return": 1.4098,
+    "return_ci": [
+     0.77,
+     2.03
+    ],
+    "hit_rate": 0.2994,
+    "max_drawdown": 0.1271
+   }
+  },
+  "beta_h": {
+   "brier": 0.19472,
+   "logloss": 0.56854,
+   "brier_le24h": 0.20286,
+   "logloss_le24h": 0.58944,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1375,
+    "per_dollar": 0.1931,
+    "per_dollar_ci": [
+     0.1181,
+     0.2724
+    ],
+    "return": 1.7452,
+    "return_ci": [
+     1.07,
+     2.45
+    ],
+    "hit_rate": 0.3004,
+    "max_drawdown": 0.1527
+   }
+  },
+  "isotonic": {
+   "brier": 0.19503,
+   "logloss": 0.56944,
+   "brier_le24h": 0.20314,
+   "logloss_le24h": 0.59055,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 861,
+    "per_dollar": 0.2098,
+    "per_dollar_ci": [
+     0.1123,
+     0.3203
+    ],
+    "return": 1.305,
+    "return_ci": [
+     0.7,
+     1.99
+    ],
+    "hit_rate": 0.3124,
+    "max_drawdown": 0.1323
+   }
+  },
+  "M1_lite": {
+   "brier": 0.19563,
+   "logloss": 0.57057,
+   "brier_le24h": 0.20385,
+   "logloss_le24h": 0.59162,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1386,
+    "per_dollar": 0.1448,
+    "per_dollar_ci": [
+     0.0557,
+     0.2366
+    ],
+    "return": 3.2363,
+    "return_ci": [
+     1.25,
+     5.26
+    ],
+    "hit_rate": 0.3615,
+    "max_drawdown": 0.6844
+   }
+  },
+  "M2_lite": {
+   "brier": 0.19504,
+   "logloss": 0.56978,
+   "brier_le24h": 0.20332,
+   "logloss_le24h": 0.59098,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1173,
+    "per_dollar": 0.1487,
+    "per_dollar_ci": [
+     0.0733,
+     0.2235
+    ],
+    "return": 3.5393,
+    "return_ci": [
+     1.71,
+     5.36
+    ],
+    "hit_rate": 0.4092,
+    "max_drawdown": 0.6145
+   }
+  },
+  "shin": {
+   "brier": 0.19616,
+   "logloss": 0.5732,
+   "brier_le24h": 0.20458,
+   "logloss_le24h": 0.5958,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 31,
+    "per_dollar": -0.0997,
+    "per_dollar_ci": [
+     -0.2738,
+     0.0587
+    ],
+    "return": -0.0771,
+    "return_ci": [
+     -0.21,
+     0.04
+    ],
+    "hit_rate": 0.6774,
+    "max_drawdown": 0.1426
+   }
+  },
+  "power": {
+   "brier": 0.19607,
+   "logloss": 0.57272,
+   "brier_le24h": 0.2045,
+   "logloss_le24h": 0.59535,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 20,
+    "per_dollar": -0.0773,
+    "per_dollar_ci": [
+     -0.3813,
+     0.282
+    ],
+    "return": -0.0268,
+    "return_ci": [
+     -0.15,
+     0.08
+    ],
+    "hit_rate": 0.5,
+    "max_drawdown": 0.0635
+   }
+  },
+  "hierarchical": {
+   "brier": 0.19545,
+   "logloss": 0.5705,
+   "brier_le24h": 0.20358,
+   "logloss_le24h": 0.59118,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1464,
+    "per_dollar": 0.0794,
+    "per_dollar_ci": [
+     0.0218,
+     0.1425
+    ],
+    "return": 1.2522,
+    "return_ci": [
+     0.35,
+     2.25
+    ],
+    "hit_rate": 0.321,
+    "max_drawdown": 0.3403
+   }
+  },
+  "M0_coherent": {
+   "brier": 0.19429,
+   "logloss": 0.56773,
+   "brier_le24h": 0.20231,
+   "logloss_le24h": 0.58819,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 855,
+    "per_dollar": 0.2717,
+    "per_dollar_ci": [
+     0.1576,
+     0.387
+    ],
+    "return": 1.9138,
+    "return_ci": [
+     1.12,
+     2.71
+    ],
+    "hit_rate": 0.3345,
+    "max_drawdown": 0.25
+   }
+  },
+  "mix_4": {
+   "brier": 0.1941,
+   "logloss": 0.56713,
+   "brier_le24h": 0.20231,
+   "logloss_le24h": 0.58811,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 1303,
+    "per_dollar": 0.1935,
+    "per_dollar_ci": [
+     0.1047,
+     0.2798
+    ],
+    "return": 2.5324,
+    "return_ci": [
+     1.37,
+     3.69
+    ],
+    "hit_rate": 0.3415,
+    "max_drawdown": 0.354
+   }
+  },
+  "mix_4+shin": {
+   "brier": 0.1942,
+   "logloss": 0.5674,
+   "brier_le24h": 0.20241,
+   "logloss_le24h": 0.58852,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 998,
+    "per_dollar": 0.2088,
+    "per_dollar_ci": [
+     0.1216,
+     0.3007
+    ],
+    "return": 1.7854,
+    "return_ci": [
+     1.04,
+     2.56
+    ],
+    "hit_rate": 0.3527,
+    "max_drawdown": 0.2653
+   }
+  },
+  "mix_4_agree": {
+   "brier": 0.1941,
+   "logloss": 0.56713,
+   "brier_le24h": 0.20231,
+   "logloss_le24h": 0.58811,
+   "n_rows": 9117,
+   "n_rows_le24h": 4405,
+   "money_V3": {
+    "n_trades": 471,
+    "per_dollar": 0.1888,
+    "per_dollar_ci": [
+     0.0477,
+     0.342
+    ],
+    "return": 0.513,
+    "return_ci": [
+     0.13,
+     0.93
+    ],
+    "hit_rate": 0.2781,
+    "max_drawdown": 0.0998
+   },
+   "rows_agreeing": 0.2681
+  }
+ },
+ "details": {
+  "shin": {
+   "books": 1070,
+   "books_overround": 553,
+   "median_z_overround": 0.0025,
+   "rows_changed": 2854
+  },
+  "power": {
+   "books": 1070,
+   "median_k": 1.0029,
+   "rows_changed": 2854
+  },
+  "hierarchical": {
+   "C": 0.003,
+   "domains": [
+    "sports",
+    "crypto",
+    "politics",
+    "economics",
+    "culture",
+    "science_tech",
+    "geopolitics"
+   ],
+   "inner_logloss": {
+    "0.003": 0.5538,
+    "0.01": 0.55408,
+    "0.03": 0.55428,
+    "0.1": 0.55435,
+    "1.0": 0.55438
+   }
+  }
+ }
+}

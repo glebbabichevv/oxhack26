@@ -1,0 +1,46 @@
+{
+ "note": "-> integrations/robustness/costs.json, costs.png, shin_time.json, shin_time.png\n\n  python integrations/robustness/costs_and_time.py\n\n(2) COST SENSITIVITY on test, descriptive (NOT used for selection): the shipped model and V3 rule, re-run with\n    taker fee \u00d7 {1, 1.5, 2}, half-spread floor {1\u00a2, 2\u00a2, 3\u00a2} and Kelly multiplier {\u215b, \u00bc, \u00bd} (cap 5% per trade and\n    open stake <= 1 bankroll unchanged). Higher costs also change WHICH trades pass the edge filter, as they would live.",
+ "n_train_markets": 23838,
+ "by_horizon": [
+  {
+   "horizon_hours": 720,
+   "z": -0.0118,
+   "ci": [
+    -0.0315,
+    0.0126
+   ]
+  },
+  {
+   "horizon_hours": 168,
+   "z": -0.0484,
+   "ci": [
+    -0.0632,
+    -0.0329
+   ]
+  },
+  {
+   "horizon_hours": 72,
+   "z": -0.0644,
+   "ci": [
+    -0.0809,
+    -0.0472
+   ]
+  },
+  {
+   "horizon_hours": 24,
+   "z": -0.0729,
+   "ci": [
+    -0.0902,
+    -0.0548
+   ]
+  },
+  {
+   "horizon_hours": 12,
+   "z": -0.072,
+   "ci": [
+    -0.0885,
+    -0.0516
+   ]
+  }
+ ]
+}

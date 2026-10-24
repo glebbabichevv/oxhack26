@@ -1,0 +1,337 @@
+{
+ "protocol": "Robustness evidence for the SHIPPED policy (M0 + V3, fees, caps). No new model variants.\n-> integrations/robustness/results.json + by_month.png + placebo.png + deflated_sharpe.png\n\n  python integrations/robustness/robustness.py [--draws 1000]\n\n(1) Monthly walk-forward over the whole history: for each calendar month m, M0 is refitted on every event that\n    ended before m starts (model.split_by_time at m's first day), and V3 trades month m's markets only (embargo:\n    entry on/after the 1st). Per month: markets, trades, \u00a2 per $1 with event-bootstrap CI, Brier market vs model.\n    Months that fall in the test period use models refitted on data the shipped model never saw: this is the\n    shipped SPEC re-run, not the shipped coefficients.\n(2) Placebo on the test set, shipped model (fit on all of train): the trades do not depend on outcomes, so each\n    draw keeps the same trades and stakes and only re-draws outcomes. Two nulls:\n      a. A's: outcomes shuffled within (5\u00a2 price bin \u00d7 horizon \u00d7 domain) cells. This keeps each cell's win rate,\n         i.e. it KEEPS the cell-level favourite/longshot bias and only destroys within-cell information.\n      b. \"prices are right\": every outcome redrawn as Bernoulli(price at that row). The market is calibrated by\n         construction, so any profit is luck.\n    p-value = share of draws with \u00a2 per $1 >= the real one.\n(3) Deflated Sharpe (Bailey & L\u00f3pez de Prado 2014) for the shipped test trades: per-trade Sharpe of stake \u00d7 return,\n    probabilistic Sharpe (P[true SR > 0]) and DSR given N trials. Trials = V0\u2013V3 (playoff) + the 18 members/mixes\n    scored on validation in integrations/model_eval (V3 trades each); their validation Sharpes give the variance\n    across trials.",
+ "cutoff": "2026-05-18",
+ "by_month": [
+  {
+   "month": "2025-01",
+   "n_fit_markets": 2037,
+   "n_markets": 388,
+   "n_trades": 0,
+   "brier_market": 0.1608,
+   "brier_model": 0.16101
+  },
+  {
+   "month": "2025-02",
+   "n_fit_markets": 2697,
+   "n_markets": 327,
+   "n_trades": 0,
+   "brier_market": 0.17572,
+   "brier_model": 0.17603
+  },
+  {
+   "month": "2025-03",
+   "n_fit_markets": 3142,
+   "n_markets": 340,
+   "n_trades": 0,
+   "brier_market": 0.18998,
+   "brier_model": 0.18926
+  },
+  {
+   "month": "2025-04",
+   "n_fit_markets": 3633,
+   "n_markets": 559,
+   "n_trades": 0,
+   "brier_market": 0.17039,
+   "brier_model": 0.17021
+  },
+  {
+   "month": "2025-05",
+   "n_fit_markets": 4414,
+   "n_markets": 572,
+   "n_trades": 0,
+   "brier_market": 0.19006,
+   "brier_model": 0.18866
+  },
+  {
+   "month": "2025-06",
+   "n_fit_markets": 5168,
+   "n_markets": 575,
+   "n_trades": 0,
+   "brier_market": 0.18935,
+   "brier_model": 0.18853
+  },
+  {
+   "month": "2025-07",
+   "n_fit_markets": 5896,
+   "n_markets": 457,
+   "n_trades": 59,
+   "brier_market": 0.18096,
+   "brier_model": 0.17959,
+   "per_dollar": -0.043,
+   "per_dollar_ci": [
+    -0.3606,
+    0.2577
+   ],
+   "return": -0.0091
+  },
+  {
+   "month": "2025-08",
+   "n_fit_markets": 6656,
+   "n_markets": 561,
+   "n_trades": 100,
+   "brier_market": 0.21894,
+   "brier_model": 0.21632,
+   "per_dollar": 0.5815,
+   "per_dollar_ci": [
+    0.2287,
+    0.9277
+   ],
+   "return": 0.2584
+  },
+  {
+   "month": "2025-09",
+   "n_fit_markets": 7357,
+   "n_markets": 662,
+   "n_trades": 272,
+   "brier_market": 0.18763,
+   "brier_model": 0.18662,
+   "per_dollar": 0.1547,
+   "per_dollar_ci": [
+    -0.0252,
+    0.3286
+   ],
+   "return": 0.2667
+  },
+  {
+   "month": "2025-10",
+   "n_fit_markets": 8188,
+   "n_markets": 1210,
+   "n_trades": 325,
+   "brier_market": 0.18276,
+   "brier_model": 0.18181,
+   "per_dollar": 0.1516,
+   "per_dollar_ci": [
+    -0.0162,
+    0.3256
+   ],
+   "return": 0.303
+  },
+  {
+   "month": "2025-11",
+   "n_fit_markets": 9520,
+   "n_markets": 1373,
+   "n_trades": 430,
+   "brier_market": 0.19271,
+   "brier_model": 0.19148,
+   "per_dollar": 0.0674,
+   "per_dollar_ci": [
+    -0.0981,
+    0.2213
+   ],
+   "return": 0.1835
+  },
+  {
+   "month": "2025-12",
+   "n_fit_markets": 11065,
+   "n_markets": 1881,
+   "n_trades": 521,
+   "brier_market": 0.18691,
+   "brier_model": 0.18568,
+   "per_dollar": 0.2193,
+   "per_dollar_ci": [
+    0.0677,
+    0.3808
+   ],
+   "return": 0.7279
+  },
+  {
+   "month": "2026-01",
+   "n_fit_markets": 13265,
+   "n_markets": 2261,
+   "n_trades": 933,
+   "brier_market": 0.19485,
+   "brier_model": 0.19366,
+   "per_dollar": 0.1432,
+   "per_dollar_ci": [
+    0.0491,
+    0.2352
+   ],
+   "return": 1.0279
+  },
+  {
+   "month": "2026-02",
+   "n_fit_markets": 16236,
+   "n_markets": 2176,
+   "n_trades": 764,
+   "brier_market": 0.18802,
+   "brier_model": 0.18711,
+   "per_dollar": 0.1666,
+   "per_dollar_ci": [
+    0.0458,
+    0.2931
+   ],
+   "return": 0.9837
+  },
+  {
+   "month": "2026-03",
+   "n_fit_markets": 18811,
+   "n_markets": 794,
+   "n_trades": 243,
+   "brier_market": 0.18328,
+   "brier_model": 0.18334,
+   "per_dollar": -0.0884,
+   "per_dollar_ci": [
+    -0.2632,
+    0.1075
+   ],
+   "return": -0.157
+  },
+  {
+   "month": "2026-04",
+   "n_fit_markets": 19829,
+   "n_markets": 2128,
+   "n_trades": 729,
+   "brier_market": 0.2046,
+   "brier_model": 0.20264,
+   "per_dollar": 0.3025,
+   "per_dollar_ci": [
+    0.1676,
+    0.4444
+   ],
+   "return": 1.4968
+  },
+  {
+   "month": "2026-05",
+   "n_fit_markets": 22462,
+   "n_markets": 1844,
+   "n_trades": 578,
+   "brier_market": 0.20635,
+   "brier_model": 0.20476,
+   "per_dollar": 0.2469,
+   "per_dollar_ci": [
+    0.1114,
+    0.397
+   ],
+   "return": 0.9788
+  },
+  {
+   "month": "2026-06",
+   "n_fit_markets": 24659,
+   "n_markets": 2459,
+   "n_trades": 1132,
+   "brier_market": 0.15102,
+   "brier_model": 0.15077,
+   "per_dollar": 0.1141,
+   "per_dollar_ci": [
+    0.0181,
+    0.2102
+   ],
+   "return": 0.861
+  },
+  {
+   "month": "2026-07",
+   "n_fit_markets": 27635,
+   "n_markets": 1785,
+   "n_trades": 729,
+   "brier_market": 0.18313,
+   "brier_model": 0.18171,
+   "per_dollar": 0.157,
+   "per_dollar_ci": [
+    0.0377,
+    0.2838
+   ],
+   "return": 0.6919
+  },
+  {
+   "month": "2026-08",
+   "n_fit_markets": 30089,
+   "n_markets": 1395,
+   "n_trades": 422,
+   "brier_market": 0.22055,
+   "brier_model": 0.21822,
+   "per_dollar": 0.4352,
+   "per_dollar_ci": [
+    0.2381,
+    0.6209
+   ],
+   "return": 1.1326
+  },
+  {
+   "month": "2026-09",
+   "n_fit_markets": 31665,
+   "n_markets": 1364,
+   "n_trades": 499,
+   "brier_market": 0.20501,
+   "brier_model": 0.20322,
+   "per_dollar": 0.2504,
+   "per_dollar_ci": [
+    0.0957,
+    0.4155
+   ],
+   "return": 0.7867
+  }
+ ],
+ "by_month_summary": {
+  "months_with_30_plus_trades": 15,
+  "months_positive": 13,
+  "months_ci_above_0": 10,
+  "months_ci_below_0": 0,
+  "months_model_brier_better": 18
+ },
+ "placebo": {
+  "real_per_dollar": 0.1723,
+  "n_trades": 3653,
+  "draws": 1000,
+  "shuffle_within_cells": {
+   "mean": 0.1814,
+   "p5": 0.1624,
+   "p95": 0.2,
+   "p_value": 0.77
+  },
+  "prices_are_right": {
+   "mean": -0.0977,
+   "p5": -0.1592,
+   "p95": -0.0352,
+   "p_value": 0.0
+  }
+ },
+ "deflated_sharpe": {
+  "selected_on_validation_all_trials": {
+   "n_trades": 1373,
+   "sharpe_per_trade": 0.1098,
+   "skew": 1.806,
+   "kurtosis": 5.549,
+   "psr_true_sharpe_gt_0": 0.999997,
+   "n_trials": 15,
+   "var_trial_sharpe": 0.004079,
+   "expected_max_sharpe_under_null_sr0": 0.1131,
+   "dsr": 0.446913
+  },
+  "selected_on_validation_playoff_trials_only": {
+   "n_trades": 1373,
+   "sharpe_per_trade": 0.1098,
+   "skew": 1.806,
+   "kurtosis": 5.549,
+   "psr_true_sharpe_gt_0": 0.999997,
+   "n_trials": 4,
+   "var_trial_sharpe": 0.000208,
+   "expected_max_sharpe_under_null_sr0": 0.0152,
+   "dsr": 0.999948
+  },
+  "test_out_of_sample": {
+   "n_trades": 3653,
+   "sharpe_per_trade": 0.0687,
+   "skew": 2.241,
+   "kurtosis": 7.377,
+   "psr_true_sharpe_gt_0": 0.999996
+  },
+  "note": "Trials are highly correlated (every model reads the same price; error correlations 0.99), so N=15 independent trials overstates the luck threshold; the playoff-only row (N=4) is the other end.",
+  "trial_sharpes_validation": {
+   "playoff_V0": 0.075,
+   "playoff_V1": 0.097,
+   "playoff_V2": 0.0956,
+   "playoff_V3": 0.1098,
+   "member_M0_domain": 0.0432,
+   "member_beta": 0.0975,
+   "member_beta_h": 0.0984,
+   "member_isotonic": 0.1063,
+   "member_M1_lite": 0.0747,
+   "member_M2_lite": 0.0926,
+   "member_shin": -0.1384,
+   "member_hierarchical": 0.0451,
+   "member_M0_coherent": 0.1307,
+   "member_mix_4": 0.101,
+   "member_mix_4+shin": 0.1124
+  }
+ }
+}
