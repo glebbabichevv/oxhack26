@@ -877,7 +877,7 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
     ctx.plan = [...ctx.plan.filter((x) => !later(x) && !subTabOf(x.q)), ...ctx.plan.filter((x) => !later(x) && subTabOf(x.q)), ...ctx.plan.filter(later)];
     for (const item of ctx.plan) journalOf(item, 'agent', 'shown');
     // The model's words only when they are plain and on-message; with a plan, one line of ours.
-    if (answer && /\b(demo|balance|portfolio|simulat|paper)/i.test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
+    if (answer && (isPaper() ? /\b(demo|simulat)/i : /\b(demo|balance|portfolio|simulat|paper)/i).test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
     if (ctx.plan.length) {
       const n = ctx.plan.length, buys = ctx.plan.every((x) => x.kind === 'buy');
       answer = buys ? `Here ${n === 1 ? 'is 1 good bet' : `are ${n} good bets`}.` : `Here ${n === 1 ? 'is 1 change' : `are ${n} changes`}.`;

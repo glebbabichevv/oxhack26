@@ -13,6 +13,7 @@ import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
 import { intendedAction, verdictOf } from './policy';
 import { fetchMe, openMyResults } from './me';
+import { isPaper } from './paper';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -224,8 +225,11 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const done = step('Opening your results');
       await openMyResults();
       const me = await fetchMe();
+      const paper = isPaper() ? await paperSummary(m) : undefined;
       done('ok');
-      return { opened: true, summary: me?.summary };
+      // In paper mode the practice book is what the user is playing with; the results page shows real decisions only.
+      return { opened: true, summary: me?.summary, ...(paper ? { paper_mode: true, paper_book: paper, paper_summary: paperLine(paper),
+        note: 'Paper trading is on: report the paper book (practice money, nothing on Polymarket). The results page shows real decisions only.' } : {}) };
     }
     case 'set_bankroll': {
       const n = Number(args.amount);
@@ -239,12 +243,30 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const open = a.positions.filter((x) => x.status === 'open');
       await refresh(await quotes(m, open.map((p) => p.marketSlug)));
       const a2 = await getAccount();
-      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2) };
+      const paper = isPaper() ? await paperSummary(m) : undefined;
+      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2),
+        ...(paper ? { paper_mode: true, paper_book: paper, note: 'Paper trading is on: these practice bets were never sent to Polymarket.' } : {}) };
     }
     default:
       return { error: `unknown tool ${name}` };
   }
 }
+
+// ---------- paper book summary (paper mode) ----------
+
+type PaperSum = { bankroll: number; open_bets: number; staked: number; marked_pnl: number; settled_pnl: number; settled_bets: number };
+async function paperSummary(m: Model): Promise<PaperSum> {
+  const a = await getAccount('paper');
+  const open = a.positions.filter((x) => x.status === 'open');
+  if (open.length) await refresh(await quotes(m, open.map((p) => p.marketSlug)), 'paper');
+  const b = await getAccount('paper');
+  const o = b.positions.filter((x) => x.status === 'open'), d = b.positions.filter((x) => x.status !== 'open');
+  return { bankroll: b.bankroll, open_bets: o.length, staked: +o.reduce((s, p) => s + p.stake, 0).toFixed(2),
+    marked_pnl: +o.reduce((s, p) => s + p.shares * (p.mark ?? p.avgPrice) - p.stake, 0).toFixed(2),
+    settled_pnl: +d.reduce((s, p) => s + (p.pnl ?? 0), 0).toFixed(2), settled_bets: d.length };
+}
+const paperLine = (p: PaperSum) => !p.open_bets && !p.settled_bets ? 'Paper book: no paper bets yet.'
+  : `Paper book: ${p.open_bets} open bet${p.open_bets === 1 ? '' : 's'} (${money(p.staked)}), ${p.marked_pnl >= 0 ? 'up' : 'down'} ${money(Math.abs(p.marked_pnl))} at today's prices${p.settled_bets ? `; ${p.settled_bets} settled, ${p.settled_pnl >= 0 ? '+' : '−'}${money(Math.abs(p.settled_pnl))}` : ''}.`;
 
 // ---------- the page ----------
 
@@ -387,7 +409,8 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
   }
 
   if (/\b(my (stats|results|record)|how am i doing|am i (up|down)|show (me )?my)\b/.test(t)) {
-    const r = await runTool(ctx, 'open_my_results', {}) as { summary?: string };
+    const r = await runTool(ctx, 'open_my_results', {}) as { summary?: string; paper_summary?: string };
+    if (r.paper_summary) return `${r.paper_summary} Your real results are open in a new tab.`;
     return r.summary ? `${r.summary}. Your results are open in a new tab.` : 'Your results are open in a new tab.';
   }
 
