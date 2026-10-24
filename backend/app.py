@@ -102,3 +102,7 @@ from agent_router import router as agent_router; app.include_router(agent_router
 
 # Decision Journal: POST/GET /api/journal (journal.py; Vercel Blob when BLOB_READ_WRITE_TOKEN is set).
 from journal import router as journal_router; app.include_router(journal_router)  # noqa: E402
+# Invest dashboard: plans, bets feed, profit; the trading loop only where TRADER_ENABLED=1.
+from invest_router import router as invest_router, start_trader  # noqa: E402
+app.include_router(invest_router)
+start_trader(app)

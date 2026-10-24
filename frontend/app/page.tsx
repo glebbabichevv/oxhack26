@@ -105,7 +105,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Invest", href: "/invest" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
