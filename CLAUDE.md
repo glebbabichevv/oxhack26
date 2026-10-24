@@ -7,6 +7,7 @@ Update it whenever a decision changes; it is how our three agents stay in sync.
 - OxHack '26, Mathematical Institute, Oxford. **Hacking: Sat 12:00 → Sun 12:00 (hard stop).** Clocks go back at 02:00 Sunday, so we get 25 real hours.
 - **Devpost submission must be done by Sun 12:00.** Devpost workshop Sun 09:00–10:00 (C1). Judging Sun 13:00–15:45, closing 16:00.
 - Schedule: lunch Sat 13:00, Citadel bubble tea 14:00, HRT talk (Matt Godbolt, compilers) 15:00–16:00 L1, dinner 18:00, HRT midnight pizza 00:00, breakfast Sun 08:00.
+- **Overall theme: TIME.** Read it as "when?": predict what happens over time and decide *when* to act. This joins the theme and the HRT challenge into one project.
 - **Platinum sponsor challenge — HRT (Hudson River Trading): "Best use of Data for Predictions & Decision Making".** Prize: £1,000 per team member of the winning team (per track vs overall: TBA).
 - **Silver sponsor challenge — Zed: "Built with Delta".** Show how we worked together in Delta (teammates + agents, from ideation through building to testing); share Delta threads as evidence. Extra points for solving real problems.
 - Only HRT and Zed have challenges; the other sponsors (Citadel, Jane Street, Oxford Asset Management, Entangl) are recruiting only.
