@@ -1,6 +1,6 @@
-"""Every candidate model scored on its own, same harness -> integrations/ensemble/results.json + README.md
+"""Every candidate model scored on its own, same harness -> integrations/model_eval/results.json + VALIDATION.md
 
-  python integrations/ensemble/evaluate_all.py [--test-q]
+  python integrations/model_eval/evaluate_all.py [--test-q]
 
 Evaluation only: nothing here changes backend/, the site or the shipped model.
 Split, costs, policy and exposure are exactly backend/playoff.py's:
@@ -26,6 +26,10 @@ Members (all predict only inside the 3–97¢ band; outside it q = price):
   shin        Shin (1993) fair probabilities from all legs of a neg-risk event at the same horizon
               (books summing 0.9–1.15 only; z = 0 when the book is not overround; elsewhere q = price)
   power       power method: q_i = p_i^k, k solved so the same near-complete book sums to 1
+  shin_spread / power_spread  Shin / power on every binary row, overround = the two asks (p + h, 1 - p + h)
+  shin_fit    Shin's insider share z fitted per horizon by maximum likelihood (z < 0 allowed: the data may say
+              longshots are UNDER-priced, the opposite of Shin's assumption)
+  power_fit   power exponent k fitted per horizon (q = p^k / (p^k + (1-p)^k), i.e. logit q = k·logit p)
   hierarchical M0 + per-domain intercept and logit(p) slope, L2-shrunk toward the pooled fit (partial pooling)
   M0_coherent M0, then q normalised to sum 1 over the same near-complete books, max one bet per event
 Mixes (reported as extra rows, same harness): mean of M0, M1_lite, M2_lite, beta_h (+ shin), and the
@@ -237,6 +241,102 @@ class Power:
         return q, q, q
 
 
+def half_spread(d):
+    sp = d["spread"].to_numpy(dtype=float)
+    return np.where(np.isnan(sp), 0.01, np.maximum(np.nan_to_num(sp) / 2, 0.01))
+
+
+class SpreadBook:
+    """Shin / power on EVERY binary row: the book is the two asks, YES at p + h and NO at 1 - p + h
+    (h = max(quoted half-spread, 1¢), the same floor as the cost), so the overround is 2h on every market."""
+
+    def __init__(self, kind):
+        self.kind, self.name = kind, f"{kind}_spread"
+
+    def fit(self, df, rng):
+        return self
+
+    def predict(self, d):
+        p = d["price_yes"].to_numpy(float)
+        h = half_spread(d)
+        a, b = np.clip(p + h, EPS, 1 - EPS), np.clip(1 - p + h, EPS, 1 - EPS)
+        s = a + b
+        if self.kind == "shin":
+            def fair(z, x):
+                return (np.sqrt(z * z + 4 * (1 - z) * x * x / s) - z) / (2 * (1 - z))
+            lo, hi = np.zeros_like(p), np.full_like(p, 0.999)
+            for _ in range(60):  # sum of fair probabilities falls as z rises
+                z = (lo + hi) / 2
+                big = fair(z, a) + fair(z, b) > 1
+                lo, hi = np.where(big, z, lo), np.where(big, hi, z)
+            z = (lo + hi) / 2
+            q = fair(z, a) / (fair(z, a) + fair(z, b))
+        else:
+            lo, hi = np.ones_like(p), np.full_like(p, 20.0)
+            for _ in range(60):  # a^k + b^k falls as k rises
+                k = (lo + hi) / 2
+                big = a ** k + b ** k > 1
+                lo, hi = np.where(big, k, lo), np.where(big, hi, k)
+            k = (lo + hi) / 2
+            q = a ** k / (a ** k + b ** k)
+        q = np.where(in_band(p), np.clip(q, EPS, 1 - EPS), p)
+        return q, q, q
+
+
+def shin_binary(p, z):
+    """Shin's fair YES probability for a two-outcome book with no overround and insider share z
+    (z > 0 shaves longshots as Shin assumes; z < 0 is allowed so the data can say the opposite)."""
+    p = np.clip(p, EPS, 1 - EPS)
+    fy = np.sqrt(z * z + 4 * (1 - z) * p * p) - z
+    fn = np.sqrt(z * z + 4 * (1 - z) * (1 - p) ** 2) - z
+    return fy / (fy + fn)
+
+
+def power_binary(p, k):
+    """Power method with a free exponent: q = p^k / (p^k + (1-p)^k), i.e. logit q = k * logit p."""
+    p = np.clip(p, EPS, 1 - EPS)
+    return p ** k / (p ** k + (1 - p) ** k)
+
+
+class ScalarFit:
+    """One parameter per horizon, fitted by maximum likelihood on the fitting rows; event-bootstrap band."""
+
+    def __init__(self, name, f, bounds):
+        self.name, self.f, self.bounds = name, f, bounds
+
+    def _fit1(self, d):
+        from scipy.optimize import minimize_scalar
+        out = {}
+        for h, g in d.groupby("horizon_hours"):
+            p, y = g["price_yes"].to_numpy(float), g["outcome"].to_numpy()
+            out[h] = minimize_scalar(lambda t: log_loss(np.clip(self.f(p, t), EPS, 1 - EPS), y),
+                                     bounds=self.bounds, method="bounded").x
+        return out
+
+    def fit(self, df, rng):
+        d = df[in_band(df["price_yes"])].reset_index(drop=True)
+        self.main = self._fit1(d)
+        rows = d.groupby(event_key(d)).indices
+        ids = np.array(list(rows))
+        self.boot = [self._fit1(d.iloc[np.concatenate([rows[i] for i in rng.choice(ids, len(ids))])])
+                     for _ in range(N_BOOT)]
+        self.info = {int(h): round(float(v), 4) for h, v in self.main.items()}
+        return self
+
+    def _q(self, par, d):
+        p = d["price_yes"].to_numpy(float)
+        t = d["horizon_hours"].map(lambda h: par.get(h, np.nan)).to_numpy(float)
+        return np.where(np.isnan(t), p, self.f(p, np.nan_to_num(t, nan=1.0)))
+
+    def predict(self, d):
+        p = d["price_yes"].to_numpy(float)
+        q = self._q(self.main, d)
+        qs = np.stack([self._q(m, d) for m in self.boot])
+        lo, hi = np.percentile(qs, 10, axis=0), np.percentile(qs, 90, axis=0)
+        b = in_band(p)
+        return np.where(b, q, p), np.where(b, lo, p), np.where(b, hi, p)
+
+
 SCALE = 10.0  # pooled terms are scaled up so the L2 penalty effectively falls on the per-domain deviations only
 SHRINK_GRID = (0.003, 0.01, 0.03, 0.1, 1.0)
 
@@ -283,7 +383,9 @@ def members(train):
             Fitted("M2_lite", x_lite, lambda: HistGradientBoostingClassifier(
                 max_depth=3, learning_rate=0.05, max_iter=300, min_samples_leaf=200, early_stopping=True,
                 validation_fraction=0.15, random_state=0), anchor=True),
-            Shin(), Power(), hierarchical(train)]
+            Shin(), Power(), SpreadBook("shin"), SpreadBook("power"),
+            ScalarFit("shin_fit", shin_binary, (-0.5, 0.5)), ScalarFit("power_fit", power_binary, (0.3, 3.0)),
+            hierarchical(train)]
 
 
 def candidates(d, q, lo, hi):
@@ -332,6 +434,8 @@ def period(fit_rows, rows, start, seed=0, score=True):
         if m.name == "power":
             extra["power"] = {"books": len(m.k), "median_k": round(float(np.median(m.k)), 4) if m.k else None,
                               "rows_changed": int((np.abs(preds["power"][0] - p) > 1e-9).sum())}
+        if m.name in ("shin_fit", "power_fit"):
+            extra[m.name] = {"param_by_horizon": m.info}
         if m.name == "hierarchical":
             extra["hierarchical"] = m.info
     q0, lo0, hi0 = preds["M0"]
@@ -339,7 +443,7 @@ def period(fit_rows, rows, start, seed=0, score=True):
     mix = ["M0", "M1_lite", "M2_lite", "beta_h"]
     for name, ms in (("mix_4", mix), ("mix_4+shin", mix + ["shin"])):
         preds[name] = tuple(np.mean([preds[k][i] for k in ms], axis=0) for i in range(3))
-    qframe = rows[["market_id", "event_slug", "horizon_hours", "price_yes", "outcome", "resolved_at"]].copy()
+    qframe = rows.copy()
     for name, (q, lo, hi) in preds.items():
         qframe[f"q_{name}"], qframe[f"lo_{name}"], qframe[f"hi_{name}"] = q, lo, hi
     if not score:
@@ -357,6 +461,13 @@ def period(fit_rows, rows, start, seed=0, score=True):
     return out, extra, qframe
 
 
+KEEP = ["market_id", "event_slug", "horizon_hours", "price_yes", "outcome", "resolved_at"]
+
+
+def qcols(qf):
+    return qf[KEEP + [c for c in qf if c.startswith(("q_", "lo_", "hi_"))]]
+
+
 def main():
     df = load_horizons(ROOT / "data" / "horizons.csv")
     train, test, cutoff = split_by_time(df, P.CUTOFF)
@@ -366,11 +477,11 @@ def main():
     print("validation", flush=True)
     v, vx, vq = period(fit, val, val["resolved_at"].min())
     HERE.mkdir(exist_ok=True)
-    vq.to_csv(HERE / "q_validation.csv.gz", index=False)
+    qcols(vq).to_csv(HERE / "q_validation.csv.gz", index=False)
     if "--test-q" in sys.argv:  # predictions only, NOT scored here: the test is opened once, by whoever picks the winner
         print("test predictions (unscored)", flush=True)
         _, _, tq = period(train, test, cutoff, score=False)
-        tq.drop(columns=["outcome"]).to_csv(HERE / "q_test_unscored.csv.gz", index=False)
+        qcols(tq).drop(columns=["outcome"]).to_csv(HERE / "q_test_unscored.csv.gz", index=False)
     res = {"protocol": __doc__.strip(), "cutoff": str(cutoff.date()), "n_validation_markets": len(val_ids),
            "validation": v, "details": vx}
     (HERE / "results.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
@@ -393,8 +504,8 @@ def main():
     md += [f"| {k} | {cell(s)} |" for k, s in v.items()] + [""]
     md += [f"Near-complete neg-risk books = legs of one event at one horizon summing {BOOK[0]}–{BOOK[1]}. "
            f"Details (Shin z, power k, hierarchical shrinkage): `{json.dumps(vx)}`"]
-    (HERE / "README.md").write_text("\n".join(md) + "\n", encoding="utf-8")
-    print("wrote", HERE / "README.md")
+    (HERE / "VALIDATION.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    print("wrote", HERE / "VALIDATION.md")
 
 
 if __name__ == "__main__":
