@@ -7,11 +7,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
-import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Quote, type Side } from './ledger';
+import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Quote, type Side } from './ledger';
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
-import { fetchMe, getWallet, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
+import { fetchMe, getWallet, heldOnEvent, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
 import { intendedAction, verdictOf, verdictRank } from './policy';
 import { API } from './agent';
 
@@ -289,14 +289,18 @@ export function AmountControl({ value, onChange, max, compact = false, label }: 
 export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   model: Model; a?: Account; marketSlug: string; title: string; d: Decision; tabId?: number; onDetails?: () => void;
 }) {
-  const verdict = verdictOf(d);
+  const [quote, setQuote] = useState<Quote>();
+  const [holding, setHolding] = useState(0);
+  useEffect(() => { if (quote?.eventSlug) void heldOnEvent(quote.eventSlug).then(setHolding); }, [quote?.eventSlug]);
+  const unsure = quote ? caution(quote) : undefined;
+  const verdict = unsure || holding ? 'SKIP' : verdictOf(d);
   const side = verdict === 'SKIP' ? undefined : sideOf(d);
   const sug = stakeFor(a, d);
+  const kellyUsd = a ? suggested(a, d) : 0; // the true ¼ Kelly amount, before Polymarket's $1 minimum
   const [chosen, setChosen] = useState<number>();
   const amount = chosen ?? sug;
   const [doing, setDoing] = useState<PlanItem[]>();
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
-  const [quote, setQuote] = useState<Quote>();
   useEffect(() => {
     let dead = false;
     void quotes(model, [marketSlug]).then((m) => {
@@ -320,9 +324,11 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
     <article className="hz-card hz-enter rounded-panel p-4">
       <h2 className="hz-display text-[27px] leading-[1.1] [overflow-wrap:anywhere]">{clean(title)}</h2>
       <p className="mt-2.5 text-subhead text-[#475569]">
-        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{priceWord(d)}</b>
+        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{unsure ? 'Not sure here' : holding ? 'Already in' : priceWord(d)}</b>
       </p>
-      {verdict === 'SKIP' && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
+      {unsure ? <p className="mt-1.5 text-footnote text-[#64748b]">{unsure} Horizon gives no advice on this one.</p> : null}
+      {!unsure && holding ? <p className="mt-1.5 text-footnote text-[#64748b]">You already hold {holding} bet{holding > 1 ? 's' : ''} on this event: a second one is the same risk, so Horizon won&apos;t suggest more.</p> : null}
+      {verdict === 'SKIP' && !unsure && !holding && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
       {d.domain === 'crypto' ? <p className="mt-1 text-caption text-[#94a3b8]">Crypto: our tests show no edge here. Polymarket prices these well.</p> : null}
       {side && verdict === 'BET' ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
       {side && verdict === 'WAIT' ? (
@@ -340,7 +346,10 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
             </button>
           </div>
           <p className="mt-1.5 text-caption text-[#94a3b8]">
-            Horizon suggests {money(sug)} (¼ Kelly of your {money(a?.bankroll ?? 1000)} budget){amount > sug ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}
+            {kellyUsd < 1
+              ? <>Horizon suggests {money(kellyUsd)} (¼ Kelly of your {money(a?.bankroll ?? 1000)} budget) · Polymarket minimum is $1</>
+              : <>Horizon suggests {money(sug)} (¼ Kelly, at most 5% of your {money(a?.bankroll ?? 1000)} budget)</>}
+            {amount > Math.max(1, sug) ? <span className="text-[#64748b]"> · above Horizon&apos;s suggestion</span> : null}
           </p>
         </>
       ) : null}
@@ -507,7 +516,7 @@ export function MyDecisions({ model }: { model: Model }) {
       <h1 className="hz-display text-[32px] leading-none">My decisions</h1>
       <MeStrip />
       <p className="mt-2 text-body text-[#475569]">
-        {rows.length ? `${rows.length} decision${rows.length === 1 ? '' : 's'} so far${resolved.length ? `, ${resolved.length} resolved: ${resolved.reduce((s, x) => s + x, 0) >= 0 ? '+' : '−'}${money(Math.abs(resolved.reduce((s, x) => s + x, 0)))} per $1 each` : ''}.` : 'Every bet Horizon shows you lands here, with the result once the market ends.'}
+        {rows.length ? `${rows.length} decision${rows.length === 1 ? '' : 's'} so far${resolved.length ? `, ${resolved.length} resolved: ${resolved.reduce((s, x) => s + x, 0) >= 0 ? '+' : '−'}${money(Math.abs(resolved.reduce((s, x) => s + x, 0)))} per $1 each` : ''}.${resolved.length < 30 ? ' Few decisions yet: too early to judge.' : ''}` : 'Every bet Horizon shows you lands here, with the result once the market ends.'}
       </p>
       {rows.length ? (
         <ul className="mt-4">
@@ -674,7 +683,7 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
                   ) : <span className="shrink-0 text-body font-semibold">{p.fraction >= 0.999 ? 'Sell all' : 'Sell part'}</span>}
                 </div>
                 {p.kind === 'buy' && p.suggested !== undefined ? (
-                  <p className="mt-0.5 text-caption text-[#94a3b8]">Horizon suggests {money(p.suggested)}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
+                  <p className="mt-0.5 text-caption text-[#94a3b8]">{d && d.kelly * budget < 1 ? <>Horizon suggests {money(Math.floor(d.kelly * budget * 100) / 100)} · Polymarket minimum is $1</> : <>Horizon suggests {money(p.suggested)}</>}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
                 ) : null}
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
                 {isLater(p) && d ? <p className="mt-1 inline-flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {bestTime(d.hours)}</p> : null}

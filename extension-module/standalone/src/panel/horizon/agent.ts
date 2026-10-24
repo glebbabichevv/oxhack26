@@ -5,7 +5,7 @@
  * list; the panel sets up Polymarket's ticket for the top few, one at a time; the user presses Trade.
  */
 import { decide, decideEvent, domainOf, feeOf, type Decision, type Model } from './horizon';
-import {
+import { caution, context,
   checkBet, getAccount, inPlay, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
   type Position, type Quote, type Side,
 } from './ledger';
@@ -72,8 +72,10 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
     const ev = mk.events?.[0];
     const domain = domainOf(m, tags);
     const fee = feeOf(m, mk, domain);
+    const ctx = context(mk);
+    if (caution({ ...ctx, endDate: mk.endDate }, now.getTime())) continue; // in progress, or smaller than anything tested
     picks.push({ marketSlug: mk.slug, eventSlug: ev?.slug ?? mk.slug, question: mk.question, label: mk.groupItemTitle || mk.question,
-      bid, ask, closed: false, endDate: mk.endDate, domain, fee, decision: decide(m, price, hours, domain, ask - bid, fee) });
+      bid, ask, closed: false, endDate: mk.endDate, domain, fee, ...ctx, decision: decide(m, price, hours, domain, ask - bid, fee) });
   }
   picks.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
   return { picks: picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, top), scanned: seen.size };

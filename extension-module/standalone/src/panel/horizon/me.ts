@@ -65,3 +65,15 @@ export const upDown = (pnl: number) => (Math.abs(pnl) < 0.005 ? "You're even" : 
 export async function openMyResults() {
   await chrome.tabs.create({ url: await meUrl() });
 }
+
+/** Open positions on one event, from the user's public wallet (Polymarket data API, read only). 0 without a wallet or on error. */
+let held: { wallet: string; at: number; rows: Promise<{ eventSlug?: string }[]> } | undefined;
+export async function heldOnEvent(eventSlug?: string): Promise<number> {
+  const w = await getWallet();
+  if (!w || !eventSlug) return 0;
+  if (!held || held.wallet !== w || Date.now() - held.at > 60_000) {
+    held = { wallet: w, at: Date.now(), rows: fetch(`https://data-api.polymarket.com/positions?user=${w}&sizeThreshold=0.1&limit=500`, { signal: AbortSignal.timeout(5000) })
+      .then((r) => (r.ok ? r.json() : [])).catch(() => []) };
+  }
+  return (await held.rows).filter((p) => p.eventSlug === eventSlug).length;
+}

@@ -19,6 +19,8 @@ export type Account = {
 export type Quote = {
   marketSlug: string; eventSlug: string; question: string; label: string; bid: number; ask: number;
   closed: boolean; settled?: 0 | 1; endDate?: string; decision?: Decision; domain?: string; fee?: Fee; conditionId?: string;
+  /** Lifetime volume (USD) and when the real-world event starts (kick-off, rally), from Gamma. */
+  volume?: number; startsAt?: string;
 };
 
 const KEY = 'horizonLedger';
@@ -60,13 +62,28 @@ export function onAccount(cb: (a: Account) => void) {
 
 const parse = (s: unknown): string[] => { try { return JSON.parse(String(s ?? '[]')); } catch { return []; } };
 
+/** Training floor: every market in the 34,677-market training/test set had at least this lifetime volume. */
+export const MIN_TRAINED_VOLUME = 100_000;
+export function context(mk: Record<string, any>): { volume: number; startsAt?: string } {
+  const ev = mk.events?.[0];
+  const raw = (mk.gameStartTime as string | undefined)?.replace(' ', 'T').replace(/\+00$/, 'Z') ?? ev?.startTime ?? ev?.eventStartTime ?? undefined;
+  return { volume: Number(mk.volumeNum ?? mk.volume ?? 0), startsAt: raw && !Number.isNaN(Date.parse(raw)) ? raw : undefined };
+}
+/** Why Horizon should not advise here, or undefined: the event is already under way, or the market is smaller than any it was tested on. */
+export function caution(q: { volume?: number; startsAt?: string; endDate?: string }, now = Date.now()): string | undefined {
+  const start = q.startsAt ? Date.parse(q.startsAt) : NaN, end = q.endDate ? Date.parse(q.endDate) : NaN;
+  if (start <= now && !(end <= now)) return 'Event in progress: the price already reflects what is happening.';
+  if (q.volume !== undefined && q.volume < MIN_TRAINED_VOLUME) return `Smaller market than any Horizon was tested on ($${Math.round(q.volume).toLocaleString()} traded; every test market had $100k+).`;
+  return undefined;
+}
+
 function toQuote(m: Model | undefined, mk: Record<string, any>, now = new Date()): Quote {
   const bid = Number(mk.bestBid), ask = Number(mk.bestAsk);
   const ev = mk.events?.[0];
   const prices = parse(mk.outcomePrices).map(Number);
   const settled = mk.closed && prices.length === 2 && (prices[0] === 1 || prices[1] === 1) ? (prices[0] === 1 ? 1 : 0) : undefined;
   const q: Quote = { marketSlug: mk.slug, eventSlug: ev?.slug ?? mk.slug, question: mk.question, label: mk.groupItemTitle || mk.question,
-    bid, ask, closed: !!mk.closed, settled, endDate: mk.endDate ?? ev?.endDate, conditionId: mk.conditionId };
+    bid, ask, closed: !!mk.closed, settled, endDate: mk.endDate ?? ev?.endDate, conditionId: mk.conditionId, ...context(mk) };
   const hours = (new Date(q.endDate ?? 0).getTime() - now.getTime()) / 3.6e6;
   const binary = parse(mk.outcomes).map((o) => o.toLowerCase()).join() === 'yes,no';
   if (m && binary && !mk.closed && mk.acceptingOrders !== false && bid > 0 && bid < ask && ask < 1 && hours > 0) {
