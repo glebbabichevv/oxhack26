@@ -1,94 +1,121 @@
 # Horizon — Devpost draft (Role C)
 
-Paste section by section into Devpost. Placeholders: `[video]`, `[Delta thread links]`, `[team names]`.
-Numbers from `backend/results/*.json` (A's 14:46 rerun) — re-check before submitting.
+Paste section by section into Devpost. Placeholders: `[video]`, `[team names]`, `[capsule result at 12:30]`.
+Numbers: shipped policy COH, `backend/results/*.json` (model 2026-10-24-390c312). Re-check against the site before submitting.
 
 ## "Try it out" links (Devpost field)
-- Demo: https://web-production-c7376.up.railway.app
+- Demo: https://web-production-c7376.up.railway.app (methods: /methods · decision journal: /journal)
 - API: https://oxhack26-production.up.railway.app/api/backtest
-- Code: https://github.com/glebbabichevv/oxhack26 *(private now: A to make it public before submitting, after a secrets check)*
+- Code: https://github.com/glebbabichevv/oxhack26
 - Video: [video]
 
 ## Tagline
-Prediction markets are overconfident. Horizon tells you when it pays to trade against them.
+Prediction markets get overconfident as the end nears. Horizon tells you when that's worth trading, and when it isn't.
 
 ## Inspiration
 The theme was *time*, and HRT asked for data used to predict and decide. A prediction-market price is a probability
-with a clock attached: how long until it resolves. Published work (arXiv 2602.19520, 292M trades on Kalshi and
-Polymarket) shows these prices are miscalibrated depending on that clock. A paper measuring a bias is not a trader
-making money from it, so we asked the trader's question: does the edge survive costs and an honest out-of-sample test,
-and how far before resolution should you act?
+with a clock attached: how long until it resolves. Published work (arXiv 2602.19520, 292M trades) says these prices are
+miscalibrated depending on that clock. A paper measuring a bias is not a trader making money from it, so we asked the
+trader's question: does the edge survive fees and an honest out-of-time test, and *when* should you act?
 
 ## What it does
-- Collects 34,677 resolved yes/no Polymarket markets and the price each one had 30 days, 7 days, 3 days, 1 day and
-  12 hours before its scheduled end.
-- Learns a calibration map: the probability a contract really resolves YES, given its price and time to resolution.
-- Turns that into a decision for every open market: buy YES, buy NO, or **no trade, costs eat the edge**, with a
-  quarter-Kelly stake.
-- Runs a **forward test**: the model's calls on open markets are pushed to GitHub *before* they resolve, then scored.
-- Shows the evidence on one page: calibration curves per horizon, the backtest with and without costs, and a panel
-  listing where the model does **not** work.
+- Collects 34,677 resolved yes/no Polymarket markets and the price each had 30 days, 7 days, 3 days, 1 day and 12 hours
+  before its scheduled end.
+- Learns a calibration map: the probability a contract really resolves YES, given its price and the time left.
+- Turns it into a decision on every open market: **Buy**, **Wait** (with when to come back) or **Skip**, with a
+  quarter-Kelly stake. This works through a Chrome extension on the Polymarket page and an agent that sets up bets.
+  The extension fills the ticket; the human presses Trade.
+- Logs every decision to a public journal, scored when the market resolves.
+- Seals predictions before the outcomes with a SHA-256 hash timestamped in Bitcoin (OpenTimestamps).
+- Shows the evidence on one page, including where it does **not** work.
 
-## Results (out of sample)
+## Results (out of time)
 Train: events that ended before 18 May 2026 (23,838 markets). Test: the 10,579 markets of later events that resolved
-after it. All markets of one event stay on the same side of the split.
-- Prices get overconfident as resolution nears: a month out the test set is about fair; from a week out, favourites
-  win less than priced and 10–35¢ contracts win more (a day out, 15¢ contracts win 20%).
-- The model beats the market price: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940.
-- Backtest after the spread **and Polymarket's own taker fees** (each market's fee schedule), never more than one
-  bankroll staked at once: **+12.7¢ per $1 staked**, 90% CI [+7.0¢, +19.1¢] from an event-level bootstrap, 6,102
-  trades. As a bankroll (¼ Kelly, summed, no compounding): +199%, CI [+106%, +289%], mostly from sports. Max drawdown
-  29%. Hit rate 21%.
-- **When:** after costs, a trade a month out loses 19%; a week out +2.3%; a day out +12.6%; 12 hours out +14.8%.
-  The edge is a last-week effect.
-- **Where:** only sports is solid on its own (+132%, CI +77% to +192%); every other market type's interval includes
-  zero, and crypto loses (−4%).
-- Baseline "always back the favourite" on the same markets: −908%.
+after it. All markets of one event stay on one side.
+- **The bias, by time:** a month out, a 15¢ contract wins about 13% (fair); from a week out to 12 hours out, 18–20%.
+  Prices get overconfident as resolution nears. Far from resolution this is **not** the direction the paper we started
+  from reports, and we say so.
+- **The model beats the market price:** Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940.
+- **The decision (policy COH):**
+  - The rule:
+    - trade only within 24 h of the end;
+    - only with at least 1¢ of net edge after the spread, Polymarket's own taker fee and the model's uncertainty;
+    - the probabilities of an event's outcomes are scaled to sum to 100%;
+    - one bet per event.
+  - Result: **+31¢ per $1 staked after fees, 90% CI +22¢ to +41¢** (event bootstrap), on 1,827 bets, with a max drawdown
+    of 0.22 bankrolls.
+  - The same model without the event rule makes +17¢ on 3,653 bets, with a drawdown of 0.38. Total profit is about the
+    same; COH earns it with half the bets and about half the drawdown.
+- **Why 24 hours:** return per trade by entry time is +7.8% a week out, +13.8% a day out and +18.5% 12 hours out.
+  A month out, nothing clears the fees.
+- **Baseline:** "always back the favourite" on the same markets loses 8.7 bankrolls.
+- **Where:** sports carries most of it (+35¢ per $1); culture is the one domain that lost; crypto is about zero.
+- **Is it luck?**
+  - Refitted every month, the edge is positive in 15 of 17 months. For the simpler rule it is 13 of 15, never
+    significantly negative. All five test months are positive.
+  - If prices were exactly right, the same bets would lose 8¢ per $1; none of 1,000 placebo draws came close.
+  - Deflated Sharpe: 0.9999.
+  - The edge survives double Polymarket's fees.
+  - A live order-book walk puts capacity at ~$10k per market on deep football books, ~$1k on typical ones.
 
 ## How we built it
-- **Data:** Python against Polymarket's Gamma and CLOB APIs. Each horizon is measured from the *scheduled* end date
-  (what a trader knows in advance), the price is the last trade at or before that moment, and a row exists only if the
-  market was still open then. Cancelled and 50-50 resolutions are dropped.
-- **Model:** logistic regression with four coefficients: logit(price), log(horizon) and their interaction. A version with
-  domain terms overfit on validation and lost. Uncertainty intervals come from bootstrapping whole events.
-- **Decision:** edge = model − price; trade only if the edge clears max(spread / 2, 1¢) + Polymarket's taker fee (rate × p(1−p), per market) and the model's bootstrap
-  interval; stake = ¼ Kelly capped at 5%.
-- **Forward test:** `integrations/forward_test.py` freezes the model's calls on open markets ending within 48 h and
-  pushes them to GitHub every 2 h; after resolution it scores only markets whose *scheduled* end has passed (no
-  selection on early resolutions). Result by Sunday: [N resolved, n trades, hit rate, P&L — fill from score.json].
-- **App:** FastAPI serving results, Next.js + Tailwind front end.
-- **Team workflow:** three roles (model/backend, front end, data/pitch), each with Claude Code agents. Agents talk
-  through per-role inbox files in the repo and review each other's PRs. Collaboration in Zed's Delta: [Delta thread links].
+- **Data:** Python against Polymarket's Gamma and CLOB APIs.
+  - Each horizon is measured from the *scheduled* end (what a trader knows in advance).
+  - The price is the last trade at or before that moment.
+  - A row exists only if the market was still open.
+- **Model:** logistic regression with four coefficients (logit price, log hours, their product, intercept). Uncertainty
+  bands come from bootstrapping whole events.
+- **Choosing honestly:** ten candidate models and rules were compared on validation only: Shin (1993), power method,
+  isotonic, hierarchical, beta calibration, an ensemble, an agreement filter, a time-weighted pool, V3 and COH. Their
+  errors correlate 0.987–0.9999: every model reads the same price. The test was opened for the two finalists, side by
+  side.
+- **App:** FastAPI backend, Next.js + Tailwind site, a Chrome extension, an MCP server and a Gemini agent, on Railway.
+- **Team workflow:** three roles (model/backend, front end, data/pitch), each with Claude Code agents. The agents argue
+  in writing through per-role inbox files in the repo, and every PR is reviewed by an agent of another role.
 
 ## Challenges
-- **Our first result was wrong, and we caught it.** A first 3,100-market sample showed the bias biggest in politics a
-  month out. A 34,700-market pull didn't replicate it: the small sample was top-volume and politics-heavy. We kept the
-  bigger result and kept this story in the pitch.
-- **Look-ahead traps everywhere:** markets that close early, the actual close time vs the scheduled one, correlated
-  legs of one event leaking across a random split, and early legs of long events that resolved before our cutoff
-  (260 of them, caught in QA, dropped and rerun).
-- **No historical order book:** Polymarket's API has no past spreads, so costs use a 1¢ floor plus live spreads.
+- **Our first result was wrong, and we caught it.** A 3,100-market sample said "politics, a month out". 34,677 markets
+  didn't replicate it. We kept the bigger result and tell this story.
+- **Look-ahead traps**, all caught by our own review and rerun:
+  - markets that close early;
+  - the actual close time vs the scheduled one;
+  - correlated legs of one event leaking across a split;
+  - 260 early legs that resolved before our cutoff.
+- **Fees and leverage:** at first we had ignored Polymarket's taker fees, and "+304%" became "+190%". We kept the lower
+  number, then switched the headline to per dollar staked so leverage can't flatter it.
+- **A placebo that couldn't fail:** our first null kept the bias by construction. A teammate caught it; the honest null
+  is "prices are right".
+- **No historical order book:** costs use live spreads with a 1¢ floor, a stated limitation.
 
 ## What we learned
-A tiny Brier improvement can still be worth money if you only act where the edge clears costs, and most of the job
-is saying "no trade".
+- Ten models agreed because they all read the same price. The money came from a rule about *events* and *time*, not a
+  cleverer formula.
+- The classic betting model (Shin) gets Polymarket backwards: its insider share comes out negative at every horizon.
+- We lose two bets in three and still make money per dollar. Most of the job is saying "not yet".
 
 ## What's next
-Real historical spreads (on-chain fills) for honest costs, Kalshi as a second venue, and capacity: how much you could
-actually put on before moving the price.
+- Polymarket combos (priced by request-for-quote), through the same calibration lens.
+- Whether skilled wallets trade against us (Gómez-Cram et al. 2026).
+- Historical spreads from on-chain fills.
+- Kalshi, where a public study finds the opposite bias.
 
 ## Built with
-python, pandas, scikit-learn, fastapi, next.js, tailwind, recharts, polymarket-api, claude-code, zed-delta
+python, pandas, scikit-learn, fastapi, next.js, tailwind, recharts, polymarket-api, chrome-extension, mcp, gemini, railway, opentimestamps, claude-code
 
-## Sponsor tracks
-- **HRT — Best use of data for predictions & decision making:** real data → calibrated probability → decision with
-  expected value after costs, evaluated out of sample against the market as baseline.
-- **Zed — Built with Delta:** [Delta thread links + one sentence on what happened in each].
+## Sponsor track
+- **HRT — Best use of data for predictions & decision making:** real data → calibrated probability with uncertainty →
+  a Buy / Wait / Skip decision with expected value after fees. Evaluated out of time against the market as baseline,
+  with robustness checks, and with the failures shown.
 
 ## What we brought in vs built here
-Brought in: the published finding (arXiv 2602.19520), public Polymarket APIs, open-source libraries, a starter
-design preset. Built at OxHack: the data pipeline, the dataset, the model, the backtest, the API and the app.
+- **Brought in:** the published finding (arXiv 2602.19520), public Polymarket APIs, open-source libraries, the browser
+  layer of the extension (Gleb's pre-hackathon code), a starter design preset.
+- **Built at OxHack:** the data pipeline, the dataset, the model and its evaluation, the decision rule, the backtest and
+  robustness checks, the API, the site, the agent, the journal and the sealed predictions.
 
 ## Gallery images
-- `integrations/pitch/when_to_trade.png`: mean return per trade after costs by entry horizon (−19% a month out → +14.8% 12 hours out, after fees).
-  Regenerate with `python integrations/pitch/make_charts.py` whenever backend/results change.
+- `integrations/robustness/shin_time.png`: the TIME slide. The classic model's insider share by time to resolution:
+  ≈ 0 a month out, most negative in the last day.
+- `integrations/robustness/by_month.png`: edge by month, refitted monthly.
+- `integrations/robustness/placebo.png`: real result vs "prices are right" placebo.
+- `integrations/robustness/costs.png`: cost sensitivity.

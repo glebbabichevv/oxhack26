@@ -1,9 +1,9 @@
 ---
-title: "Prediction markets are overconfident. We spent OxHack finding out when that's worth money."
+title: "Prediction markets get overconfident as the end nears. We spent OxHack finding out when that's worth money."
 published: false
 description: "34,677 Polymarket markets, an out-of-time test, and the moment our first result fell apart. Built in 24 hours at OxHack '26."
 tags: hackathon, python, datascience, machinelearning
-cover_image: [raw GitHub URL of integrations/pitch/when_to_trade.png once the repo is public]
+cover_image: [raw GitHub URL of integrations/robustness/shin_time.png once the repo is public]
 ---
 
 <!-- Before posting: check the MLH × DEV challenge rules at mlh.link/oxhack (required tag / link back), fill [brackets]. -->
@@ -52,47 +52,71 @@ you more for showing it.
 
 On the held-out markets:
 
-- Prices get overconfident as resolution nears: about fair a month out, clearly too extreme from a week out.
-- A four-coefficient calibration model (logistic regression on logit(price), log(horizon) and their product) beats the market
-  price itself: **Brier 0.1297 vs 0.1305**. That's a small gain, but the market price is a hard baseline.
-- Trading only where the edge clears the spread, Polymarket's own taker fee and the model's bootstrap interval, at a
-  quarter-Kelly stake: **+12.7¢ per dollar staked**, 90% CI [+7.0¢, +19.1¢], 6,102 trades. With at most one bankroll at
-  risk that's +199% of the starting bankroll. Max drawdown 29%. Hit rate 21%: lots of small losses, a few large wins.
-- "Always back the favourite" on the same markets: **−908%**.
+- Prices get overconfident as resolution nears: about fair a month out, clearly too extreme in the last week. Far
+  from resolution that is *not* the direction the paper we started from reports, and we say so.
+- A four-coefficient calibration model (logistic regression on logit(price), log(hours) and their product) beats the
+  market price itself: **Brier 0.1297 vs 0.1305**. That's a small gain, but the market price is a hard baseline.
+- Our first version had no fees and showed +304%. A teammate's agent audited it: 93% of our test markets charge takers
+  a fee. We added each market's real fee schedule, capped leverage, and moved the headline to *per dollar staked*, so
+  nothing could flatter it.
 
-Our first version had no fees and showed +304%. A teammate's agent audited the model, found that 93% of our test
-markets charge takers a fee, and the number dropped to +12.7¢ per dollar staked. The edge survived; the headline got honest.
+The part that fits the theme is *when*. Return per trade by entry time, after fees: a week out +7.8%, a day out
++13.8%, 12 hours out +18.5%. A month out, nothing clears the fees. So Horizon only trades in the last 24 hours, and
+before that it says **Wait**, with the time to come back.
 
-And the part that fits the theme:
+## The night of ten models
 
-![Mean return per trade after costs by time to resolution](integrations/pitch/when_to_trade.png)
-<!-- replace with the raw GitHub URL -->
+On Saturday night we threw everything at it, choosing on validation only:
+- Shin (1993) and the power method, the classic ways bookmakers' odds are "de-vigged";
+- isotonic regression;
+- a hierarchical model by domain;
+- beta calibration;
+- an ensemble, an agreement filter and a time-weighted log pool.
 
-After fees, a trade a month out loses 19%; a day out it makes 12.6%. By market type, only sports is solid on its own;
-everything else has an interval that includes zero.
+They agreed with each other almost perfectly: errors correlate 0.987–0.9999, because every model reads the same price.
+Two findings came out of it:
 
-## A test we can't overfit
+- **The classic betting model gets Polymarket backwards.** Shin assumes longshots are *over*priced. Fitted freely,
+  Shin's insider share comes out negative at every horizon: about zero a month out, most negative in the last day.
+  That one curve is our whole thesis.
 
-An out-of-time backtest is still history, and we had looked at it many times by Saturday afternoon. So at 15:43 we
-froze the model's calls on every open market ending in the next 48 hours, 163 markets, and pushed them to GitHub before
-any of them resolved, then again every two hours. On Sunday we scored only the markets whose scheduled end date had
-passed: [N resolved, n trades, hit rate, P&L]. That's far too few trades to prove an edge, and we say so. What it shows
-is that the calls are real and made before the answer existed.
+  ![Shin's insider share by time to resolution](integrations/robustness/shin_time.png)
+  <!-- replace with the raw GitHub URL -->
+
+- **The winner wasn't a formula, it was a rule about events.** In a multi-outcome event (home / draw / away), scale the
+  probabilities to sum to 100% and place **at most one bet per event**. On the test set, which we opened for the two
+  finalists: **+31¢ per dollar staked after fees, 90% CI +22¢ to +41¢, on 1,827 bets.** The same model without the rule
+  makes +17¢ on 3,653 bets. Total profit is about the same, with half the bets and half the drawdown. "Always back the
+  favourite" on the same markets loses 8.7 bankrolls.
+
+## Trying to break it
+
+- **Refit every month** over the whole history: positive in 15 of 17 months, and all five test months positive. The
+  bias isn't fading as Polymarket grows.
+- **Placebo:** if prices were exactly right, the same bets would lose 8¢ per dollar. None of 1,000 draws came close to
+  +31¢. Our first placebo shuffled outcomes within price buckets, which kept the bias by construction, so of course it
+  "passed". A teammate caught it.
+- **Costs:** the edge survives double Polymarket's fees. Walking tonight's live order books, it holds up to ~$10k per
+  market on big football matches, ~$1k on typical ones.
+- **We lose two bets in three.** The longest losing streak on test was 25. That's what an edge on longshots looks like.
 
 ## What doesn't work
 
-Every page needs an honest "where it fails" section, so ours is on the screen too: no Brier lift 30 days out, none in crypto or
-culture at any horizon, and too few test markets in "other" to say anything. Historical spreads aren't available
-from the API, so a 1¢ floor stands in for the historical spread (fees are real, from each market's schedule). That's the first thing we'd fix.
+- A month out there's nothing to trade after fees.
+- Culture is the one domain that lost money; crypto is about zero. We show them rather than cut them: cutting after
+  seeing the test would be snooping.
+- Under 10¢, the spread eats everything. That's also why a 2026 paper finds cheap longshots *over*priced on executed
+  trades: fills pay the spread.
+- Historical spreads aren't in the API, so a 1¢ floor stands in. That's the first thing we'd fix.
 
 ## How we worked
 
 Three roles (model/backend, front end, data/pitch), each running Claude Code agents. The agents talked through
 per-role inbox files in the repo: one blunt line each, like "your CSV breaks the data contract here". They also
 reviewed each other's pull requests. That's how the sign flip travelled from the data agent to the model agent to the
-pitch in under an hour. [One line about Delta, if used.]
+pitch in under an hour. Every number in this post was challenged by another role's agent before it reached the screen.
 
-**Stack:** Python, pandas, scikit-learn, FastAPI, Next.js, Tailwind, Recharts.
+**Stack:** Python, pandas, scikit-learn, FastAPI, Next.js, Tailwind, Recharts, a Chrome extension, MCP, Gemini, Railway.
 
 Repo: https://github.com/glebbabichevv/oxhack26 · Demo: https://web-production-c7376.up.railway.app · Devpost: [Devpost URL]
 
