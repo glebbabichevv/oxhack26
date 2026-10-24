@@ -10,7 +10,7 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [x] [Gleb] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
 - [x] [Gleb] Decision rule + backtest with/without costs; replace example JSON with real numbers
 - [x] [Gleb] `/api/live` from `data/live.csv`
-- [ ] [Gleb] Public URL for the API (Vercel deploy needs Gleb's OK) + split requirements so the bundle fits
+- [x] [Gleb] Public API: https://horizon-api-five.vercel.app
 
 ### Role B — frontend
 - [x] [Gleb] Design preset in `DESIGN.md` + tokens/Tailwind preset/starter components in `frontend/design/` — PR `gleb/design-preset`
