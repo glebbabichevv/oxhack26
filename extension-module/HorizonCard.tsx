@@ -35,6 +35,15 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 const cents = (x: number) => `${Math.round(x * 100)}¢`;
 const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
 
+/** ' (12 closed, 3 without a book)': why legs are missing, so an empty card is not a mystery. */
+function skipNote(legs: Leg[]) {
+  const n = new Map<string, number>();
+  for (const l of legs) if (l.skip) n.set(l.skip, (n.get(l.skip) ?? 0) + 1);
+  const short: Record<string, string> = { 'not a yes/no market': 'not yes/no', closed: 'closed', 'no two-sided order book': 'without a book', 'past its end date': 'past their end date' };
+  const parts = [...n].map(([k, v]) => `${v} ${short[k] ?? k}`);
+  return parts.length ? ` (${parts.join(', ')})` : '';
+}
+
 function Chip({ d }: { d: Decision }) {
   const style = d.action === 'BUY_YES' ? { color: UP, background: 'rgba(21,128,61,0.10)' }
     : d.action === 'BUY_NO' ? { color: DOWN, background: 'rgba(225,29,72,0.10)' }
@@ -58,8 +67,9 @@ function Track({ d }: { d: Decision }) {
   );
 }
 
-function Row({ leg }: { leg: Leg }) {
+function Row({ leg, band }: { leg: Leg; band: [number, number] }) {
   const d = leg.decision!;
+  const outOfBand = d.price < band[0] || d.price > band[1];
   return (
     <div className="border-t border-black/[0.06] py-2.5 first:border-t-0" title={d.reason}>
       <div className="flex items-start justify-between gap-2">
@@ -68,12 +78,14 @@ function Row({ leg }: { leg: Leg }) {
       </div>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[12px] tabular-nums text-[#676e7e] [&>span]:whitespace-nowrap">
         <span>market <b className="font-semibold text-[#0a0a0a]">{cents(d.price)}</b></span>
-        <span>Horizon <b className="font-semibold text-[#0a0a0a]">{pct(d.q)}</b> <span className="text-[#71717a]">({pct(d.lo)}–{pct(d.hi)})</span></span>
+        {outOfBand
+          ? <span className="!whitespace-normal">outside {pct(band[0])}–{pct(band[1])}: a {cents(d.cost)} cost exceeds any edge</span>
+          : <span>Horizon <b className="font-semibold text-[#0a0a0a]">{pct(d.q)}</b> <span className="text-[#71717a]">({pct(d.lo)}–{pct(d.hi)})</span></span>}
         {d.action !== 'NO_TRADE'
           ? <span>edge <b className="font-semibold" style={{ color: d.action === 'BUY_YES' ? UP : DOWN }}>{(d.netEdge * 100).toFixed(1)}¢</b> · stake {(d.kelly * 100).toFixed(1)}%</span>
           : null}
       </div>
-      <Track d={d} />
+      {outOfBand ? null : <Track d={d} />}
     </div>
   );
 }
@@ -83,8 +95,11 @@ function Row({ leg }: { leg: Leg }) {
 // markets whose event was already over. The window is shown in the reader's local time.
 const WINDOW_H: [number, number] = [24, 12];
 function When({ hours }: { hours: number }) {
+  const far = hours - WINDOW_H[0] > 6 * 24; // a weekday alone is ambiguous beyond a week
   const at = (h: number) => new Date(Date.now() + (hours - h) * 3.6e6)
-    .toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    .toLocaleString(undefined, far
+      ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+      : { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   const text = hours > WINDOW_H[0]
     ? <>Best window: <b className="font-semibold text-[#0a0a0a]">{at(WINDOW_H[0])} – {at(WINDOW_H[1])}</b> (12–24h before the end), when the edge per trade was ~2× the 3-day one.</>
     : hours > WINDOW_H[1]
@@ -100,6 +115,7 @@ function When({ hours }: { hours: number }) {
 export function HorizonCard() {
   const [slug, setSlug] = useState<string>();
   const [state, setState] = useState<{ title: string; legs: Leg[]; model: Model } | 'loading' | 'error'>();
+  const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
@@ -119,11 +135,13 @@ export function HorizonCard() {
 
   const load = useCallback(async (s: string) => {
     setState('loading');
+    setNotFound(false);
     try {
       const model = await loadModel();
       const ev = await decideEvent(model, s);
       setState({ ...ev, model });
-    } catch {
+    } catch (e) {
+      setNotFound(e instanceof Error && e.message === 'event not found');
       setState('error');
     }
   }, []);
@@ -145,7 +163,7 @@ export function HorizonCard() {
         <span className="min-w-0">
           <span className="block text-[11px] font-semibold tracking-[0.02em] text-[#71717a]">Horizon · calibrated for time to resolution</span>
           <span className="mt-0.5 block truncate text-[15px] text-[#0a0a0a]" style={{ fontFamily: "'Playfair Display', 'Cormorant Garamond', Georgia, serif" }}>
-            {state === 'loading' ? 'Reading the market…' : state === 'error' ? 'Horizon unavailable' : state.title}
+            {state === 'loading' ? 'Reading the market…' : state === 'error' ? (notFound ? 'Event not found on Polymarket' : 'Horizon unavailable') : state.title}
           </span>
         </span>
         <span className="shrink-0 text-[12px] text-[#71717a]">{open ? 'Hide' : 'Show'}</span>
@@ -154,12 +172,15 @@ export function HorizonCard() {
         <div className="px-3.5 pb-3">
           {state === 'loading' ? <div className="h-16 animate-pulse rounded-control bg-black/[0.04]" /> : null}
           {state === 'error' ? (
+            <>
+            <p className="pb-2 text-[12px] leading-snug text-[#676e7e]">{notFound ? 'Gamma has no event with this address yet.' : 'Could not reach Polymarket prices.'}</p>
             <button type="button" onClick={() => void load(slug)} className="w-full rounded-control bg-black/[0.05] py-2 text-[13px] font-medium">Retry</button>
+            </>
           ) : null}
           {state !== 'loading' && state !== 'error' ? (
             legs.length ? (
               <>
-                {shown.map((l, i) => <Row key={i} leg={l} />)}
+                {shown.map((l, i) => <Row key={i} leg={l} band={state.model.tradable} />)}
                 {legs.length > 4 ? (
                   <button type="button" onClick={() => setShowAll((s) => !s)} className="mt-1 w-full rounded-control bg-black/[0.04] py-1.5 text-[12px] font-medium text-[#111113]">
                     {showAll ? 'Show fewer' : `Show all ${legs.length}`}
@@ -171,7 +192,7 @@ export function HorizonCard() {
                   <a href={SITE_URL} target="_blank" rel="noreferrer" className="underline decoration-black/20 underline-offset-2">How we measured it</a>
                 </p>
               </>
-            ) : <p className="py-2 text-[13px] text-[#676e7e]">No open yes/no market with a two-sided book on this page.</p>
+            ) : <p className="py-2 text-[13px] leading-snug text-[#676e7e]">No open yes/no market with a two-sided book on this page{skipNote(state.legs)}.</p>
           ) : null}
         </div>
       ) : null}
