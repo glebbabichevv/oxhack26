@@ -936,8 +936,8 @@
   "return_per_dollar": 0.203
  },
  "return_ci": [
-  5.65,
-  11.0
+  5.61,
+  11.16
  ],
  "by_domain": [
   {
@@ -946,9 +946,10 @@
    "return": 6.591,
    "hit_rate": 0.2428,
    "return_ci": [
-    4.53,
-    8.6
-   ]
+    4.39,
+    8.83
+   ],
+   "return_per_dollar": 0.2141
   },
   {
    "domain": "science_tech",
@@ -956,9 +957,10 @@
    "return": 0.8989,
    "hit_rate": 0.4615,
    "return_ci": [
-    0.4,
-    1.4
-   ]
+    0.44,
+    1.38
+   ],
+   "return_per_dollar": 1.4029
   },
   {
    "domain": "politics",
@@ -966,9 +968,10 @@
    "return": 0.8425,
    "hit_rate": 0.2632,
    "return_ci": [
-    0.08,
+    0.16,
     1.59
-   ]
+   ],
+   "return_per_dollar": 0.3885
   },
   {
    "domain": "economics",
@@ -976,9 +979,10 @@
    "return": 0.2145,
    "hit_rate": 0.2333,
    "return_ci": [
-    -0.17,
-    0.63
-   ]
+    -0.15,
+    0.61
+   ],
+   "return_per_dollar": 0.4828
   },
   {
    "domain": "other",
@@ -988,7 +992,8 @@
    "return_ci": [
     0.03,
     0.03
-   ]
+   ],
+   "return_per_dollar": 1.751
   },
   {
    "domain": "crypto",
@@ -996,9 +1001,10 @@
    "return": 0.0033,
    "hit_rate": 0.1636,
    "return_ci": [
-    -0.85,
-    0.88
-   ]
+    -0.8,
+    0.89
+   ],
+   "return_per_dollar": 0.001
   },
   {
    "domain": "geopolitics",
@@ -1006,9 +1012,10 @@
    "return": -0.0097,
    "hit_rate": 0.1562,
    "return_ci": [
-    -0.35,
-    0.36
-   ]
+    -0.32,
+    0.34
+   ],
+   "return_per_dollar": -0.0197
   },
   {
    "domain": "culture",
@@ -1016,9 +1023,10 @@
    "return": -0.2341,
    "hit_rate": 0.1748,
    "return_ci": [
-    -0.94,
-    0.45
-   ]
+    -0.91,
+    0.47
+   ],
+   "return_per_dollar": -0.071
   }
  ],
  "without_costs": {
@@ -1870,8 +1878,8 @@
    }
   ],
   "return_ci": [
-   8.02,
-   14.61
+   8.2,
+   14.84
   ],
   "peak_exposure": 1.0,
   "return_per_dollar": 0.3088
@@ -1884,6 +1892,7 @@
  },
  "baseline_m0": {
   "logloss": 0.3917,
+  "brier": 0.1297,
   "n_trades": 2690,
   "return": 8.3358,
   "hit_rate": 0.2346,
@@ -2720,8 +2729,8 @@
    }
   ],
   "return_ci": [
-   5.67,
-   10.95
+   5.76,
+   10.96
   ],
   "peak_exposure": 1.0,
   "return_per_dollar": 0.203
@@ -3083,7 +3092,9 @@
   "Cost per contract = max(spread/2, 1c) + Polymarket taker fee rate x p x (1-p) on markets with fees enabled (today's rates, whole period).",
   "One trade per market at the earliest qualifying horizon, held to resolution; fills at the historical price.",
   "Stakes capped at 5% per trade, 10% per event, and 1.0 starting bankroll open at any time; P&L additive.",
-  "Validation chose Kelly x0.5 and a 2c minimum edge; x0.5 Kelly doubles stake size versus the backend's x0.25, so return and drawdown scale with it - compare return_per_dollar across rules.",
+  "Validation chose Kelly x0.5 and a 2c minimum edge; x0.5 Kelly is 2.0x the backend's x0.25 stake size, so return and drawdown scale with it - compare return_per_dollar across rules.",
+  "by_horizon is descriptive: each horizon traded on its own with the backend's quarter-Kelly rule, no minimum edge and no caps - it is not the headline policy.",
+  "naive_favourite uses flat 2% stakes with no caps, so compare its sign, not its size.",
   "volume_usd is not a feature (lifetime volume would leak trading after the horizon)."
  ]
 }

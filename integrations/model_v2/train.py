@@ -18,8 +18,8 @@ sys.path.insert(0, str(HERE.parents[1] / "backend"))
 sys.path.insert(0, str(HERE))  # last insert wins: local modules beat backend/ and site-packages
 import model as backend  # read-only: metric and report helpers  # noqa: E402
 
-from decision import apply_caps, earliest_trades, trade_cost  # noqa: E402
-from features import build_table  # noqa: E402
+from decision import apply_caps, decide, earliest_trades, trade_cost  # noqa: E402
+from features import book_features, build_table, by_date, path_stats  # noqa: E402
 from models import in_band, make  # noqa: E402
 
 CUTOFF = "2026-05-18"
@@ -106,6 +106,53 @@ def summary(t, rng):
     return s
 
 
+def live_table(data_dir, raw_dir):
+    live = pd.read_csv(data_dir / "live.csv")
+    live = live[live["price_yes"].between(0, 1, inclusive="neither")].reset_index(drop=True)
+    live["domain"] = live["domain"].fillna("other").str.lower()
+    live["horizon_hours"] = live["hours_to_resolution"]
+    live["by_date"] = by_date(live["question"])
+    live = live.join(book_features(live))
+    now = pd.to_datetime(live["fetched_at"], utc=True, format="mixed")
+    stats = []
+    for r, ts in zip(live.itertuples(), now):
+        f = raw_dir / "live_hist" / f"{r.market_id}.json"
+        pts = json.loads(f.read_text()) if f.exists() else []
+        t = np.array([x["t"] for x in pts], float)
+        p = np.array([x["p"] for x in pts], float)
+        stats.append(path_stats(t, p, ts.timestamp()))
+    live[["mom24", "mom72", "vol72"]] = np.array(stats) if stats else np.zeros((0, 3))
+    live["fees_on"] = live["fees_enabled"].astype(bool)
+    return live
+
+
+def live_report(model, live, kelly_mult, min_edge, n_trades=30, n_no_trade=15):
+    p = live["price_yes"].to_numpy()
+    q, lo, hi = model.predict(live)
+    c = costs(live)
+    action, kelly, edge = decide(p, q, lo, hi, c, min_edge, kelly_mult)
+    out = []
+    for i, r in enumerate(live.itertuples()):
+        if not in_band(p[i]):
+            reason = f"Market at {p[i]:.1%}: too close to certain, costs exceed any edge"
+        elif action[i] == "NO_TRADE":
+            reason = (f"Model {q[i]:.0%} (range {lo[i]:.0%}-{hi[i]:.0%}) vs market {p[i]:.0%}: "
+                      f"gap is inside the model's uncertainty plus {c[i] * 100:.1f}c cost incl. fees")
+        else:
+            reason = (f"{backend.horizon_label(r.hours_to_resolution)} out, {r.domain}: model {q[i]:.0%} vs market "
+                      f"{p[i]:.0%}, net edge {edge[i] * 100:.1f}c after fees")
+        out.append({"market_id": str(r.market_id), "question": r.question, "domain": r.domain,
+                    "price_yes": round(float(p[i]), 4), "hours_to_resolution": float(r.hours_to_resolution),
+                    "q_yes": round(float(q[i]), 4), "q_low": round(float(lo[i]), 4), "q_high": round(float(hi[i]), 4),
+                    "edge": round(float(q[i] - p[i]), 4), "net_edge": round(float(edge[i]), 4), "cost": round(float(c[i]), 4),
+                    "action": str(action[i]), "kelly_fraction": round(float(kelly[i]), 4), "reason": reason,
+                    "url": r.url, "volume_usd": float(r.volume_usd)})
+    trades = sorted((x for x in out if x["action"] != "NO_TRADE"), key=lambda x: -x["net_edge"])[:n_trades]
+    no_trade = sorted((x for x in out if x["action"] == "NO_TRADE" and in_band(x["price_yes"])),
+                      key=lambda x: -x["volume_usd"])[:n_no_trade]
+    return trades + no_trade
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data")
@@ -180,6 +227,10 @@ def main():
     }
     (out / "backtest.json").write_text(json.dumps(backtest, indent=1, default=str))
     w = backtest["with_costs"]
+    if (Path(a.data) / "live.csv").exists():
+        live = live_report(model, live_table(Path(a.data), Path(a.raw)), kelly_mult, min_edge)
+        (out / "live.json").write_text(json.dumps(live, indent=1))
+        print(f"live: {sum(x['action'] != 'NO_TRADE' for x in live)} trades of {len(live)} cards")
     print(f"TEST  logloss market {backtest['overall']['logloss_market']}  {best} {backtest['overall']['logloss_model']}  M0 {backtest['baseline_m0']['logloss']}")
     print(f"TEST  {len(trades)} trades  return {w['return']:+.3f} CI {w['return_ci']}  peak exposure {w['peak_exposure']}  "
           f"per $ {w['return_per_dollar']}  maxDD {w['max_drawdown']}")

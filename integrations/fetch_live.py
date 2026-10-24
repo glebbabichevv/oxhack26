@@ -7,11 +7,22 @@ from gamma. hours_to_resolution is measured to the scheduled end date, the same
 clock fetch_horizons.py uses, so the model sees live markets on its training axis.
 """
 import argparse
+import json
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-from common import DATA, GAMMA, domain_of, get, is_yes_no, parse_ts, tag_slugs
+from common import CLOB, DATA, GAMMA, RAW, domain_of, get, is_yes_no, parse_ts, tag_slugs, yes_token
+
+LIVE_HIST = RAW / "live_hist"
+
+
+def recent_history(m, now, hours=72):
+    LIVE_HIST.mkdir(parents=True, exist_ok=True)
+    path = LIVE_HIST / f"{m['conditionId']}.json"
+    pts = get(f"{CLOB}/prices-history", dict(market=yes_token(m), startTs=int(now.timestamp()) - hours * 3600,
+                                            endTs=int(now.timestamp()), fidelity=60)).get("history", [])
+    path.write_text(json.dumps(pts))
 
 
 def main():
@@ -52,7 +63,9 @@ def main():
             best_bid=bid, best_ask=ask, end_date=end.isoformat(),
             liquidity_usd=round(float(m.get("liquidityNum") or 0), 2), neg_risk=bool(m.get("negRisk")),
             fetched_at=now.isoformat(timespec="seconds"),
+            fees_enabled=str(m.get("feesEnabled")) == "True", event_slug=event.get("slug") or m.get("slug"),
         ))
+        recent_history(m, now)
 
     df = pd.DataFrame(rows).sort_values("volume_usd", ascending=False)
     df.to_csv(a.out, index=False)
