@@ -50,3 +50,21 @@ def test_playoff_ties_within_tie_go_to_earliest_candidate(monkeypatch):
     (name, kw), scores = train.playoff(val, val)
     assert (name, kw) == ("M1", {"C": 0.1})  # M2 is best by 0.0006 but M1(C=0.1) is within 0.0005 and earlier
     assert scores["M2"] < scores["M1_C0.1"] < scores["M0"]
+
+
+class _Confident:
+    """Stub model: says YES is 30c more likely than the price, with a tight band."""
+    def predict(self, df):
+        p = df["price_yes"].to_numpy()
+        return p + 0.3, p + 0.29, p + 0.31
+
+
+def test_live_cards_under_12h_get_no_call():
+    from train import live_report
+    live = pd.DataFrame({"market_id": ["short", "ok"], "question": ["q1", "q2"], "domain": ["sports"] * 2,
+                         "price_yes": [0.3, 0.3], "hours_to_resolution": [6.0, 48.0], "spread": [0.01] * 2,
+                         "fees_on": [True] * 2, "url": ["u"] * 2, "volume_usd": [1.0, 1.0]})
+    cards = {c["market_id"]: c for c in live_report(_Confident(), live, 0.25, 0.01)}
+    assert cards["short"]["action"] == "NO_TRADE" and cards["short"]["kelly_fraction"] == 0
+    assert cards["short"]["reason"].startswith("Outside the trained horizon range")
+    assert cards["ok"]["action"] == "BUY_YES"
