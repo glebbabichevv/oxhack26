@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip } from "@/design/components/Page";
+import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
+import { CountUp } from "@/components/CountUp";
+import { HorizonStrip } from "@/components/HorizonStrip";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
@@ -78,6 +80,9 @@ export default function Home() {
             : undefined}
         />
         {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
+        {calibration.all ? (
+          <HorizonStrip horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
+        ) : <Skeleton className="mt-12 h-[300px]" />}
 
         <div id="calibration">
           <Section
@@ -162,13 +167,13 @@ function Kpis({ b }: { b: Backtest }) {
       items={[
         {
           label: "Return after costs",
-          value: bankroll(b.with_costs.return),
+          value: <CountUp value={bankroll(b.with_costs.return)} />,
           note: b.return_ci ? `of bankroll · 90% CI ${bankroll(b.return_ci[0])} to ${bankroll(b.return_ci[1])}` : `max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`,
           tone: b.return_ci ? (b.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
-        { label: "Brier, model / market", value: `${b.overall.brier_model.toFixed(4)} / ${b.overall.brier_market.toFixed(4)}`, note: `${brier.text} · lower is better`, tone: brier.tone },
+        { label: "Brier score, model", value: <CountUp value={b.overall.brier_model.toFixed(4)} />, note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
         { label: "Where it pays", value: where.value, note: where.note },
-        { label: "Trades", value: int(b.n_trades), note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
+        { label: "Trades", value: <CountUp value={int(b.n_trades)} />, note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
       ]}
     />
   );
@@ -182,9 +187,10 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
   const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
   return (
     <>
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint">
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint md:grid-cols-[1fr_auto_120px_auto_auto]">
         <span>{trades.length} trades · {passes.length} passes</span>
         <span className="hidden text-right md:block">market</span>
+        <span className="hidden text-center md:block">price → model</span>
         <span className="hidden text-right md:block">model</span>
         <span className="hidden w-[68px] md:block" />
       </div>
@@ -198,6 +204,7 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
           action={m.action}
           href={m.url}
           title={m.reason}
+          track={<EdgeTrack price={m.price_yes} q={m.q_yes} lo={m.q_low} hi={m.q_high} action={m.action} />}
         />
       ))}
       {live.length > 9 ? (
