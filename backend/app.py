@@ -99,3 +99,6 @@ def mcp_no_stream():
 
 # Agent for the extension command box (Gemini function-calling; 503 without GEMINI_API_KEY).
 from agent_router import router as agent_router; app.include_router(agent_router)  # noqa: E402
+
+# Decision Journal: POST/GET /api/journal (journal.py; Vercel Blob when BLOB_READ_WRITE_TOKEN is set).
+from journal import router as journal_router; app.include_router(journal_router)  # noqa: E402
