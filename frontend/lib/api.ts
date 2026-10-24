@@ -21,6 +21,16 @@ export type LiveMarket = {
   reason: string;
   url: string;
   volume_usd: number;
+  fee?: number;
+};
+
+// /api/live (contract v1.3): computed from live Polymarket prices on request; "fallback" = saved snapshot.
+export type LivePayload = {
+  updated_at: string | null;
+  model_version: string | null;
+  source: "live" | "fallback";
+  error?: string;
+  markets: LiveMarket[];
 };
 
 export type CalibrationBin = { price_mid: number; observed: number; model: number; n: number };
@@ -56,6 +66,11 @@ export type Backtest = {
   worst_trades: WorstTrade[];
   assumptions: string[];
   return_ci?: [number, number];
+  generated_at?: string;
+  model_version?: string;
+  peak_open_stake?: number;
+  return_per_dollar_staked?: number;
+  capped_exposure?: Run & { return_ci?: [number, number]; cap: number; return_per_dollar_staked?: number };
   by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };
 

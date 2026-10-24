@@ -1,0 +1,35 @@
+# Hourly refit + gated promotion + API redeploy on GitHub's runners. DISABLED: manual trigger only.
+# To enable: add repo secrets VERCEL_TOKEN (vercel.com/account/tokens, owner's account),
+# VERCEL_ORG_ID and VERCEL_PROJECT_ID (backend/.vercel/project.json), then uncomment `schedule`.
+name: refit
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: "17 * * * *"
+permissions:
+  contents: write
+jobs:
+  refit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r backend/requirements-model.txt
+      - id: refit
+        working-directory: backend
+        run: |
+          set +e; python refit.py; code=$?; set -e
+          echo "promoted=$([ $code -eq 10 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+          [ $code -eq 0 ] || [ $code -eq 10 ]
+      - if: steps.refit.outputs.promoted == '1'
+        working-directory: backend
+        run: npx vercel@39 deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
+      - if: steps.refit.outputs.promoted == '1'
+        run: |
+          git config user.name "horizon-refit" && git config user.email "actions@users.noreply.github.com"
+          git add backend/results data/horizons.csv && git commit -m "refit: promote model" && git push
