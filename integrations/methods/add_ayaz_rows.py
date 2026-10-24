@@ -81,8 +81,8 @@ def main():
         if v:
             lo, hi = ci(v)
             rows.append(row("exit", f"{k} (test)", v.get("per_dollar"), lo, hi, v.get("n_trades"), "test",
-                            f"return/maxDD {v.get('ret_per_dd')}; maxDD {v.get('max_drawdown')}; opened once because "
-                            f"COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive"))
+                            f"return/maxDD {v.get('ret_per_dd')}; maxDD {v.get('max_drawdown')}; SECOND test look (after V3 vs COH), "
+                            f"gated on COH+DYNAMIC beating COH on VAL2 return/maxDD; descriptive, not a fresh out-of-sample read"))
     for policy in ("V3", "COH"):
         for block, col in (("domain", "domain"), ("volume", "volume_tier"), ("price_bucket", "price_bucket")):
             for g in desc[policy][block]:

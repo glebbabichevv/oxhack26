@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
 import { HorizonCurve } from "@/components/HorizonCurve";
+import { CorrectionField } from "@/components/CorrectionField";
 import { LongRun } from "@/components/LongRun";
 import { CachedNote } from "@/components/CachedNote";
 import { Capsule, type CapsuleData } from "@/components/Capsule";
@@ -124,6 +125,7 @@ export default function Home() {
             ? `Trained on ${int(backtest.n_train_markets)} resolved Polymarket markets that ended before ${dateLong(backtest.cutoff)}; tested out of time on the ${int(backtest.n_test_markets)} that ended after.`
             : undefined}
         />
+        <CorrectionField horizons={calibration.all?.horizons} />
         {calibration.all ? (
           <HorizonCurve horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
         ) : <div className="mt-14 h-[400px]" />}
