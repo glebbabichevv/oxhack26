@@ -17,18 +17,28 @@ def _iso(now):
 
 
 def settle_and_mark(store, broker, plan, now):
+    """Never raises: each position's failure is counted and logged on its own."""
+    failed = False
     for p in plan["positions"]:
         if p["status"] != "open":
             continue
-        mark, outcome = broker.mark(broker.market(p["market_id"]), p["side"])
-        if outcome is None:
-            p["mark"] = mark if mark is not None else p["mark"]
-            continue
-        payout = round(p["shares"] * outcome, 4)
-        plan["cash"] = round(plan["cash"] + payout, 4)
-        p.update(status="won" if outcome else "lost", payout=payout, mark=float(outcome))
-        store.log(plan["id"], "settle", _iso(now), question=p["question"], side=p["side"], outcome=outcome,
-                  cost=p["cost"], payout=payout, pnl=round(payout - p["cost"], 4), url=p["url"])
+        try:
+            mark, outcome = broker.mark(broker.market(p["market_id"]), p["side"])
+            if outcome is None:
+                p["mark"] = mark if mark is not None else p["mark"]
+                continue
+            payout = round(p["shares"] * outcome, 4)
+            plan["cash"] = round(plan["cash"] + payout, 4)
+            p.update(status="won" if outcome else "lost", payout=payout, mark=float(outcome))
+            store.log(plan["id"], "settle", _iso(now), question=p["question"], side=p["side"], outcome=outcome,
+                      cost=p["cost"], payout=payout, pnl=round(payout - p["cost"], 4), url=p["url"])
+        except Exception as e:
+            failed = True
+            plan["errors"] += 1
+            store.log(plan["id"], "error", _iso(now), text=f"settling: {str(e)[:300]}",
+                      question=p["question"], side=p["side"], url=p["url"])
+    if not failed:  # a clean settle pass ends any run of errors
+        plan["errors"] = 0
 
 
 def buy_round(store, broker, plan, live, now, value, room):
@@ -38,6 +48,9 @@ def buy_round(store, broker, plan, live, now, value, room):
                    key=lambda i: -i["net_edge"])
     for item in picks:
         if plan["errors"] >= MAX_ERRORS:
+            break
+        current = store.plan(plan["id"])  # a Stop or Pause from the person wins over this round
+        if current is None or current["status"] != "running":
             break
         stake, _ = size_bet(item, plan, value, min(broker.ceiling, room - spent))
         if not stake:
@@ -56,11 +69,18 @@ def buy_round(store, broker, plan, live, now, value, room):
             if p_win(item, side) - q["avg_price"] - (item.get("fee") or 0) <= 0:
                 store.log(plan["id"], "skip", _iso(now), reason="edge_vanished", price=q["avg_price"], **base)
                 continue
-            fill = broker.buy(m, side, q["fillable_usd"], q["worst_price"], note=f"plan {plan['id']}")
-        except Exception as e:  # network / order errors count towards the auto-pause
+        except Exception as e:  # quote/network errors count towards the auto-pause
             plan["errors"] += 1
             store.log(plan["id"], "error", _iso(now), text=str(e)[:300], **base)
             continue
+        try:
+            fill = broker.buy(m, side, q["fillable_usd"], q["worst_price"], note=f"plan {plan['id']}")
+        except Exception as e:  # money may already have left: stop and check by hand
+            plan["errors"] += 1
+            plan.update(status="paused", pause_reason="check_fill")
+            store.log(plan["id"], "error", _iso(now), text=str(e)[:300], possible_fill=True, **base)
+            store.log(plan["id"], "pause", _iso(now), reason="check_fill")
+            break
         plan["errors"] = 0
         plan["cash"] = round(plan["cash"] - fill["cost"], 4)
         spent += fill["cost"]
@@ -80,11 +100,8 @@ def run_cycle(store, broker, live, now, total_cap):
     open_stake = sum(p["cost"] for pl in plans for p in pl["positions"] if p["status"] == "open")
     room = max(total_cap - open_stake, 0.0)
     for plan in plans:
-        try:
-            settle_and_mark(store, broker, plan, now)
-        except Exception as e:
-            plan["errors"] += 1
-            store.log(plan["id"], "error", _iso(now), text=f"settling: {str(e)[:300]}")
+        status_at_start = plan["status"]
+        settle_and_mark(store, broker, plan, now)
         value = plan_value(plan)
         today = now.date().isoformat()
         if plan["day"]["date"] != today:
@@ -99,20 +116,52 @@ def run_cycle(store, broker, live, now, total_cap):
                 if plan["errors"] >= MAX_ERRORS:
                     plan.update(status="paused", pause_reason="polymarket_errors")
                     store.log(plan["id"], "pause", _iso(now), reason="polymarket_errors")
+        fresh = store.plan(plan["id"])
+        if fresh and fresh["status"] != status_at_start:  # the person changed status mid-cycle: their change wins
+            plan.update(status=fresh["status"], pause_reason=fresh.get("pause_reason"))
         plan["last_check"] = _iso(now)
         store.save_plan(plan)
     plans = store.plans()
     store.add_equity(_iso(now), round(sum(p["budget"] for p in plans), 2), round(sum(plan_value(p) for p in plans), 2))
 
 
+def _read_lock(path):
+    """(pid, timestamp) from a lock file, or None if it is missing or malformed."""
+    try:
+        pid, ts = Path(path).read_text().split()[:2]
+        return int(pid), float(ts)
+    except (OSError, ValueError):
+        return None
+
+
 def acquire_lock(path, now, stale_s=1800):
-    """One trader per data folder: take the lock if it is missing or its heartbeat is stale."""
+    """One trader per data folder. Creating the file is atomic (O_EXCL); a missing, malformed or
+    stale lock may be taken over."""
     path = Path(path)
-    if path.exists() and now - float(path.read_text().split()[1]) < stale_s:
-        return False
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f"{os.getpid()} {now}")
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        held = _read_lock(path)
+        if held is not None and now - held[1] < stale_s:
+            return False
+        tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+        tmp.write_text(f"{os.getpid()} {now}")
+        os.replace(tmp, path)
+        return True
+    with os.fdopen(fd, "w") as f:
+        f.write(f"{os.getpid()} {now}")
     return True
+
+
+def release_lock(path):
+    """Remove the lock only if this process holds it."""
+    held = _read_lock(path)
+    if held and held[0] == os.getpid():
+        try:
+            Path(path).unlink()
+        except OSError:
+            pass
 
 
 def run_once(store, broker):
@@ -122,13 +171,16 @@ def run_once(store, broker):
 
 
 async def loop(store, broker, interval_s=INTERVAL_S):
-    lock, me = store.dir / "trader.lock", str(os.getpid())
-    while True:
-        mine = lock.exists() and lock.read_text().split()[0] == me
-        if mine or acquire_lock(lock, time.time()):
-            lock.write_text(f"{me} {time.time()}")  # heartbeat: another process may take over after 30 min of silence
-            try:
-                await asyncio.to_thread(run_once, store, broker)
-            except Exception as e:
-                store.log(None, "error", _iso(datetime.now(timezone.utc)), text=f"cycle failed: {str(e)[:300]}")
-        await asyncio.sleep(interval_s)
+    lock, me = store.dir / "trader.lock", os.getpid()
+    try:
+        while True:
+            held = _read_lock(lock)
+            if (held and held[0] == me) or acquire_lock(lock, time.time()):
+                lock.write_text(f"{me} {time.time()}")  # heartbeat: another process may take over after 30 min of silence
+                try:
+                    await asyncio.to_thread(run_once, store, broker)
+                except Exception as e:
+                    store.log(None, "error", _iso(datetime.now(timezone.utc)), text=f"cycle failed: {str(e)[:300]}")
+            await asyncio.sleep(interval_s)
+    finally:
+        release_lock(lock)

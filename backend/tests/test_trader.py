@@ -1,8 +1,9 @@
 # backend/tests/test_trader.py
+import os
 from datetime import datetime, timezone
 
 from invest.store import Store
-from invest.trader import acquire_lock, run_cycle
+from invest.trader import acquire_lock, release_lock, run_cycle
 
 NOW = datetime(2026, 10, 24, 18, 0, tzinfo=timezone.utc)
 FRESH = "2026-10-24T17:55:00+00:00"
@@ -120,3 +121,103 @@ def test_lock_file(tmp_path):
     assert acquire_lock(lock, 1000.0) is True
     assert acquire_lock(lock, 1100.0, stale_s=1800) is False
     assert acquire_lock(lock, 5000.0, stale_s=1800) is True
+
+
+def test_malformed_lock_file_is_taken_over(tmp_path):
+    lock = tmp_path / "trader.lock"
+    lock.write_text("")
+    assert acquire_lock(lock, 1000.0) is True
+    lock.write_text("garbage")
+    assert acquire_lock(lock, 1000.0) is True
+
+
+def test_release_lock_only_removes_our_own(tmp_path):
+    lock = tmp_path / "trader.lock"
+    assert acquire_lock(lock, 1000.0) is True
+    release_lock(lock)
+    assert not lock.exists()
+    lock.write_text(f"{os.getpid() + 1} 1000.0")  # a foreign pid's lock
+    release_lock(lock)
+    assert lock.exists()
+
+
+class StopOnBuyBroker(FakeBroker):
+    """The person stops the plan in the store right after the first buy lands."""
+
+    def __init__(self, store, plan_id, **kw):
+        super().__init__(**kw)
+        self.store, self.plan_id = store, plan_id
+
+    def buy(self, m, side, usd, worst_price, note):
+        fill = super().buy(m, side, usd, worst_price, note)
+        p = self.store.plan(self.plan_id)
+        p["status"] = "stopped"
+        self.store.save_plan(p)
+        return fill
+
+
+def test_person_stop_mid_cycle_wins(tmp_path):
+    s = Store(tmp_path)
+    p = s.new_plan(1000, 25, 100, FRESH)
+    b = StopOnBuyBroker(s, p["id"])
+    run_cycle(s, b, {"updated_at": FRESH, "markets": [item("m1"), item("m2")]}, NOW, total_cap=500)
+    assert len(b.bought) == 1
+    assert s.plan(p["id"])["status"] == "stopped"
+
+
+class SettleFlakyBroker(FakeBroker):
+    """market() fails for one market id; everything else behaves like FakeBroker."""
+
+    def __init__(self, bad="bad", **kw):
+        super().__init__(**kw)
+        self.bad = bad
+
+    def market(self, market_id):
+        if market_id == self.bad:
+            raise RuntimeError("gamma down")
+        return {"market_id": market_id}
+
+
+def test_clean_settle_pass_resets_error_run(tmp_path):
+    s = Store(tmp_path)
+    p = s.new_plan(1000, 25, 100, FRESH)
+    p["errors"] = 2
+    s.save_plan(p)
+    run_cycle(s, FakeBroker(), {"updated_at": FRESH, "markets": []}, NOW, total_cap=500)
+    plan = s.plan(p["id"])
+    assert plan["errors"] == 0 and plan["status"] == "running"
+
+
+def test_one_failing_position_does_not_block_others(tmp_path):
+    s = Store(tmp_path)
+    p = s.new_plan(1000, 25, 100, FRESH)
+    run_cycle(s, FakeBroker(), {"updated_at": FRESH, "markets": [item("bad"), item("good")]}, NOW, total_cap=500)
+    run_cycle(s, SettleFlakyBroker(outcome=1), {"updated_at": FRESH, "markets": []}, NOW, total_cap=500)
+    plan = s.plan(p["id"])
+    status = {x["market_id"]: x["status"] for x in plan["positions"]}
+    assert status == {"bad": "open", "good": "won"}
+    assert plan["errors"] == 1 and plan["status"] == "running"
+    assert any(e["kind"] == "error" and e["text"].startswith("settling: ") for e in s.events(p["id"]))
+
+
+class BuyRaisesBroker(FakeBroker):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.attempts = 0
+
+    def buy(self, m, side, usd, worst_price, note):
+        self.attempts += 1
+        raise RuntimeError("connection reset after order sent")
+
+
+def test_buy_failure_pauses_for_manual_check(tmp_path):
+    s = Store(tmp_path)
+    p = s.new_plan(1000, 25, 100, FRESH)
+    b = BuyRaisesBroker()
+    run_cycle(s, b, {"updated_at": FRESH, "markets": [item("m1"), item("m2")]}, NOW, total_cap=500)
+    plan = s.plan(p["id"])
+    assert plan["status"] == "paused" and plan["pause_reason"] == "check_fill"
+    assert plan["cash"] == 1000 and plan["positions"] == []
+    assert b.attempts == 1
+    errs = [e for e in s.events(p["id"]) if e["kind"] == "error"]
+    assert len(errs) == 1 and errs[0]["possible_fill"] is True
