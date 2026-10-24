@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 export function Nav({ links, action }: { links: { label: string; href: string }[]; action?: ReactNode }) {
   return (
-    <nav className="sticky top-4 z-40 mx-auto mt-4 flex h-[52px] max-w-[1120px] items-center justify-between rounded-full border border-black/[0.04] bg-[rgba(250,250,250,0.9)] pl-4 pr-2 shadow-nav">
+    <nav className="sticky top-4 z-40 mx-auto mt-4 flex w-[calc(100%-32px)] h-[52px] max-w-[1120px] items-center justify-between rounded-full border border-black/[0.04] bg-[rgba(250,250,250,0.9)] pl-4 pr-2 shadow-nav">
       <span className="text-[17px] font-medium text-ink-strong">Horizon<span className="text-ink-faint">.</span></span>
       <div className="hidden gap-7 text-ink-muted md:flex">
         {links.map((l) => <a key={l.href} href={l.href} className="transition-colors hover:text-ink-strong">{l.label}</a>)}
@@ -95,11 +95,15 @@ export function ActionChip({ action }: { action: keyof typeof chip }) {
 }
 
 /** One live market row: question | price | model q | chip. */
-export function DecisionRow({ question, meta, price, q, action }: { question: string; meta: string; price: string; q: string; action: keyof typeof chip }) {
+export function DecisionRow({ question, meta, price, q, action, href, title }: { question: string; meta: string; price: string; q: string; action: keyof typeof chip; href?: string; title?: string }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3.5 border-t border-hairline-soft py-3 first:border-t-0">
+    <div title={title} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3.5 border-t border-hairline-soft py-3 first:border-t-0">
       <div className="min-w-0">
-        <div className="truncate font-medium">{question}</div>
+        {href ? (
+          <a href={href} target="_blank" rel="noreferrer" className="block truncate font-medium hover:underline hover:decoration-hairline hover:underline-offset-4">{question}</a>
+        ) : (
+          <div className="truncate font-medium">{question}</div>
+        )}
         <div className="text-[12px] text-ink-faint">{meta}</div>
       </div>
       <div className="text-right tabular-nums text-ink-muted">{price}</div>
