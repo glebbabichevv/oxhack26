@@ -1,0 +1,2927 @@
+{
+ "cutoff": "2026-05-18",
+ "by_domain": {
+  "all": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 2763,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0382,
+       "model": 0.0279,
+       "n": 1389
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.128,
+       "model": 0.1596,
+       "n": 492
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2619,
+       "model": 0.2669,
+       "n": 210
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3947,
+       "model": 0.3597,
+       "n": 114
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4229,
+       "model": 0.4701,
+       "n": 201
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6421,
+       "model": 0.5446,
+       "n": 95
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7162,
+       "model": 0.6475,
+       "n": 74
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6533,
+       "model": 0.7386,
+       "n": 75
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8448,
+       "model": 0.8277,
+       "n": 58
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.8909,
+       "model": 0.9383,
+       "n": 55
+      }
+     ],
+     "brier_market": 0.1051,
+     "brier_model": 0.105,
+     "logloss_market": 0.3351,
+     "logloss_model": 0.334
+    },
+    {
+     "horizon_hours": 168,
+     "n": 6528,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0321,
+       "model": 0.0365,
+       "n": 2306
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1773,
+       "model": 0.1753,
+       "n": 812
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.314,
+       "model": 0.2834,
+       "n": 691
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3567,
+       "model": 0.3761,
+       "n": 541
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5116,
+       "model": 0.4644,
+       "n": 995
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5738,
+       "model": 0.5473,
+       "n": 488
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6345,
+       "model": 0.6439,
+       "n": 290
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7697,
+       "model": 0.7324,
+       "n": 178
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.875,
+       "model": 0.826,
+       "n": 104
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9593,
+       "model": 0.9481,
+       "n": 123
+      }
+     ],
+     "brier_market": 0.145,
+     "brier_model": 0.1444,
+     "logloss_market": 0.4312,
+     "logloss_model": 0.4299
+    },
+    {
+     "horizon_hours": 72,
+     "n": 9328,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0372,
+       "model": 0.0364,
+       "n": 3498
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1875,
+       "model": 0.1811,
+       "n": 1056
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.304,
+       "model": 0.2902,
+       "n": 1000
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3674,
+       "model": 0.3819,
+       "n": 675
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4844,
+       "model": 0.4682,
+       "n": 927
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5551,
+       "model": 0.5519,
+       "n": 681
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6598,
+       "model": 0.6415,
+       "n": 435
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7529,
+       "model": 0.7327,
+       "n": 263
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8326,
+       "model": 0.824,
+       "n": 233
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9536,
+       "model": 0.9614,
+       "n": 560
+      }
+     ],
+     "brier_market": 0.1347,
+     "brier_model": 0.1342,
+     "logloss_market": 0.4112,
+     "logloss_model": 0.4098
+    },
+    {
+     "horizon_hours": 24,
+     "n": 9438,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0313,
+       "model": 0.0328,
+       "n": 3743
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2016,
+       "model": 0.1904,
+       "n": 972
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3275,
+       "model": 0.2991,
+       "n": 855
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.4,
+       "model": 0.389,
+       "n": 665
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4715,
+       "model": 0.4728,
+       "n": 895
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5681,
+       "model": 0.5558,
+       "n": 697
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.629,
+       "model": 0.6405,
+       "n": 434
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7309,
+       "model": 0.7297,
+       "n": 275
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8107,
+       "model": 0.8209,
+       "n": 206
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9799,
+       "model": 0.9731,
+       "n": 696
+      }
+     ],
+     "brier_market": 0.1285,
+     "brier_model": 0.1275,
+     "logloss_market": 0.386,
+     "logloss_model": 0.383
+    },
+    {
+     "horizon_hours": 12,
+     "n": 9394,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0283,
+       "model": 0.0309,
+       "n": 3775
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2025,
+       "model": 0.1962,
+       "n": 958
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3377,
+       "model": 0.3048,
+       "n": 838
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3894,
+       "model": 0.3922,
+       "n": 624
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4699,
+       "model": 0.4766,
+       "n": 881
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5798,
+       "model": 0.559,
+       "n": 633
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6186,
+       "model": 0.6414,
+       "n": 451
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7175,
+       "model": 0.7288,
+       "n": 269
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8235,
+       "model": 0.8186,
+       "n": 221
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9812,
+       "model": 0.9778,
+       "n": 744
+      }
+     ],
+     "brier_market": 0.1258,
+     "brier_model": 0.1246,
+     "logloss_market": 0.3763,
+     "logloss_model": 0.3729
+    }
+   ]
+  },
+  "crypto": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 186,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0703,
+       "model": 0.0278,
+       "n": 128
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.125,
+       "model": 0.1586,
+       "n": 16
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.25,
+       "model": 0.2727,
+       "n": 12
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2,
+       "model": 0.3642,
+       "n": 5
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.25,
+       "model": 0.4419,
+       "n": 8
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.1667,
+       "model": 0.5584,
+       "n": 6
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6667,
+       "model": 0.6426,
+       "n": 3
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6,
+       "model": 0.7321,
+       "n": 5
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.0,
+       "model": 0.8189,
+       "n": 1
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9328,
+       "n": 2
+      }
+     ],
+     "brier_market": 0.1065,
+     "brier_model": 0.1061,
+     "logloss_market": 0.3542,
+     "logloss_model": 0.3488
+    },
+    {
+     "horizon_hours": 168,
+     "n": 246,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0,
+       "model": 0.0126,
+       "n": 204
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.0,
+       "model": 0.1763,
+       "n": 13
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.0,
+       "model": 0.2611,
+       "n": 7
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2,
+       "model": 0.3757,
+       "n": 5
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.6667,
+       "model": 0.455,
+       "n": 6
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6667,
+       "model": 0.5763,
+       "n": 3
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5,
+       "model": 0.6559,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.0,
+       "model": 0.7302,
+       "n": 2
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.5,
+       "model": 0.8022,
+       "n": 2
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9538,
+       "n": 2
+      }
+     ],
+     "brier_market": 0.0257,
+     "brier_model": 0.0266,
+     "logloss_market": 0.087,
+     "logloss_model": 0.0912
+    },
+    {
+     "horizon_hours": 72,
+     "n": 1652,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0447,
+       "model": 0.0295,
+       "n": 694
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1167,
+       "model": 0.1814,
+       "n": 120
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2209,
+       "model": 0.2902,
+       "n": 86
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2778,
+       "model": 0.3828,
+       "n": 54
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4717,
+       "model": 0.4658,
+       "n": 53
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5088,
+       "model": 0.5509,
+       "n": 57
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.551,
+       "model": 0.6477,
+       "n": 49
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7167,
+       "model": 0.7346,
+       "n": 60
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8837,
+       "model": 0.8295,
+       "n": 86
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9517,
+       "model": 0.9635,
+       "n": 393
+      }
+     ],
+     "brier_market": 0.0891,
+     "brier_model": 0.0899,
+     "logloss_market": 0.3094,
+     "logloss_model": 0.3123
+    },
+    {
+     "horizon_hours": 24,
+     "n": 1689,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0256,
+       "model": 0.0189,
+       "n": 860
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.0959,
+       "model": 0.1946,
+       "n": 73
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3143,
+       "model": 0.2912,
+       "n": 35
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2333,
+       "model": 0.3926,
+       "n": 30
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5263,
+       "model": 0.4732,
+       "n": 38
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5769,
+       "model": 0.5521,
+       "n": 26
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6071,
+       "model": 0.6481,
+       "n": 28
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.641,
+       "model": 0.7336,
+       "n": 39
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.75,
+       "model": 0.8258,
+       "n": 56
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9901,
+       "model": 0.9792,
+       "n": 504
+      }
+     ],
+     "brier_market": 0.053,
+     "brier_model": 0.053,
+     "logloss_market": 0.1829,
+     "logloss_model": 0.1825
+    },
+    {
+     "horizon_hours": 12,
+     "n": 1785,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0197,
+       "model": 0.0155,
+       "n": 965
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2192,
+       "model": 0.2038,
+       "n": 73
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2,
+       "model": 0.2974,
+       "n": 40
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.4286,
+       "model": 0.3935,
+       "n": 21
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.32,
+       "model": 0.4788,
+       "n": 25
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5455,
+       "model": 0.5668,
+       "n": 22
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5161,
+       "model": 0.6558,
+       "n": 31
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6786,
+       "model": 0.734,
+       "n": 28
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.825,
+       "model": 0.8241,
+       "n": 40
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9889,
+       "model": 0.9853,
+       "n": 540
+      }
+     ],
+     "brier_market": 0.0451,
+     "brier_model": 0.045,
+     "logloss_market": 0.1535,
+     "logloss_model": 0.1523
+    }
+   ]
+  },
+  "culture": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 58,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0465,
+       "model": 0.0342,
+       "n": 43
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.0,
+       "model": 0.1695,
+       "n": 4
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.6667,
+       "model": 0.2473,
+       "n": 3
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.0,
+       "model": 0.3955,
+       "n": 1
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5,
+       "model": 0.4234,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7652,
+       "n": 1
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8273,
+       "n": 3
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.0,
+       "model": 0.9447,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.085,
+     "brier_model": 0.0849,
+     "logloss_market": 0.3027,
+     "logloss_model": 0.2997
+    },
+    {
+     "horizon_hours": 168,
+     "n": 689,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0421,
+       "model": 0.0372,
+       "n": 475
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1607,
+       "model": 0.1773,
+       "n": 168
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.0952,
+       "model": 0.2679,
+       "n": 21
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.8,
+       "model": 0.3901,
+       "n": 5
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 1.0,
+       "model": 0.4471,
+       "n": 1
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.0,
+       "model": 0.5338,
+       "n": 2
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5,
+       "model": 0.6493,
+       "n": 4
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6667,
+       "model": 0.7477,
+       "n": 3
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8355,
+       "n": 4
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9233,
+       "n": 6
+      }
+     ],
+     "brier_market": 0.0698,
+     "brier_model": 0.07,
+     "logloss_market": 0.2517,
+     "logloss_model": 0.2519
+    },
+    {
+     "horizon_hours": 72,
+     "n": 956,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0333,
+       "model": 0.0294,
+       "n": 571
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2018,
+       "model": 0.1887,
+       "n": 109
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2199,
+       "model": 0.2876,
+       "n": 141
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2927,
+       "model": 0.3736,
+       "n": 41
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.575,
+       "model": 0.482,
+       "n": 40
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5,
+       "model": 0.5532,
+       "n": 28
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6667,
+       "model": 0.6394,
+       "n": 6
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.75,
+       "model": 0.8118,
+       "n": 4
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9576,
+       "n": 16
+      }
+     ],
+     "brier_market": 0.0925,
+     "brier_model": 0.0929,
+     "logloss_market": 0.3036,
+     "logloss_model": 0.3037
+    },
+    {
+     "horizon_hours": 24,
+     "n": 858,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.013,
+       "model": 0.0184,
+       "n": 540
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1781,
+       "model": 0.1946,
+       "n": 73
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2708,
+       "model": 0.2956,
+       "n": 48
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.359,
+       "model": 0.3858,
+       "n": 39
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4571,
+       "model": 0.4698,
+       "n": 35
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5818,
+       "model": 0.5574,
+       "n": 55
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5667,
+       "model": 0.652,
+       "n": 30
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7692,
+       "model": 0.7214,
+       "n": 13
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8333,
+       "model": 0.8296,
+       "n": 6
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9809,
+       "n": 19
+      }
+     ],
+     "brier_market": 0.0801,
+     "brier_model": 0.0803,
+     "logloss_market": 0.2487,
+     "logloss_model": 0.2504
+    },
+    {
+     "horizon_hours": 12,
+     "n": 784,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0117,
+       "model": 0.0139,
+       "n": 514
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1026,
+       "model": 0.1956,
+       "n": 39
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2162,
+       "model": 0.3045,
+       "n": 37
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.375,
+       "model": 0.3816,
+       "n": 32
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.3478,
+       "model": 0.4734,
+       "n": 23
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6667,
+       "model": 0.5574,
+       "n": 27
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7059,
+       "model": 0.6509,
+       "n": 34
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7778,
+       "model": 0.7292,
+       "n": 27
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.7727,
+       "model": 0.8196,
+       "n": 22
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9572,
+       "n": 29
+      }
+     ],
+     "brier_market": 0.0653,
+     "brier_model": 0.066,
+     "logloss_market": 0.207,
+     "logloss_model": 0.2094
+    }
+   ]
+  },
+  "economics": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 374,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0404,
+       "model": 0.0232,
+       "n": 223
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1628,
+       "model": 0.1703,
+       "n": 43
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3043,
+       "model": 0.2686,
+       "n": 23
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2308,
+       "model": 0.3607,
+       "n": 13
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5,
+       "model": 0.4434,
+       "n": 12
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.4375,
+       "model": 0.5435,
+       "n": 16
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6,
+       "model": 0.6305,
+       "n": 5
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.5,
+       "model": 0.7543,
+       "n": 16
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8276,
+       "n": 12
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9091,
+       "model": 0.9519,
+       "n": 11
+      }
+     ],
+     "brier_market": 0.0979,
+     "brier_model": 0.0975,
+     "logloss_market": 0.3143,
+     "logloss_model": 0.3108
+    },
+    {
+     "horizon_hours": 168,
+     "n": 392,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0104,
+       "model": 0.014,
+       "n": 288
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1923,
+       "model": 0.194,
+       "n": 26
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3636,
+       "model": 0.2723,
+       "n": 11
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3,
+       "model": 0.3702,
+       "n": 10
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5714,
+       "model": 0.4688,
+       "n": 7
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5714,
+       "model": 0.5424,
+       "n": 7
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5556,
+       "model": 0.6328,
+       "n": 9
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6667,
+       "model": 0.7287,
+       "n": 9
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.837,
+       "n": 4
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.969,
+       "n": 21
+      }
+     ],
+     "brier_market": 0.0497,
+     "brier_model": 0.0496,
+     "logloss_market": 0.1589,
+     "logloss_model": 0.1588
+    },
+    {
+     "horizon_hours": 72,
+     "n": 420,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0059,
+       "model": 0.0101,
+       "n": 338
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2,
+       "model": 0.1852,
+       "n": 10
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2667,
+       "model": 0.2699,
+       "n": 15
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2222,
+       "model": 0.3755,
+       "n": 9
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.6,
+       "model": 0.4687,
+       "n": 5
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.75,
+       "model": 0.5538,
+       "n": 4
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.8333,
+       "model": 0.6462,
+       "n": 6
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6667,
+       "model": 0.7481,
+       "n": 6
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.6667,
+       "model": 0.8191,
+       "n": 3
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9818,
+       "n": 24
+      }
+     ],
+     "brier_market": 0.0325,
+     "brier_model": 0.0325,
+     "logloss_market": 0.1042,
+     "logloss_model": 0.1049
+    },
+    {
+     "horizon_hours": 24,
+     "n": 401,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0151,
+       "model": 0.0079,
+       "n": 332
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1667,
+       "model": 0.1839,
+       "n": 12
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.2222,
+       "model": 0.2918,
+       "n": 9
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2,
+       "model": 0.3808,
+       "n": 5
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.6,
+       "model": 0.4627,
+       "n": 5
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 1.0,
+       "model": 0.5517,
+       "n": 3
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6499,
+       "n": 3
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7169,
+       "n": 3
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8296,
+       "n": 5
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9914,
+       "n": 24
+      }
+     ],
+     "brier_market": 0.0275,
+     "brier_model": 0.0272,
+     "logloss_market": 0.0912,
+     "logloss_model": 0.0895
+    },
+    {
+     "horizon_hours": 12,
+     "n": 381,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0032,
+       "model": 0.0063,
+       "n": 317
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2308,
+       "model": 0.1766,
+       "n": 13
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.6,
+       "model": 0.2873,
+       "n": 5
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3333,
+       "model": 0.3893,
+       "n": 3
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5,
+       "model": 0.4772,
+       "n": 2
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 1.0,
+       "model": 0.5728,
+       "n": 1
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6295,
+       "n": 3
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7309,
+       "n": 2
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8346,
+       "n": 7
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9839,
+       "n": 28
+      }
+     ],
+     "brier_market": 0.0185,
+     "brier_model": 0.018,
+     "logloss_market": 0.0605,
+     "logloss_model": 0.0595
+    }
+   ]
+  },
+  "geopolitics": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 99,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0175,
+       "model": 0.0492,
+       "n": 57
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2143,
+       "model": 0.1619,
+       "n": 14
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.0,
+       "model": 0.2593,
+       "n": 6
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.5,
+       "model": 0.3651,
+       "n": 6
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4545,
+       "model": 0.4442,
+       "n": 11
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5,
+       "model": 0.534,
+       "n": 2
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6565,
+       "n": 1
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.6986,
+       "n": 1
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8239,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.0904,
+     "brier_model": 0.0909,
+     "logloss_market": 0.2935,
+     "logloss_model": 0.296
+    },
+    {
+     "horizon_hours": 168,
+     "n": 142,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0106,
+       "model": 0.0324,
+       "n": 94
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.3333,
+       "model": 0.1747,
+       "n": 18
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.6,
+       "model": 0.2734,
+       "n": 5
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.0,
+       "model": 0.3746,
+       "n": 3
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.6,
+       "model": 0.4793,
+       "n": 5
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5,
+       "model": 0.5715,
+       "n": 2
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6563,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7716,
+       "n": 1
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.6667,
+       "model": 0.839,
+       "n": 3
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9345,
+       "n": 9
+      }
+     ],
+     "brier_market": 0.0764,
+     "brier_model": 0.0749,
+     "logloss_market": 0.2388,
+     "logloss_model": 0.2349
+    },
+    {
+     "horizon_hours": 72,
+     "n": 184,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.031,
+       "model": 0.0282,
+       "n": 129
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1538,
+       "model": 0.1894,
+       "n": 13
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3333,
+       "model": 0.2713,
+       "n": 3
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.6667,
+       "model": 0.3893,
+       "n": 3
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.75,
+       "model": 0.4556,
+       "n": 4
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6667,
+       "model": 0.553,
+       "n": 3
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6607,
+       "n": 3
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7195,
+       "n": 5
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8571,
+       "model": 0.8392,
+       "n": 7
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9483,
+       "n": 14
+      }
+     ],
+     "brier_market": 0.0561,
+     "brier_model": 0.0556,
+     "logloss_market": 0.191,
+     "logloss_model": 0.1879
+    },
+    {
+     "horizon_hours": 24,
+     "n": 191,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0146,
+       "model": 0.0187,
+       "n": 137
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.3333,
+       "model": 0.1829,
+       "n": 9
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.5,
+       "model": 0.2759,
+       "n": 2
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 1.0,
+       "model": 0.4148,
+       "n": 1
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5,
+       "model": 0.4485,
+       "n": 2
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5,
+       "model": 0.5313,
+       "n": 2
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6627,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6667,
+       "model": 0.7267,
+       "n": 6
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8333,
+       "model": 0.8438,
+       "n": 6
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9583,
+       "model": 0.9614,
+       "n": 24
+      }
+     ],
+     "brier_market": 0.0501,
+     "brier_model": 0.0489,
+     "logloss_market": 0.1656,
+     "logloss_model": 0.1619
+    },
+    {
+     "horizon_hours": 12,
+     "n": 191,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0145,
+       "model": 0.0163,
+       "n": 138
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.0,
+       "model": 0.2004,
+       "n": 5
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 1.0,
+       "model": 0.2667,
+       "n": 2
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.0,
+       "model": 0.3924,
+       "n": 1
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 1.0,
+       "model": 0.4775,
+       "n": 1
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6667,
+       "model": 0.5687,
+       "n": 3
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5,
+       "model": 0.61,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.0,
+       "model": 0.7156,
+       "n": 2
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8333,
+       "model": 0.8119,
+       "n": 6
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9677,
+       "model": 0.9696,
+       "n": 31
+      }
+     ],
+     "brier_market": 0.0405,
+     "brier_model": 0.0396,
+     "logloss_market": 0.1336,
+     "logloss_model": 0.1282
+    }
+   ]
+  },
+  "other": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 2,
+     "bins": [
+      {
+       "price_mid": 0.25,
+       "observed": 0.0,
+       "model": 0.2457,
+       "n": 1
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 1.0,
+       "model": 0.3203,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.2686,
+     "brier_model": 0.2612,
+     "logloss_market": 0.7253,
+     "logloss_model": 0.7102
+    },
+    {
+     "horizon_hours": 168,
+     "n": 3,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0,
+       "model": 0.008,
+       "n": 1
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 1.0,
+       "model": 0.1913,
+       "n": 1
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.0,
+       "model": 0.4426,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.296,
+     "brier_model": 0.2833,
+     "logloss_market": 0.8001,
+     "logloss_model": 0.7488
+    },
+    {
+     "horizon_hours": 72,
+     "n": 3,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0,
+       "model": 0.0045,
+       "n": 1
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.0,
+       "model": 0.665,
+       "n": 1
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7408,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.1712,
+     "brier_model": 0.1698,
+     "logloss_market": 0.4678,
+     "logloss_model": 0.4661
+    },
+    {
+     "horizon_hours": 24,
+     "n": 3,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0,
+       "model": 0.004,
+       "n": 1
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 1.0,
+       "model": 0.3908,
+       "n": 1
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.0,
+       "model": 0.6905,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.305,
+     "brier_model": 0.2827,
+     "logloss_market": 0.7549,
+     "logloss_model": 0.7055
+    },
+    {
+     "horizon_hours": 12,
+     "n": 3,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0,
+       "model": 0.003,
+       "n": 1
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 1.0,
+       "model": 0.3482,
+       "n": 1
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.0,
+       "model": 0.7463,
+       "n": 1
+      }
+     ],
+     "brier_market": 0.361,
+     "brier_model": 0.3273,
+     "logloss_market": 0.8922,
+     "logloss_model": 0.8099
+    }
+   ]
+  },
+  "politics": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 595,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0363,
+       "model": 0.0248,
+       "n": 358
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1923,
+       "model": 0.1687,
+       "n": 52
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3056,
+       "model": 0.2634,
+       "n": 36
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3793,
+       "model": 0.358,
+       "n": 29
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.3333,
+       "model": 0.4511,
+       "n": 24
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.7368,
+       "model": 0.5566,
+       "n": 19
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7778,
+       "model": 0.649,
+       "n": 18
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7333,
+       "model": 0.7306,
+       "n": 15
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.75,
+       "model": 0.8323,
+       "n": 20
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9167,
+       "model": 0.9405,
+       "n": 24
+      }
+     ],
+     "brier_market": 0.0952,
+     "brier_model": 0.0947,
+     "logloss_market": 0.3086,
+     "logloss_model": 0.3056
+    },
+    {
+     "horizon_hours": 168,
+     "n": 748,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0171,
+       "model": 0.0206,
+       "n": 467
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1562,
+       "model": 0.174,
+       "n": 64
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3871,
+       "model": 0.2748,
+       "n": 31
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3929,
+       "model": 0.374,
+       "n": 28
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.3043,
+       "model": 0.4635,
+       "n": 23
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5556,
+       "model": 0.5506,
+       "n": 18
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7,
+       "model": 0.6478,
+       "n": 20
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.5909,
+       "model": 0.7313,
+       "n": 22
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8485,
+       "model": 0.8318,
+       "n": 33
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9286,
+       "model": 0.943,
+       "n": 42
+      }
+     ],
+     "brier_market": 0.0767,
+     "brier_model": 0.0763,
+     "logloss_market": 0.2412,
+     "logloss_model": 0.2406
+    },
+    {
+     "horizon_hours": 72,
+     "n": 809,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0131,
+       "model": 0.0181,
+       "n": 533
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.16,
+       "model": 0.1801,
+       "n": 50
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3556,
+       "model": 0.2885,
+       "n": 45
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.381,
+       "model": 0.389,
+       "n": 21
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4286,
+       "model": 0.4702,
+       "n": 14
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5,
+       "model": 0.549,
+       "n": 18
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7619,
+       "model": 0.6423,
+       "n": 21
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7619,
+       "model": 0.7294,
+       "n": 21
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.75,
+       "model": 0.8275,
+       "n": 28
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9483,
+       "model": 0.9538,
+       "n": 58
+      }
+     ],
+     "brier_market": 0.0649,
+     "brier_model": 0.0646,
+     "logloss_market": 0.2071,
+     "logloss_model": 0.2069
+    },
+    {
+     "horizon_hours": 24,
+     "n": 829,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0123,
+       "model": 0.0147,
+       "n": 569
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2667,
+       "model": 0.1951,
+       "n": 45
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3548,
+       "model": 0.2971,
+       "n": 31
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.4286,
+       "model": 0.3869,
+       "n": 21
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.3529,
+       "model": 0.4607,
+       "n": 17
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6667,
+       "model": 0.5594,
+       "n": 21
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6154,
+       "model": 0.642,
+       "n": 13
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6667,
+       "model": 0.735,
+       "n": 21
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.85,
+       "model": 0.821,
+       "n": 20
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9296,
+       "model": 0.9532,
+       "n": 71
+      }
+     ],
+     "brier_market": 0.0635,
+     "brier_model": 0.0626,
+     "logloss_market": 0.1998,
+     "logloss_model": 0.1971
+    },
+    {
+     "horizon_hours": 12,
+     "n": 826,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0105,
+       "model": 0.0122,
+       "n": 572
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2667,
+       "model": 0.2131,
+       "n": 45
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.4138,
+       "model": 0.299,
+       "n": 29
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.4783,
+       "model": 0.3947,
+       "n": 23
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.375,
+       "model": 0.4716,
+       "n": 16
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5833,
+       "model": 0.5588,
+       "n": 12
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7333,
+       "model": 0.6312,
+       "n": 15
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.65,
+       "model": 0.737,
+       "n": 20
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.7857,
+       "model": 0.8175,
+       "n": 28
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9545,
+       "model": 0.9605,
+       "n": 66
+      }
+     ],
+     "brier_market": 0.062,
+     "brier_model": 0.0606,
+     "logloss_market": 0.1921,
+     "logloss_model": 0.1881
+    }
+   ]
+  },
+  "science_tech": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 60,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0385,
+       "model": 0.0126,
+       "n": 26
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.375,
+       "model": 0.1743,
+       "n": 8
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3333,
+       "model": 0.2886,
+       "n": 3
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3333,
+       "model": 0.3729,
+       "n": 3
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.6667,
+       "model": 0.4673,
+       "n": 3
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 1.0,
+       "model": 0.5287,
+       "n": 3
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.0,
+       "model": 0.6402,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7268,
+       "n": 4
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.6,
+       "model": 0.8267,
+       "n": 5
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.6667,
+       "model": 0.9149,
+       "n": 3
+      }
+     ],
+     "brier_market": 0.156,
+     "brier_model": 0.1532,
+     "logloss_market": 0.4538,
+     "logloss_model": 0.4421
+    },
+    {
+     "horizon_hours": 168,
+     "n": 65,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0,
+       "model": 0.0196,
+       "n": 35
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2,
+       "model": 0.1596,
+       "n": 5
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 1.0,
+       "model": 0.3257,
+       "n": 1
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.25,
+       "model": 0.3676,
+       "n": 4
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.6,
+       "model": 0.5365,
+       "n": 5
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6728,
+       "n": 3
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.5,
+       "model": 0.75,
+       "n": 2
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9415,
+       "n": 10
+      }
+     ],
+     "brier_market": 0.0633,
+     "brier_model": 0.0635,
+     "logloss_market": 0.1982,
+     "logloss_model": 0.2018
+    },
+    {
+     "horizon_hours": 72,
+     "n": 85,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0364,
+       "model": 0.0197,
+       "n": 55
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.0,
+       "model": 0.2068,
+       "n": 2
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.5,
+       "model": 0.302,
+       "n": 4
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.5,
+       "model": 0.3735,
+       "n": 2
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 1.0,
+       "model": 0.4591,
+       "n": 4
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 1.0,
+       "model": 0.5603,
+       "n": 2
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.6738,
+       "n": 1
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.3333,
+       "model": 0.7231,
+       "n": 3
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 1.0,
+       "model": 0.8085,
+       "n": 3
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9792,
+       "n": 9
+      }
+     ],
+     "brier_market": 0.0781,
+     "brier_model": 0.0761,
+     "logloss_market": 0.2466,
+     "logloss_model": 0.2418
+    },
+    {
+     "horizon_hours": 24,
+     "n": 122,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0725,
+       "model": 0.0214,
+       "n": 69
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2727,
+       "model": 0.1877,
+       "n": 11
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.5455,
+       "model": 0.3163,
+       "n": 11
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.5455,
+       "model": 0.3796,
+       "n": 11
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.6667,
+       "model": 0.4642,
+       "n": 3
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.5,
+       "model": 0.639,
+       "n": 2
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 1.0,
+       "model": 0.7524,
+       "n": 1
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.6,
+       "model": 0.8033,
+       "n": 5
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 1.0,
+       "model": 0.9751,
+       "n": 9
+      }
+     ],
+     "brier_market": 0.1338,
+     "brier_model": 0.1269,
+     "logloss_market": 0.411,
+     "logloss_model": 0.3873
+    },
+    {
+     "horizon_hours": 12,
+     "n": 124,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0303,
+       "model": 0.0141,
+       "n": 66
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.5385,
+       "model": 0.1911,
+       "n": 13
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.6667,
+       "model": 0.2952,
+       "n": 12
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.2857,
+       "model": 0.3691,
+       "n": 7
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5,
+       "model": 0.4617,
+       "n": 4
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 1.0,
+       "model": 0.635,
+       "n": 1
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.5,
+       "model": 0.7038,
+       "n": 4
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.6,
+       "model": 0.835,
+       "n": 5
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9167,
+       "model": 0.9723,
+       "n": 12
+      }
+     ],
+     "brier_market": 0.148,
+     "brier_model": 0.139,
+     "logloss_market": 0.4664,
+     "logloss_model": 0.4363
+    }
+   ]
+  },
+  "sports": {
+   "horizons": [
+    {
+     "horizon_hours": 720,
+     "n": 1389,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0325,
+       "model": 0.0298,
+       "n": 554
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.107,
+       "model": 0.1565,
+       "n": 355
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.246,
+       "model": 0.2675,
+       "n": 126
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.4464,
+       "model": 0.3588,
+       "n": 56
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4326,
+       "model": 0.48,
+       "n": 141
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.7143,
+       "model": 0.5399,
+       "n": 49
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.7333,
+       "model": 0.6493,
+       "n": 45
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.6364,
+       "model": 0.7375,
+       "n": 33
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.9375,
+       "model": 0.8232,
+       "n": 16
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9286,
+       "model": 0.9292,
+       "n": 14
+      }
+     ],
+     "brier_market": 0.1106,
+     "brier_model": 0.1109,
+     "logloss_market": 0.3481,
+     "logloss_model": 0.3494
+    },
+    {
+     "horizon_hours": 168,
+     "n": 4243,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0566,
+       "model": 0.0628,
+       "n": 742
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1818,
+       "model": 0.174,
+       "n": 517
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3171,
+       "model": 0.2849,
+       "n": 615
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.356,
+       "model": 0.3763,
+       "n": 486
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.5147,
+       "model": 0.4644,
+       "n": 952
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5765,
+       "model": 0.5472,
+       "n": 451
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.628,
+       "model": 0.6434,
+       "n": 250
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.8201,
+       "model": 0.732,
+       "n": 139
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8966,
+       "model": 0.8214,
+       "n": 58
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9394,
+       "model": 0.951,
+       "n": 33
+      }
+     ],
+     "brier_market": 0.1884,
+     "brier_model": 0.1875,
+     "logloss_market": 0.5487,
+     "logloss_model": 0.5466
+    },
+    {
+     "horizon_hours": 72,
+     "n": 5219,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0552,
+       "model": 0.0615,
+       "n": 1177
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1995,
+       "model": 0.1798,
+       "n": 752
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3272,
+       "model": 0.2913,
+       "n": 706
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3817,
+       "model": 0.3823,
+       "n": 545
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4771,
+       "model": 0.4678,
+       "n": 807
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5606,
+       "model": 0.552,
+       "n": 569
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.6638,
+       "model": 0.6402,
+       "n": 348
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7665,
+       "model": 0.7325,
+       "n": 167
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8137,
+       "model": 0.8184,
+       "n": 102
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.913,
+       "model": 0.9439,
+       "n": 46
+      }
+     ],
+     "brier_market": 0.1796,
+     "brier_model": 0.1784,
+     "logloss_market": 0.5298,
+     "logloss_model": 0.5266
+    },
+    {
+     "horizon_hours": 24,
+     "n": 5345,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0559,
+       "model": 0.066,
+       "n": 1235
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.2083,
+       "model": 0.1896,
+       "n": 749
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3282,
+       "model": 0.2997,
+       "n": 719
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.4075,
+       "model": 0.3894,
+       "n": 557
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.4704,
+       "model": 0.4733,
+       "n": 795
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.561,
+       "model": 0.5558,
+       "n": 590
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.632,
+       "model": 0.6387,
+       "n": 356
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7539,
+       "model": 0.7293,
+       "n": 191
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8333,
+       "model": 0.8171,
+       "n": 108
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9333,
+       "model": 0.9292,
+       "n": 45
+      }
+     ],
+     "brier_market": 0.1804,
+     "brier_model": 0.1789,
+     "logloss_market": 0.5303,
+     "logloss_model": 0.526
+    },
+    {
+     "horizon_hours": 12,
+     "n": 5300,
+     "bins": [
+      {
+       "price_mid": 0.05,
+       "observed": 0.0591,
+       "model": 0.0686,
+       "n": 1202
+      },
+      {
+       "price_mid": 0.15,
+       "observed": 0.1974,
+       "model": 0.1949,
+       "n": 770
+      },
+      {
+       "price_mid": 0.25,
+       "observed": 0.3385,
+       "model": 0.3058,
+       "n": 712
+      },
+      {
+       "price_mid": 0.35,
+       "observed": 0.3873,
+       "model": 0.393,
+       "n": 537
+      },
+      {
+       "price_mid": 0.45,
+       "observed": 0.479,
+       "model": 0.4768,
+       "n": 810
+      },
+      {
+       "price_mid": 0.55,
+       "observed": 0.5757,
+       "model": 0.5587,
+       "n": 568
+      },
+      {
+       "price_mid": 0.65,
+       "observed": 0.611,
+       "model": 0.64,
+       "n": 365
+      },
+      {
+       "price_mid": 0.75,
+       "observed": 0.7351,
+       "model": 0.7277,
+       "n": 185
+      },
+      {
+       "price_mid": 0.85,
+       "observed": 0.8407,
+       "model": 0.8154,
+       "n": 113
+      },
+      {
+       "price_mid": 0.95,
+       "observed": 0.9211,
+       "model": 0.9209,
+       "n": 38
+      }
+     ],
+     "brier_market": 0.1819,
+     "brier_model": 0.1802,
+     "logloss_market": 0.5342,
+     "logloss_model": 0.5298
+    }
+   ]
+  }
+ }
+}
