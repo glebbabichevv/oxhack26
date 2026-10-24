@@ -19,6 +19,9 @@ from sklearn.linear_model import LogisticRegression
 
 HERE = Path(__file__).parent
 EPS = 0.01
+# Outside this price band a 1¢ cost swamps any edge and tiny prices make logit features unstable:
+# the model is neither trained nor traded there (q = market price, NO_TRADE).
+TRADABLE = (0.03, 0.97)
 KELLY_SCALE = 0.25
 KELLY_CAP = 0.05
 N_BOOT = 40
@@ -63,16 +66,18 @@ class Calibrator:
         cols = [lp, lh, lp * lh]
         for d in self.domains[1:]:  # first domain is the reference level
             ind = (dom == d).astype(float)
-            cols += [ind, ind * lp]
+            cols += [ind, ind * lp, ind * lp * lh]
         return np.column_stack(cols)
 
     def fit(self, df, rng):
+        df = df[in_band(df["price_yes"])].reset_index(drop=True)
         X = self.features(df["price_yes"], df["horizon_hours"], df["domain"])
         y = df["outcome"].to_numpy()
         self.main = LogisticRegression(C=1.0, max_iter=2000).fit(X, y)
-        # Bootstrap over markets (rows of one market are correlated) for an interval on q.
-        ids = df["market_id"].unique()
-        rows = df.groupby("market_id").indices
+        # Bootstrap over events (rows of one market, and markets of one event, are correlated).
+        cluster = "event_id" if "event_id" in df else "market_id"
+        ids = df[cluster].unique()
+        rows = df.groupby(cluster).indices
         self.boot = []
         for _ in range(N_BOOT):
             pick = np.concatenate([rows[i] for i in rng.choice(ids, len(ids))])
@@ -80,10 +85,18 @@ class Calibrator:
         return self
 
     def predict(self, price, hours, domain):
-        X = self.features(price, hours, domain)
+        p = np.asarray(price, float)
+        X = self.features(p, hours, domain)
         q = self.main.predict_proba(X)[:, 1]
         qs = np.stack([m.predict_proba(X)[:, 1] for m in self.boot])
-        return q, np.percentile(qs, 10, axis=0), np.percentile(qs, 90, axis=0)
+        lo, hi = np.percentile(qs, 10, axis=0), np.percentile(qs, 90, axis=0)
+        band = in_band(p)
+        return np.where(band, q, p), np.where(band, lo, p), np.where(band, hi, p)
+
+
+def in_band(price):
+    p = np.asarray(price, float)
+    return (p >= TRADABLE[0]) & (p <= TRADABLE[1])
 
 
 class MarketBaseline:
@@ -99,6 +112,7 @@ def select_model(train, rng):
     order = train.groupby("market_id")["resolved_at"].first().sort_values()
     val_ids = set(order.index[int(len(order) * 0.8):])
     fit, val = train[~train["market_id"].isin(val_ids)], train[train["market_id"].isin(val_ids)]
+    val = val[in_band(val["price_yes"])]
     y = val["outcome"].to_numpy()
     scores = {"market": log_loss(val["price_yes"], y)}
     candidates = {"simple": ["other"], "full": pick_domains(fit)}
@@ -165,11 +179,17 @@ def trade_cost(spread, fee, min_half_spread):
     return half + fee
 
 
-def decide(p, q, cost):
-    """Edge net of cost per $1 contract; quarter Kelly on the side with positive net edge."""
-    buy_yes = q - (p + cost)          # pay p + cost for a contract worth q
-    buy_no = (p - cost) - q           # pay (1 - p) + cost for a contract worth 1 - q
-    action = np.where(buy_yes > 0, "BUY_YES", np.where(buy_no > 0, "BUY_NO", "NO_TRADE"))
+def decide(p, q, cost, lo=None, hi=None):
+    """Net edge per $1 contract, required to survive the model's own uncertainty: buy YES only if the
+    low end of the q interval beats price + cost, buy NO only if the high end is below price - cost.
+    Quarter Kelly on the conservative q. Outside the tradable band: NO_TRADE."""
+    lo = q if lo is None else lo
+    hi = q if hi is None else hi
+    buy_yes = lo - (p + cost)         # pay p + cost for a contract worth at least lo
+    buy_no = (p - cost) - hi          # pay (1 - p) + cost for a contract worth at least 1 - hi
+    band = in_band(p)
+    action = np.where(band & (buy_yes > 0), "BUY_YES", np.where(band & (buy_no > 0), "BUY_NO", "NO_TRADE"))
+    q = np.where(action == "BUY_YES", lo, np.where(action == "BUY_NO", hi, q))
     py, pn = np.clip(p + cost, EPS, 1 - EPS), np.clip(1 - p + cost, EPS, 1 - EPS)
     kelly = np.where(action == "BUY_YES", (q - py) / (1 - py),
                      np.where(action == "BUY_NO", ((1 - q) - pn) / (1 - pn), 0.0))
@@ -184,10 +204,10 @@ def payoff(action, p, cost, y):
                     np.where(action == "BUY_NO", (1 - y) / np.clip(1 - p + cost, EPS, 1) - 1, 0.0))
 
 
-def run_policy(test, q, cost):
+def run_policy(test, q, cost, lo, hi):
     """One trade per market: the earliest horizon (furthest from resolution) where the net edge is positive."""
     t = test.assign(q=q, cost=cost)
-    t["action"], t["kelly"], t["edge"] = decide(t["price_yes"].to_numpy(), t["q"].to_numpy(), t["cost"].to_numpy())
+    t["action"], t["kelly"], t["edge"] = decide(t["price_yes"].to_numpy(), q, cost, lo, hi)
     t = t[t["action"] != "NO_TRADE"].sort_values("horizon_hours", ascending=False)
     trades = t.groupby("market_id").head(1).copy()
     trades["ret"] = payoff(trades["action"].to_numpy(), trades["price_yes"].to_numpy(),
@@ -196,12 +216,12 @@ def run_policy(test, q, cost):
 
 
 def equity_stats(trades, stake):
-    # stake: fraction of bankroll per trade (scalar or per-trade array). Sequential compounding in
-    # resolution order; overlapping positions are not netted (see assumptions).
-    growth = 1 + np.asarray(stake) * trades["ret"].to_numpy()
-    equity = np.cumprod(growth) if len(growth) else np.array([])
+    # stake: fraction of the starting bankroll per trade (scalar or per-trade array). Additive P&L in
+    # resolution order, no compounding: positions overlap in time, so compounding would overstate.
+    pnl = np.asarray(stake) * trades["ret"].to_numpy()
+    equity = 1 + np.cumsum(pnl) if len(pnl) else np.array([])
     peak = np.maximum.accumulate(equity) if len(equity) else equity
-    dd = float(np.max(1 - equity / peak)) if len(equity) else 0.0
+    dd = float(np.max(peak - equity)) if len(equity) else 0.0  # in units of starting bankroll
     step = max(1, len(equity) // 200)
     curve = [{"t": ts.strftime("%Y-%m-%d"), "value": round(float(v), 4)}
              for ts, v in list(zip(trades["resolved_at"], equity))[::step]]
@@ -211,7 +231,7 @@ def equity_stats(trades, stake):
             "equity": curve}
 
 
-def by_horizon(test, q, cost):
+def by_horizon(test, q, cost, lo, hi):
     """If you could only act at one fixed horizon: is the edge tradable there?"""
     rows = []
     for h in sorted(test["horizon_hours"].unique(), reverse=True):
@@ -219,7 +239,7 @@ def by_horizon(test, q, cost):
         p, y = test["price_yes"].to_numpy()[m], test["outcome"].to_numpy()[m]
         out = {"horizon_hours": int(h), "n_markets": int(m.sum())}
         for name, c in (("with_costs", cost[m]), ("without_costs", np.zeros(m.sum()))):
-            action, kelly, edge = decide(p, q[m], c)
+            action, kelly, edge = decide(p, q[m], c, lo[m], hi[m])
             traded = action != "NO_TRADE"
             r = payoff(action, p, c, y)[traded]
             out[name] = {"n_trades": int(traded.sum()),
@@ -230,7 +250,7 @@ def by_horizon(test, q, cost):
 
 
 def naive_favourite(test, cost, stake=0.02):
-    t = test.assign(cost=cost).sort_values("horizon_hours", ascending=False).groupby("market_id").head(1)
+    t = test.assign(cost=cost)[in_band(test["price_yes"])].sort_values("horizon_hours", ascending=False).groupby("market_id").head(1)
     action = np.where(t["price_yes"] >= 0.5, "BUY_YES", "BUY_NO")
     t = t.assign(ret=payoff(action, t["price_yes"].to_numpy(), t["cost"].to_numpy(), t["outcome"].to_numpy()))
     s = equity_stats(t.sort_values("resolved_at"), stake)
@@ -247,6 +267,13 @@ def failures(test, q, cal, trades):
             elif h["n"] < 30:
                 out.append({"kind": "thin_data", "domain": dom, "horizon_hours": h["horizon_hours"], "n": h["n"],
                             "text": f"{dom}, {h['horizon_hours']}h: only {h['n']} test markets — too few to trust"})
+    t = trades.assign(pnl=trades["kelly"] * trades["ret"])
+    for dom, g in t.groupby("domain"):
+        if len(g) >= 20 and g["pnl"].sum() < 0:
+            out.append({"kind": "losing_domain", "domain": dom, "horizon_hours": None, "n": int(len(g)),
+                        "text": f"{dom}: {len(g)} trades lost {abs(g['pnl'].sum()):.2f} bankroll units — the market is better calibrated here than the model assumes"})
+    rank = {"losing_domain": 0, "no_lift": 1, "thin_data": 2}
+    out.sort(key=lambda f: rank[f["kind"]])
     worst = trades.sort_values("ret").head(5)
     worst_trades = [{"question": r.question, "action": r.action, "price_yes": round(r.price_yes, 3), "q_yes": round(r.q, 3),
                      "outcome": int(r.outcome), "horizon_hours": int(r.horizon_hours), "ret": round(r.ret, 3)}
@@ -260,18 +287,21 @@ def horizon_label(h):
     return f"{h / 24:.0f}d" if h >= 48 else f"{h:.0f}h"
 
 
-def live_report(model, live, fee, min_half_spread, limit=40):
+def live_report(model, live, fee, min_half_spread, n_trades=30, n_no_trade=15):
     live = live[live["price_yes"].between(0, 1, inclusive="neither")].copy()
     live["domain"] = live["domain"].fillna("other").str.lower()
     p = live["price_yes"].to_numpy()
     q, lo, hi = model.predict(p, live["hours_to_resolution"], live["domain"])
     cost = trade_cost(pd.to_numeric(live["spread"], errors="coerce").to_numpy(), fee, min_half_spread)
-    action, kelly, edge = decide(p, q, cost)
+    action, kelly, edge = decide(p, q, cost, lo, hi)
     out = []
     for i, r in enumerate(live.itertuples()):
         gap = (q[i] - p[i]) * 100
-        if action[i] == "NO_TRADE":
-            reason = f"Model {q[i]:.0%} vs market {p[i]:.0%}: a {abs(gap):.1f}¢ gap does not cover {cost[i] * 100:.1f}¢ cost"
+        if not in_band(p[i]):
+            reason = f"Market at {p[i]:.1%}: too close to certain, a {cost[i] * 100:.0f}¢ cost exceeds any edge"
+        elif action[i] == "NO_TRADE":
+            reason = (f"Model {q[i]:.0%} (range {lo[i]:.0%}–{hi[i]:.0%}) vs market {p[i]:.0%}: "
+                      f"the {abs(gap):.1f}¢ gap is inside the model's uncertainty plus {cost[i] * 100:.0f}¢ cost")
         else:
             reason = f"{horizon_label(r.hours_to_resolution)} out, {r.domain}: model {q[i]:.0%} vs market {p[i]:.0%}, net edge {edge[i] * 100:.1f}¢"
         out.append({"market_id": str(r.market_id), "question": r.question, "domain": r.domain,
@@ -279,9 +309,12 @@ def live_report(model, live, fee, min_half_spread, limit=40):
                     "q_yes": round(float(q[i]), 4), "q_low": round(float(lo[i]), 4), "q_high": round(float(hi[i]), 4),
                     "edge": round(float(q[i] - p[i]), 4), "net_edge": round(float(edge[i]), 4), "cost": round(float(cost[i]), 4),
                     "action": str(action[i]), "kelly_fraction": round(float(kelly[i]), 4), "reason": reason,
-                    "url": getattr(r, "url", "") or ""})
-    out.sort(key=lambda x: (x["action"] == "NO_TRADE", -abs(x["net_edge"])))
-    return out[:limit]
+                    "url": getattr(r, "url", "") or "", "volume_usd": float(r.volume_usd)})
+    trades = sorted((x for x in out if x["action"] != "NO_TRADE"), key=lambda x: -x["net_edge"])[:n_trades]
+    # Biggest markets where the honest answer is "don't trade".
+    no_trade = sorted((x for x in out if x["action"] == "NO_TRADE" and in_band(x["price_yes"])),
+                      key=lambda x: -x["volume_usd"])[:n_no_trade]
+    return trades + no_trade
 
 
 # ---------- main ----------
@@ -302,15 +335,15 @@ def main():
     df = load_horizons(Path(a.data) / "horizons.csv")
     train, test, cutoff = split_by_time(df, a.cutoff)
     model, selection = select_model(train, rng)
-    q, _, _ = model.predict(test["price_yes"], test["horizon_hours"], test["domain"])
+    q, lo, hi = model.predict(test["price_yes"], test["horizon_hours"], test["domain"])
     y = test["outcome"].to_numpy()
     cost = trade_cost(test["spread"].to_numpy(dtype=float), a.fee, a.min_half_spread)
 
     cal = calibration_report(test, q)
     (out / "calibration.json").write_text(json.dumps({"cutoff": str(cutoff.date()), "by_domain": cal}, indent=1))
 
-    with_c = run_policy(test, q, cost)
-    without_c = run_policy(test, q, np.zeros(len(test)))
+    with_c = run_policy(test, q, cost, lo, hi)
+    without_c = run_policy(test, q, np.zeros(len(test)), lo, hi)
     fails, worst = failures(test, q, cal, with_c)
     backtest = {
         "cutoff": str(cutoff.date()),
@@ -322,13 +355,14 @@ def main():
         "naive_favourite": naive_favourite(test, cost),
         "overall": {"brier_market": round(brier(test["price_yes"], y), 4), "brier_model": round(brier(q, y), 4),
                     "logloss_market": round(log_loss(test["price_yes"], y), 4), "logloss_model": round(log_loss(q, y), 4)},
-        "by_horizon": by_horizon(test, q, cost),
+        "by_horizon": by_horizon(test, q, cost, lo, hi),
         "failures": fails, "worst_trades": worst,
         "assumptions": [
             "Split by time: train on markets resolved before the cutoff, test on markets resolved after it.",
             f"Cost per contract = max(spread / 2, {a.min_half_spread}) + fee {a.fee}; spread is the market's quoted spread, not the historical one.",
             "One trade per market, at the earliest horizon with positive net edge, held to resolution.",
-            f"Stake = {KELLY_SCALE} Kelly, capped at {KELLY_CAP:.0%} of bankroll; equity compounds in resolution order, overlapping positions not netted.",
+            f"Only prices in {TRADABLE[0]:.0%}–{TRADABLE[1]:.0%} are modelled or traded; edge must survive the model's 10–90% bootstrap interval (resampled by event).",
+            f"Stake = {KELLY_SCALE} Kelly on the conservative q, capped at {KELLY_CAP:.0%} of the starting bankroll; P&L is additive (no compounding) because positions overlap.",
             "Prices are Polymarket price history at each horizon; fills at that price are assumed.",
         ],
     }
