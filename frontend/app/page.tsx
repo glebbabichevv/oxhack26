@@ -1,13 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip } from "@/design/components/Page";
+import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
+import { HorizonCurve } from "@/components/HorizonCurve";
+import { Capsule, type CapsuleData } from "@/components/Capsule";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
   API_URL, cents, dateLong, getJSON, horizonLabel, horizonPhrase, horizonShort, int, pct, bankroll,
-  type Backtest, type Calibration, type LiveMarket,
+  type Backtest, type Calibration, type LiveMarket, type LivePayload,
 } from "@/lib/api";
+
+const LIVE_REFRESH_MS = 2 * 60 * 1000;
+
+function ago(iso: string | null | undefined, now: number) {
+  if (!iso) return "time unknown";
+  const min = Math.max(0, Math.round((now - Date.parse(iso)) / 60000));
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const h = Math.round(min / 60);
+  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
+}
+
+function Freshness({ meta, now }: { meta?: LivePayload; now: number }) {
+  if (!meta) return null;
+  const live = meta.source === "live";
+  return (
+    <p className="text-[12px] text-ink-faint tabular-nums" title={meta.error}>
+      {live ? "Live" : "Saved snapshot (live feed unavailable)"} · updated {ago(meta.updated_at, now)}
+      {meta.model_version ? ` · model ${meta.model_version}` : ""}
+    </p>
+  );
+}
 
 const HORIZONS = [720, 168, 72, 24, 12] as const;
 const DOMAINS = ["all", "sports", "politics", "crypto", "economics"] as const;
@@ -34,15 +58,36 @@ function Empty({ children }: { children: React.ReactNode }) {
 export default function Home() {
   const [backtest, setBacktest] = useState<Backtest>();
   const [live, setLive] = useState<LiveMarket[]>();
+  const [liveMeta, setLiveMeta] = useState<LivePayload>();
+  const [now, setNow] = useState(() => Date.now());
   const [calibration, setCalibration] = useState<Record<string, Calibration>>({});
   const [error, setError] = useState<string>();
   const [horizon, setHorizon] = useState<string>("24");
   const [domain, setDomain] = useState<Domain>("all");
   const [showAll, setShowAll] = useState(false);
+  const [capsule, setCapsule] = useState<CapsuleData>();
 
   useEffect(() => {
     getJSON<Backtest>("/api/backtest").then(setBacktest).catch((e) => setError(String(e)));
-    getJSON<LiveMarket[]>("/api/live").then(setLive).catch((e) => setError(String(e)));
+    getJSON<CapsuleData>("/api/capsule").then(setCapsule).catch(() => undefined); // optional section
+  }, []);
+
+  // Live decisions: fetched now, then every 2 min while the tab is visible (the API recomputes every ~5 min).
+  useEffect(() => {
+    const load = () =>
+      getJSON<LivePayload | LiveMarket[]>("/api/live")
+        .then((d) => {
+          const payload: LivePayload = Array.isArray(d) ? { updated_at: null, model_version: null, source: "fallback", markets: d } : d;
+          setLive(payload.markets);
+          setLiveMeta(payload);
+        })
+        .catch((e) => setError(String(e)));
+    load();
+    const poll = setInterval(() => { if (document.visibilityState === "visible") load(); }, LIVE_REFRESH_MS);
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    const onVisible = () => { if (document.visibilityState === "visible") { setNow(Date.now()); load(); } };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(poll); clearInterval(tick); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
   useEffect(() => {
@@ -60,7 +105,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
@@ -77,6 +122,9 @@ export default function Home() {
             ? `Trained on ${int(backtest.n_train_markets)} resolved Polymarket markets that ended before ${dateLong(backtest.cutoff)}; tested out of time on the ${int(backtest.n_test_markets)} that ended after.`
             : undefined}
         />
+        {calibration.all ? (
+          <HorizonCurve horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
+        ) : <div className="mt-14 h-[400px]" />}
         {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
 
         <div id="calibration">
@@ -119,13 +167,25 @@ export default function Home() {
         <div id="live">
           <Section
             title="Live decisions"
-            lead={live?.[0] ? `Open markets right now: price, model, and the call after a ${cents(live[0].cost)} cost. We only trade when the edge survives the model's own uncertainty.` : "Open markets right now: price, model, and the call after costs."}
+            lead={live?.[0] ? "Open markets right now: price, model, and the call after the spread and Polymarket's fee. We only trade when the edge survives the model's own uncertainty." : "Open markets right now: price, model, and the call after costs."}
+            controls={<Freshness meta={liveMeta} now={now} />}
           >
             <FramedCard>
               {live ? <LiveList live={live} showAll={showAll} onToggle={() => setShowAll((s) => !s)} /> : <Skeleton className="h-[320px]" />}
             </FramedCard>
           </Section>
         </div>
+
+        {capsule?.seals.length ? (
+          <div id="sealed">
+            <Section
+              title="Sealed before the outcomes"
+              lead="A backtest can always be tuned after the fact. So on Saturday afternoon we hashed Horizon's probabilities for every market that ends before judging, after writing down how they would be scored and what we expected. It opens on Sunday, whatever it says."
+            >
+              <Capsule data={capsule} />
+            </Section>
+          </div>
+        ) : null}
 
         <div id="backtest">{backtest ? <BacktestSection b={backtest} /> : null}</div>
         {backtest ? <Failures b={backtest} /> : null}
@@ -157,16 +217,18 @@ function whereItPays(b: Backtest) {
 function Kpis({ b }: { b: Backtest }) {
   const where = whereItPays(b);
   const brier = brierVerdict(b.overall.brier_model, b.overall.brier_market);
+  // Headline = the honest variant: fees on, and never more than one bankroll staked at once.
+  const head = b.capped_exposure ?? { ...b.with_costs, return_ci: b.return_ci };
   return (
     <KpiRow
       items={[
         {
-          label: "Return after costs",
-          value: bankroll(b.with_costs.return),
-          note: b.return_ci ? `of bankroll · 90% CI ${bankroll(b.return_ci[0])} to ${bankroll(b.return_ci[1])}` : `max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`,
-          tone: b.return_ci ? (b.return_ci[0] > 0 ? "up" : "down") : undefined,
+          label: "Return after fees and spread",
+          value: bankroll(head.return),
+          note: head.return_ci ? `of bankroll${b.capped_exposure ? ", ≤1 bankroll at risk" : ""} · 90% CI ${bankroll(head.return_ci[0])} to ${bankroll(head.return_ci[1])}` : `max drawdown ${Math.round(head.max_drawdown * 100)}% of bankroll`,
+          tone: head.return_ci ? (head.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
-        { label: "Brier, model / market", value: `${b.overall.brier_model.toFixed(4)} / ${b.overall.brier_market.toFixed(4)}`, note: `${brier.text} · lower is better`, tone: brier.tone },
+        { label: "Brier score, model", value: b.overall.brier_model.toFixed(4), note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
         { label: "Where it pays", value: where.value, note: where.note },
         { label: "Trades", value: int(b.n_trades), note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
       ]}
@@ -182,9 +244,10 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
   const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
   return (
     <>
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint">
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint md:grid-cols-[1fr_auto_120px_auto_auto]">
         <span>{trades.length} trades · {passes.length} passes</span>
         <span className="hidden text-right md:block">market</span>
+        <span className="hidden text-center md:block">price → model</span>
         <span className="hidden text-right md:block">model</span>
         <span className="hidden w-[68px] md:block" />
       </div>
@@ -198,6 +261,7 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
           action={m.action}
           href={m.url}
           title={m.reason}
+          track={<EdgeTrack price={m.price_yes} q={m.q_yes} lo={m.q_low} hi={m.q_high} action={m.action} />}
         />
       ))}
       {live.length > 9 ? (
@@ -213,10 +277,10 @@ function BacktestSection({ b }: { b: Backtest }) {
   const best = Math.max(...b.by_horizon.map((h) => Math.abs(h.with_costs.mean_return_per_trade)), 0.0001);
   return (
     <Section
-      title={`After costs, the test made ${bankroll(b.with_costs.return)} of its starting bankroll`}
-      lead={`Out-of-time test on ${int(b.n_test_markets)} markets, one trade per market at ¼ Kelly, P&L as a share of the starting bankroll, summed (no compounding). Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
+      title={`After fees and spread, the test made ${bankroll((b.capped_exposure ?? b.with_costs).return)} of its starting bankroll`}
+      lead={`Out-of-time test on ${int(b.n_test_markets)} markets, one trade per market at ¼ Kelly, P&L as a share of the starting bankroll, summed (no compounding)${b.capped_exposure ? `, with at most one bankroll staked at once. Uncapped, open stakes peaked at ${b.peak_open_stake?.toFixed(2)} bankrolls and it made ${bankroll(b.with_costs.return)}; per $1 staked, ${bankroll(b.return_per_dollar_staked ?? 0)}` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
     >
-      <FramedCard title="Equity, test period" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
+      <FramedCard title="Equity, test period, uncapped stakes" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
         <EquityChart withCosts={b.with_costs.equity} withoutCosts={b.without_costs.equity} />
         <div className="mt-5 border-t border-hairline-soft pt-3">
           <div className="mb-2 text-[13px] font-semibold text-ink-strong">When to act: mean return per trade after costs</div>

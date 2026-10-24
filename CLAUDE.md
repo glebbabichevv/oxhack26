@@ -42,19 +42,19 @@ Pipeline:
 4. **Live (Roles A + C):** currently open markets → q, edge, recommended action ("buy YES / buy NO / **no trade — costs eat the edge**"), Kelly size, and *when* the edge is expected to be largest.
 5. **Screen (Role B):** live decision cards + calibration chart by horizon + backtest equity curve with/without costs + an honest "where it fails" panel.
 
-Pitch line (**updated 15:20: 30d test bins are ~fair, so no 'every horizon'**): *"Published research says prediction-market prices are miscalibrated depending on time to resolution. On 34,677 Polymarket markets, tested out of time on 10,579, we find prices get overconfident as resolution nears — from a week out, 10–35¢ longshots win more often than priced (a day out, 15¢ contracts win 20%), favourites less; a month out the test set is about fair — and a model that corrects this beats the market and stays profitable after a 1¢ cost. The edge grows as resolution nears and is solid only in sports. Our first 3k-market sample said 'politics, a month out'; it did not replicate, and we show why."* Cite the paper; never claim we discovered the bias.
+Pitch line (**updated 18:15: Polymarket taker fees + exposure cap, after C's 17:52 audit**): *"Published research says prediction-market prices are miscalibrated depending on time to resolution. On 34,677 Polymarket markets, tested out of time on 10,579, we find prices get overconfident as resolution nears — from a week out, 10–35¢ longshots win more often than priced, favourites less; a month out the test set is about fair — and a model that corrects this beats the market and stays profitable after the spread and Polymarket's own taker fees, never staking more than one bankroll at once. The edge grows as resolution nears and is solid only in sports. Our first 3k-market sample said 'politics, a month out'; it did not replicate, and we show why."* Cite the paper; never claim we discovered the bias.
 
 Honesty rules (quant judges will probe these): binary markets only; drop cancelled / MKT resolutions; split by **time**, never random; include costs; report where there is **no** edge as clearly as where there is.
 
 Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabelled "Other" markets into domains (the paper notes ~42% are unclassified) — real use of the Gemini prize.
 
-### Results (Role A, 15:05 Sat) — team dataset (Ayaz, 34,677 markets), numbers in `backend/results/*.json`
+### Results (Role A, 18:15 Sat, fees on) — team dataset (Ayaz, 34,677 markets), numbers in `backend/results/*.json`, model `2026-10-24-390c312`
 Out-of-time test: train = events that ended before 2026-05-18 (23,838 markets); test = markets of the remaining events that resolved after the cutoff (10,579). Legs of one event never straddle the split; 260 legs that resolved before the cutoff were dropped from test (TheMarkz3's catch — they leaked time). Prices 3–97% only; 1¢ cost floor (no historical spreads).
 - **Calibration:** slope ≈ 0.85 pooled, same in train and test; on test the 30d bins are about fair (15¢ → 12.8%, n=492, within noise), 7d–12h clearly overconfident (15¢ → 18–20%) → prices are overconfident: 10–35¢ longshots underpriced, favourites overpriced; the 0–10¢ tail is about fair (24h: 3.0% YES, n=3,904).
 - **Model beats the market** out of time: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940 (simple 4-coefficient model, picked on validation).
-- **Money after costs:** 7,106 trades, +3.05 starting bankrolls (+304% on screen, additive, ¼ Kelly), 90% CI [1.84, 4.40] by event bootstrap; max drawdown 42%; hit rate 24%. Naive "always back the favourite": −7.41.
-- **When:** return per $1 trade grows toward resolution: 30d +4.6%, 7d +4.6%, 3d +7.3%, 1d +14.3%, 12h +16.3% (each horizon backtested on its own).
-- **Where:** sports +1.85 [1.11, 2.63] (4,475 trades), science/tech +0.42 [0.16, 0.72]; politics +0.35, geopolitics, economics, culture, crypto all have CIs touching zero. `by_domain[]` is in `/api/backtest`.
+- **Money after costs (fees on, 18:15):** cost = max(spread/2, 1¢) + Polymarket taker fee rate×p(1−p), each market's own Gamma `feeSchedule` (93.5% of test rows fee-enabled; sports mostly 0.03 (v2) or 0.05 (v3), crypto 0.07, politics 0.04 or 0, geopolitics 0). **Headline (honest): open stake capped at 1 bankroll → +1.90 starting bankrolls (+190%), 90% CI [0.94, 2.85], 6,013 trades, max drawdown 31%, +11.9% per $1 staked.** Uncapped: 6,102 trades, +2.05 [1.15, 3.06], open stakes peak at 1.20 bankrolls, +12.7% per $ staked, hit rate 21%. C's domain-rate rule (every market fee-enabled at its domain rate) gives +1.87 [0.96, 2.80], matching C's +1.91 [0.99, 2.91]; ours is a bit higher because many sports markets were on the 0.03 schedule. Pre-fee numbers (+3.05, peak open stake 1.86) are retired. Naive "always back the favourite": −9.08.
+- **When (fees on):** mean return per $1 trade by horizon: 30d −19.0% (313 trades, longshot noise), 7d +2.3%, 3d +5.0%, 1d +12.6%, 12h +14.8% (each horizon backtested on its own). The edge is a last-week effect; a month out it does not pay after fees. Robustness note (17:20, pre-fees): dropping markets whose event was already over leaves 12–24h about unchanged. Never "×100 per day".
+- **Where (fees on):** sports +1.32 [0.77, 1.92], science/tech +0.30 [0.09, 0.53]; politics +0.26, geopolitics +0.15, economics, culture, crypto all have CIs touching zero (crypto −0.04). `by_domain[]` is in `/api/backtest`.
 - **Earlier 3.1k sample (TheMarkz3)** said "politics, a month out": it did not replicate on 11× more data. Keep it in the pitch as the honesty moment.
 
 ## Stack (locked)
@@ -93,7 +93,7 @@ At the start of every session, ask the human which role they have (if not obviou
 - From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
 
 ## API contract (Role A maintains this) — v1
-**Demo screen: https://horizon-jet-mu.vercel.app** · API base URL: `https://horizon-api-five.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
+**Demo screen: https://horizon-two-gilt.vercel.app** · API base URL: `https://horizon-api-iota.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
 
 `GET /api/live` → open markets with a decision
 ```json
@@ -104,6 +104,8 @@ At the start of every session, ask the human which role they have (if not obviou
 `action` ∈ `BUY_YES | BUY_NO | NO_TRADE`.
 
 **v1.1 additions (13:44, additive — nothing removed):** `/api/live` items also have `net_edge` (edge after cost and model uncertainty), `volume_usd`; list = top 30 trades by net edge + 15 biggest in-band NO_TRADE. `/api/calibration` horizons have `n`, `logloss_market`, `logloss_model`; bins have `model` (mean model q). Domains: `all, sports, crypto, politics, economics, culture, science_tech, geopolitics, other` (lowercase). `/api/backtest` also has `return_ci` [lo, hi], `by_domain[]` ({domain, n_trades, return, hit_rate, return_ci}), `n_train_markets`, `n_test_markets`, `model_selection`, `overall`, `by_horizon[]`, `failures[]` (`kind` ∈ losing_domain | no_lift | thin_data, `text`), `worst_trades[]`, `assumptions[]`; `return` and `max_drawdown` are in units of the starting bankroll (additive P&L).
+
+**v1.3 (18:15, Role A) — `/api/live` is now an object, computed from live Gamma prices on request** (5 min per-instance cache, 60 s CDN): `{"updated_at": ISO, "model_version": "2026-10-24-390c312", "source": "live"|"fallback", "n_markets_scanned", "n_markets_priced", "n_trades", "markets": [ …the v1.1 items, plus "spread", "fee"… ]}`; `cost` now includes the taker fee. `"fallback"` = Gamma failed, saved snapshot `results/live.json` (+ `error`). `/api/backtest` and `/api/calibration` have `generated_at` + `model_version`; `/api/backtest` adds `peak_open_stake`, `return_per_dollar_staked`, `capped_exposure` {return, return_ci, n_trades, hit_rate, max_drawdown, equity, cap}. `/api/model` adds `version`, `metrics`, `fee_rates`. New models only via `backend/refit.py` (out-of-time Brier gate).
 
 `GET /api/calibration?domain=all` → reliability curves per horizon
 ```json
