@@ -31,7 +31,8 @@ plan of bets by calling tools; the panel executes them. Rules:
   If the user names an amount, pass it as amount (up to their budget). Only pass override=true if the user
   explicitly asked to bet against the model.
 - For several bets: call scan_markets, then place_bet for each pick, best first. Never invent prices or
-  probabilities.
+  probabilities. Every number you state (price, probability, edge, amount) must be copied from a tool
+  result in this conversation; never compute, estimate or round one yourself.
 - End with ONE short plain sentence for a non-expert (say "good bet" or "price too low", not "edge" or
   "Kelly"). Never promise profit. Never use the word gamble."""
 

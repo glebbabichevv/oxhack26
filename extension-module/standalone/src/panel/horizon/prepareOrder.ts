@@ -121,21 +121,49 @@ export async function prepareOrder(opts: {
     // Buy Yes/No button INSIDE that row and click it through the browser-use layer. Read-only DOM
     // look-up via scripting; the click itself is the content script's.
     const byDomRow = async () => {
-      let marked = false;
-      for (let pass = 0; pass < 2 && !marked; pass++) {
-        const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, args: [label, word, pass === 1], func: (lbl: string, w: string, expand: boolean) => {
-          const norm = (x: string) => x.replace(/[\u00a0\s]+/g, ' ').replace(/º/g, '°').replace(/\s*°\s*/g, '°').replace(/\s*-\s*/g, '-').trim().toLowerCase();
-          if (expand) {
-            for (const b of Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"]'))) {
-              if (/^(show|see|view) (all|more)\b|more outcomes|^more$/i.test(norm(b.textContent || ''))) b.click();
-            }
+      // Pass 0 looks; if the row is not on the page, press every "Show more"-style control, let the list
+      // re-render, and look again (up to 3 rounds: some pages reveal outcomes in steps).
+      const expand = async () => {
+        const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => {
+          const norm = (x: string) => x.replace(/[\u00a0\s]+/g, ' ').trim().toLowerCase();
+          const more = /^(show|see|view|load)( all| more)\b|^\+?\s*\d+\s+more\b|\bmore (outcomes|markets|options|results)\b|^more$|^show \d+ more/;
+          let n = 0;
+          const all = Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"], a, div, span'));
+          // Polymarket's outcome list says "Show 19 more"; prefer that, fall back to generic "show more" controls once.
+          const counted = all.filter((b) => /^show \d+ more$/.test(norm(b.innerText || '')));
+          for (const b of counted.length ? counted : all) {
+            const t = norm(b.innerText || b.textContent || '');
+            if (!t || t.length > 40 || !more.test(t)) continue;
+            if (!counted.length && b.closest('[data-hz-expanded]')) continue;
+            const clickable = b.tagName === 'BUTTON' || b.getAttribute('role') === 'button' || b.tagName === 'A' || getComputedStyle(b).cursor === 'pointer';
+            if (!clickable || b.closest('nav, header, footer')) continue;
+            // the deepest element with this text, so one control is clicked once
+            if (Array.from(b.children).some((c) => more.test(norm((c as HTMLElement).innerText || '')))) continue;
+            b.setAttribute('data-hz-expanded', '1');
+            b.scrollIntoView({ block: 'center' });
+            b.click();
+            n++;
           }
+          return n;
+        } }).catch(() => [{ result: 0 }]);
+        return Number(r?.result ?? 0);
+      };
+      let marked = false;
+      for (let pass = 0; pass < 4 && !marked; pass++) {
+        if (pass > 0) {
+          const n = await expand();
+          if (!n && pass > 1) break;
+          if (n) say('Showing all outcomes');
+          await new Promise((res) => setTimeout(res, 900)); // let the list re-render before looking again
+        }
+        const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, args: [label, word], func: (lbl: string, w: string) => {
+          const norm = (x: string) => x.replace(/[\u00a0\s]+/g, ' ').replace(/º/g, '°').replace(/\s*°\s*/g, '°').replace(/\s*-\s*/g, '-').trim().toLowerCase();
           const want = norm(lbl);
           const hits = Array.from(document.querySelectorAll<HTMLElement>('body *')).filter((e) => !['BUTTON', 'SCRIPT', 'STYLE'].includes(e.tagName) && norm(e.textContent || '') === want);
           // the deepest element carrying exactly this text
           const leaves = hits.filter((e) => !hits.some((o) => o !== e && e.contains(o)));
           document.querySelectorAll('[data-hz-target]').forEach((x) => x.removeAttribute('data-hz-target'));
-          const re = new RegExp(`^buy\\s+${w}\\b`, 'i');
+          const re = new RegExp(`^buy\\s*${w}(?![a-z])`, 'i');
           for (const el of leaves) {
             let row: HTMLElement | null = el;
             for (let i = 0; i < 10 && row; i++) {
@@ -149,7 +177,6 @@ export async function prepareOrder(opts: {
           return false;
         } }).catch(() => [{ result: false }]);
         marked = !!r?.result;
-        if (!marked && pass === 0) await new Promise((res) => setTimeout(res, 400));
       }
       if (!marked) return false;
       await new Promise((res) => setTimeout(res, 250));
