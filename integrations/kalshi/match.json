@@ -1,0 +1,137 @@
+{
+ "since": "2026-05-18",
+ "n_kalshi_listed": 213004,
+ "n_matches_with_24h_quote": 1032,
+ "n_text_matches": 1032,
+ "n_dropped_outcome_mismatch": 82,
+ "n_pairs": 950,
+ "n_events": 713,
+ "by_domain": {
+  "sports": 949,
+  "culture": 1
+ },
+ "abs_diff_cents": {
+  "mean": 2.59,
+  "median": 0.5,
+  "p90": 3.0
+ },
+ "share_diff_ge_2c": 0.1179,
+ "share_diff_ge_5c": 0.0916,
+ "share_diff_gt_kalshi_spread": 0.1674,
+ "median_kalshi_spread_cents": 1.0,
+ "brier_polymarket": 0.20719,
+ "brier_kalshi": 0.20733,
+ "brier_diff_poly_minus_kalshi": -0.00015,
+ "brier_diff_ci": [
+  -0.00417,
+  0.0035
+ ],
+ "closer_to_outcome_share": {
+  "polymarket": 0.2832,
+  "kalshi": 0.3389,
+  "tie": 0.3779
+ },
+ "examples": [
+  {
+   "question": "Will CA River Plate win on 2026-08-23?",
+   "text": "River Plate wins by more than 1.5 goals? River Plate wins by more than 1.5 goals",
+   "p_price": 0.58,
+   "k_price": 0.28500000000000003,
+   "p_outcome": 0
+  },
+  {
+   "question": "Will AFC Bournemouth win on 2026-10-22?",
+   "text": "Bournemouth wins Bournemouth",
+   "p_price": 0.485,
+   "k_price": 0.475,
+   "p_outcome": 1
+  },
+  {
+   "question": "Will AC Milan win on 2026-10-22?",
+   "text": "Milan wins Milan",
+   "p_price": 0.265,
+   "k_price": 0.265,
+   "p_outcome": 0
+  },
+  {
+   "question": "Will FC Midtjylland win on 2026-10-22?",
+   "text": "Midtjylland wins Midtjylland",
+   "p_price": 0.59,
+   "k_price": 0.595,
+   "p_outcome": 0
+  },
+  {
+   "question": "Will SC Braga win on 2026-10-22?",
+   "text": "Braga wins Braga",
+   "p_price": 0.505,
+   "k_price": 0.51,
+   "p_outcome": 1
+  },
+  {
+   "question": "Will Sporting CP win on 2026-10-09?",
+   "text": "Sporting CP wins Sporting CP",
+   "p_price": 0.445,
+   "k_price": 0.445,
+   "p_outcome": 1
+  },
+  {
+   "question": "Will Finland win on 2026-10-06?",
+   "text": "Finland wins Finland",
+   "p_price": 0.485,
+   "k_price": 0.48,
+   "p_outcome": 0
+  },
+  {
+   "question": "Will Spain win on 2026-10-06?",
+   "text": "Spain wins Spain",
+   "p_price": 0.775,
+   "k_price": 0.785,
+   "p_outcome": 1
+  }
+ ],
+ "clean": {
+  "filter": "dropped Kalshi spread/total/handicap contracts (text: 'more than', 'over', 'goals', decimals\u2026)",
+  "n_pairs": 931,
+  "n_events": 702,
+  "domain": {
+   "sports": 930,
+   "culture": 1
+  },
+  "abs_diff_cents": {
+   "mean": 2.39,
+   "median": 0.5,
+   "p90": 2.0
+  },
+  "share_diff_ge_2c": 0.1074,
+  "share_diff_ge_5c": 0.0806,
+  "brier_polymarket": 0.20829,
+  "brier_kalshi": 0.20937,
+  "brier_diff_poly_minus_kalshi": -0.00109,
+  "brier_diff_ci": [
+   -0.00534,
+   0.00285
+  ],
+  "calibration_slope_24h": {
+   "polymarket": 0.949,
+   "polymarket_ci": [
+    0.802,
+    1.124
+   ],
+   "kalshi": 0.874,
+   "kalshi_ci": [
+    0.742,
+    1.028
+   ],
+   "slope_diff_ci": [
+    0.01,
+    0.16
+   ]
+  },
+  "cheap_side_10_35c": {
+   "n": 397,
+   "won": 0.2746,
+   "poly_price": 0.2482,
+   "kalshi_price_same_side": 0.2568
+  }
+ }
+}
