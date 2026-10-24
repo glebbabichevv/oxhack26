@@ -25,7 +25,7 @@ CAPSULE = ROOT / "capsule"
 sys.path.insert(0, str(ROOT / "integrations"))
 
 from common import GAMMA, domain_of, get, is_yes_no, parse_ts, tag_slugs  # noqa: E402
-from model import (TRADABLE, brier, decide, in_band, load_horizons, select_model,  # noqa: E402
+from model import (TRADABLE, brier, coherent, decide, in_band, load_horizons, select_model,  # noqa: E402
                    split_by_time, trade_cost)
 
 DEADLINE = datetime(2026, 10, 25, 13, 0, tzinfo=timezone.utc)  # Sun 13:00 UTC, judging starts
@@ -71,6 +71,7 @@ def rows_from(markets, now):
         event = (m.get("events") or [{}])[0]
         rows.append(dict(
             gamma_id=str(m["id"]), market_id=m["conditionId"], event_slug=event.get("slug") or m.get("slug"),
+            neg_risk=bool(m.get("negRisk") or event.get("negRisk")),
             question=m["question"], domain=domain_of(tag_slugs(m)), end_date=end.isoformat(),
             hours_to_resolution=round((end - now).total_seconds() / 3600, 2),
             price_yes=round(price, 4), spread=round(ask - bid, 4), volume_usd=round(float(m.get("volumeNum") or 0), 2)))
@@ -107,9 +108,18 @@ def seal(dry_run=False):
     pol = ident["policy"] or {}
     p = df["price_yes"].to_numpy()
     q, lo, hi = model.predict(p, df["hours_to_resolution"], df["domain"])
+    if pol.get("coherent"):  # policy COH: q coherent across the legs of a complete-looking neg-risk book
+        q0 = q
+        q = coherent(df.assign(horizon_hours=df["end_date"]), q0)  # sealed legs of one event share the end date
+        lo, hi = np.clip(q - (q0 - lo), 0, 1), np.clip(q + (hi - q0), 0, 1)
     action, kelly, net = decide(p, q, trade_cost(df["spread"].to_numpy(), 0.0, MIN_HALF_SPREAD), lo, hi,
                                 hours=df["hours_to_resolution"].to_numpy(), min_edge=pol.get("min_edge", 0.0),
                                 enter_from=pol.get("enter_from_hours"))
+    if pol.get("one_per_event"):  # one bet per event: only the largest net edge keeps its BUY
+        buy = action != "NO_TRADE"
+        best = pd.Series(np.where(buy, net, -np.inf), index=df.index).groupby(df["event_slug"]).transform("max").to_numpy()
+        drop = buy & (net < best)
+        action, kelly = np.where(drop, "NO_TRADE", action), np.where(drop, 0.0, kelly)
     df = df.assign(q_yes=np.round(q, 6), q_low=np.round(lo, 6), q_high=np.round(hi, 6),
                    action=action, kelly_fraction=np.round(kelly, 4), net_edge=np.round(net, 4))
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
