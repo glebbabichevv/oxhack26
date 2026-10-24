@@ -32,8 +32,13 @@ MIN_DOMAIN_ROWS = 50
 # cost and model uncertainty is at least 1¢, and never earlier than 24 h before the scheduled end.
 MIN_EDGE = 0.01
 ENTER_FROM_H = 24
-POLICY = {"name": "V3", "min_edge": MIN_EDGE, "enter_from_hours": ENTER_FROM_H,
-          "note": "rule chosen on validation only; test results for all variants shown side by side (integrations/playoff)"}
+# Policy COH (integrations/ensemble, Ayaz's round 2): V3 + event coherence. In a neg-risk event whose legs at one
+# horizon look like a complete book (>= 2 legs, prices summing to BOOK_OK), q is normalised to sum to 1 across the
+# legs (band offsets kept); then at most one bet per event, the largest net edge.
+BOOK_OK = (0.95, 1.25)
+POLICY = {"name": "COH", "min_edge": MIN_EDGE, "enter_from_hours": ENTER_FROM_H, "coherent": True,
+          "book_ok": list(BOOK_OK), "one_per_event": True,
+          "note": "10 variants compared on validation; the test was opened once for V3 and COH side by side"}
 # Polymarket taker fee per share = rate * (p * (1 - p)) ** exponent (docs.polymarket.com/trading/fees; makers pay
 # nothing, we assume taker fills). Each market's own schedule (Gamma feeSchedule) wins; this domain table is the
 # fallback for a market with fees enabled but no schedule. Geopolitics markets are fee-free.
@@ -255,13 +260,41 @@ def payoff(action, p, cost, y):
                     np.where(action == "BUY_NO", (1 - y) / np.clip(1 - p + cost, EPS, 1) - 1, 0.0))
 
 
-def run_policy(test, q, cost, lo, hi, min_edge=MIN_EDGE, enter_from=ENTER_FROM_H):
-    """One trade per market: the earliest horizon (furthest from resolution) that the policy allows (V3 by default)."""
+def book_groups(d):
+    """Neg-risk events with >= 2 legs priced at the same horizon and a plausible complete book (integrations/ensemble)."""
+    g = d[d["neg_risk"].astype(str).str.lower().eq("true")].groupby(["event_slug", "horizon_hours"])["price_yes"]
+    book, n = g.transform("sum"), g.transform("size")
+    ok = (n >= 2) & book.between(*BOOK_OK)
+    return ok.reindex(d.index, fill_value=False), book.reindex(d.index)
+
+
+def coherent(d, q):
+    """Normalise q across the legs of a complete-looking neg-risk book so it sums to 1."""
+    q = np.asarray(q, float).copy()
+    if "neg_risk" not in d:
+        return np.clip(q, 1e-4, 1 - 1e-4)
+    ok, _ = book_groups(d)
+    s = pd.Series(q, index=d.index)[ok].groupby([d.loc[ok, "event_slug"], d.loc[ok, "horizon_hours"]]).transform("sum")
+    ix = d.index.get_indexer(s.index)
+    q[ix] = q[ix] / s.to_numpy()
+    return np.clip(q, 1e-4, 1 - 1e-4)
+
+
+def run_policy(test, q, cost, lo, hi, min_edge=MIN_EDGE, enter_from=ENTER_FROM_H,
+               coherence=POLICY.get("coherent", False), one_per_event=POLICY.get("one_per_event", False)):
+    """One trade per market: the earliest horizon (furthest from resolution) that the policy allows (COH by default:
+    coherent q in neg-risk books, then only the largest net edge per event)."""
+    if coherence:
+        q0 = np.asarray(q, float)
+        q = coherent(test, q0)
+        lo, hi = np.clip(q - (q0 - np.asarray(lo, float)), 0, 1), np.clip(q + (np.asarray(hi, float) - q0), 0, 1)
     t = test.assign(q=q, cost=cost)
     t["action"], t["kelly"], t["edge"] = decide(t["price_yes"].to_numpy(), q, cost, lo, hi,
                                                 t["horizon_hours"].to_numpy(), min_edge, enter_from)
     t = t[t["action"] != "NO_TRADE"].sort_values("horizon_hours", ascending=False)
     trades = t.groupby("market_id").head(1).copy()
+    if one_per_event:
+        trades = trades.sort_values("edge", ascending=False).groupby(event_key(trades)).head(1).copy()
     trades["ret"] = payoff(trades["action"].to_numpy(), trades["price_yes"].to_numpy(),
                            trades["cost"].to_numpy(), trades["outcome"].to_numpy())
     return trades.sort_values("resolved_at")
@@ -426,7 +459,18 @@ def policy_comparison():
     rows = [{"variant": v, "label": meta["label"], "picked_by_validation": v == r["selected_by_validation"]["winner"],
              "validation": {k: r["validation"][v]["ours"][k] for k in keep},
              "test": {k: r["test"][v]["ours"][k] for k in keep}} for v, meta in r["variants"].items()]
-    return {"note": "The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only.", "rows": rows}
+    ens = HERE.parent / "integrations" / "ensemble" / "results.json"
+    round2 = None
+    if ens.exists():
+        e = json.loads(ens.read_text())
+        val = e.get("validation_second_half") or {}
+        round2 = [{"variant": v, "picked_by_validation": v == e.get("winner"),
+                   "validation": {k: val.get(v, {}).get(k) for k in keep},
+                   "test": {k: e["test"][v].get(k) for k in keep} if v in e.get("test", {}) else None}
+                  for v in e.get("candidates", [])]
+    return {"note": "10 variants compared on validation; the test was opened once for V3 and COH side by side",
+            "round1_note": "Round 1 (V0-V3): rule chosen on validation (last 20% of training); test results for all four shown side by side; V1 and V2 were proposed by teammates who had seen test numbers.",
+            "rows": rows, "round2": round2}
 
 
 def naive_favourite(test, cost, stake=0.02):
@@ -541,7 +585,7 @@ def evaluate(df, cutoff=None, fee=0.0, min_half_spread=0.01, seed=0, model=None,
             (f"Cost per contract = max(spread / 2, {min_half_spread}) + Polymarket taker fee (rate x p(1-p), each market's own "
              f"fee schedule from Gamma; {'fees on' if use_fees else 'fees OFF'}) + flat fee {fee}; historical spreads are unknown, so the 1¢ floor applies."),
             "Stakes are fractions of the starting bankroll and positions overlap: peak_open_stake is the most staked at once; capped_exposure re-runs the same trades with total open stake capped at 1 bankroll.",
-            f"Policy V3: one trade per market, at the earliest horizon within {ENTER_FROM_H} h of the scheduled end whose net edge is at least {MIN_EDGE * 100:.0f}¢, held to resolution. Chosen on validation only among V0-V3 (integrations/playoff); test results for all four are reported side by side.",
+            f"Policy COH: one trade per market, at the earliest horizon within {ENTER_FROM_H} h of the scheduled end whose net edge is at least {MIN_EDGE * 100:.0f}¢; in neg-risk events whose legs at that horizon sum to {BOOK_OK[0]}-{BOOK_OK[1]}, q is normalised across the legs first; then only the largest net edge per event; held to resolution. 10 variants compared on validation (integrations/playoff, integrations/ensemble); the test was opened once for V3 and COH side by side.",
             "Embargo: a test trade counts only if it was entered on/after the cutoff.",
             f"Only prices in {TRADABLE[0]:.0%}–{TRADABLE[1]:.0%} are modelled or traded; edge must survive the model's 10–90% bootstrap interval (resampled by event).",
             f"Stake = {KELLY_SCALE} Kelly on the conservative q, capped at {KELLY_CAP:.0%} of the starting bankroll; P&L is additive (no compounding) because positions overlap.",
