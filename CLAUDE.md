@@ -30,37 +30,80 @@ HRT is a quant trading firm. A pretty chart is not enough. Our project must show
 4. A baseline to beat (naive / last-value / majority class), so the model's lift is visible.
 Never fake data or accuracy numbers; judges will ask how they were measured.
 
-## What we are building
-TBA — one paragraph, written after the idea is locked (after /office-hours).
+## What we are building — LOCKED (13:15 Sat)
+**Working name: "Horizon" — is the prediction-market time bias actually tradable?**
 
-## Stack (default, change only by team decision)
-- Frontend: Next.js + Tailwind + shadcn/ui, deployed on Vercel. Visual style: our minimalist white preset (see `DESIGN.md`).
-- Backend / agent: TBA (FastAPI or Next.js API routes). AI: Gemini API. Voice: ElevenLabs.
-- Secrets live in `.env.local` (never committed). Template: `.env.example`.
+Published research (arXiv 2602.19520, 292M trades on Kalshi + Polymarket) shows prediction-market prices are miscalibrated *as a function of time to resolution*: far from resolution, prices are compressed toward 50% (a 70¢ contract a month out resolves YES more like ~75% of the time), with domain differences (politics underconfident, etc.). That paper measures calibration. **We ask the trader's question: does that edge survive spreads, fees and an honest out-of-time test — and when (how far from resolution) is it worth acting?**
+
+Pipeline:
+1. **Data (Role C):** resolved *binary* Polymarket markets → market price at fixed horizons before resolution (30d, 7d, 3d, 1d, 12h) + outcome + domain + volume/liquidity. Manifold as backup / extra sample.
+2. **Model (Role A):** calibration map q = f(price, horizon, domain) — logistic regression on logit(price) with horizon × domain terms. **Baseline = the market price itself.** Metrics: Brier, log loss, reliability curves, on an **out-of-time** test set (train on markets resolved before a cutoff date, test after).
+3. **Decision (Role A):** edge = q − price; trade only if edge > costs (spread + fee); size by **fractional Kelly (¼)**. Backtest P&L on the test set **with and without costs**: return, hit rate, max drawdown. Compare to naive "always back the favourite".
+4. **Live (Roles A + C):** currently open markets → q, edge, recommended action ("buy YES / buy NO / **no trade — costs eat the edge**"), Kelly size, and *when* the edge is expected to be largest.
+5. **Screen (Role B):** live decision cards + calibration chart by horizon + backtest equity curve with/without costs + an honest "where it fails" panel.
+
+Pitch line: *"A 70¢ contract a month out is really ~75¢ — that's published. We asked whether you can actually make money on it, and when."* Cite the paper; never claim we discovered the bias.
+
+Honesty rules (quant judges will probe these): binary markets only; drop cancelled / MKT resolutions; split by **time**, never random; include costs; report where there is **no** edge as clearly as where there is.
+
+Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabelled "Other" markets into domains (the paper notes ~42% are unclassified) — real use of the Gemini prize.
+
+## Stack (locked)
+- **Backend + model: Python 3, FastAPI, pandas, scikit-learn** in `backend/`. Run: `uvicorn app:app --reload` from `backend/`.
+- **Data fetching: Python** in `integrations/` (requests). Outputs files into `data/` (see Data contract).
+- **Frontend: Next.js + Tailwind + shadcn/ui** in `frontend/`, deployed on Vercel; charts with Recharts. Style: `DESIGN.md`.
+- Secrets in `.env.local` (never committed). Template: `.env.example`.
+
+## Data contract (Role C produces, Role A consumes)
+`data/horizons.csv` — one row per (market, horizon):
+`market_id, question, domain, horizon_hours, price_yes, outcome (1/0), resolved_at (ISO), volume_usd, spread (if known)`
+`data/live.csv` — open markets now: `market_id, question, domain, price_yes, hours_to_resolution, volume_usd, spread, url`
+Keep committed CSVs under ~50 MB; raw API dumps go in `data/raw/` (gitignored).
+Polymarket gotcha: for closed markets `prices-history` with `interval=max` can come back empty or 12h-coarse — request explicit `startTs`/`endTs` in ~15-day chunks. 12h granularity is fine for our horizons.
 
 ## Roles — who you are
 At the start of every session, ask the human which role they have (if not obvious from the branch name), then act only as that role.
 
 ### Role A — Tech lead: agent & backend (Gleb)
 - Folder: `backend/` (or `app/api/` if we go full Next.js). Branches: `gleb/<feature>`.
-- Owns: architecture, agent logic on Gemini, API endpoints, wiring everything together, cut/keep decisions, merging PRs.
+- Owns: the calibration model, the decision rule (edge vs costs, ¼ Kelly), the out-of-time backtest, the FastAPI endpoints in the contract, cut/keep decisions, merging PRs.
 - Writes and keeps the **API contract** section below up to date — other roles build against it.
 - gstack flow: `/office-hours` → `/plan-ceo-review` (Reduction / Hold Scope) → `/plan-eng-review` at the start; `/investigate` when something breaks; `/review` on the whole repo before feature freeze.
 
 ### Role B — Frontend & demo screen
 - Folder: `frontend/`. Branches: `front/<feature>`. First command in a session: `/freeze frontend/`.
-- Owns: the one main demo screen, styled strictly by `DESIGN.md`, calling the API exactly as the contract says.
+- Owns: the one main screen — live decision cards, calibration chart by horizon, backtest equity curve with vs without costs, "where it fails" panel — styled by `DESIGN.md`, calling the API exactly as the contract says.
 - gstack flow: `/design-shotgun` → pick one → `/design-html`; `/design-review` in the evening. Impeccable applies to every screen automatically.
 - Until the backend exists, use the contract's example responses — but replace them with real calls before the 16:30 gate.
 
 ### Role C — Integrations, demo data, then pitch
 - Folder: `integrations/`. Branches: `int/<feature>`. First command in a session: `/freeze integrations/`.
-- Owns: thin wrappers around sponsor APIs (ElevenLabs voice, Presage, others as needed), real demo data, and running the demo as a user.
+- Owns: the data pipeline — Polymarket (and Manifold backup) fetchers that produce `data/horizons.csv` and `data/live.csv` per the Data contract, domain labels, data sanity checks; then running the demo as a user.
 - gstack flow: `/qa` at every gate, walking the exact demo script.
 - From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
 
-## API contract (Role A maintains this)
-TBA after `/plan-eng-review` — list each endpoint: method, path, request body, example response.
+## API contract (Role A maintains this) — v1
+Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. Role B builds against the example shapes now.
+
+`GET /api/live` → open markets with a decision
+```json
+[{"market_id":"0xabc","question":"Will X happen by Dec 31?","domain":"politics","price_yes":0.70,
+  "hours_to_resolution":720,"q_yes":0.75,"q_low":0.71,"q_high":0.79,"edge":0.05,"cost":0.02,
+  "action":"BUY_YES","kelly_fraction":0.03,"reason":"Long horizon: politics prices compressed toward 50%","url":"https://polymarket.com/..."}]
+```
+`action` ∈ `BUY_YES | BUY_NO | NO_TRADE`.
+
+`GET /api/calibration?domain=all` → reliability curves per horizon
+```json
+{"horizons":[{"horizon_hours":720,"bins":[{"price_mid":0.7,"observed":0.75,"n":312}],"brier_market":0.19,"brier_model":0.18}]}
+```
+
+`GET /api/backtest` → out-of-time results
+```json
+{"cutoff":"2025-06-01","n_trades":412,"with_costs":{"return":0.08,"hit_rate":0.56,"max_drawdown":0.11,
+  "equity":[{"t":"2025-06-03","value":1.0}]},"without_costs":{"return":0.21,"hit_rate":0.56,"max_drawdown":0.09,"equity":[]},
+ "naive_favourite":{"return":-0.02}}
+```
 
 ## Order of work (real schedule)
 1. **12:00–13:00 — idea.** All together, one laptop: `/office-hours` → `/plan-ceo-review` → `/plan-eng-review` (or `/autoplan`). Write "What we are building" + API contract here. Everyone `git pull`. Eat lunch while building, not instead of planning.
