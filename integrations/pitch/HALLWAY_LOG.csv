@@ -1,0 +1,6 @@
+participant,time,polymarket_before,T1_first5s,T1_quote,T2_decision,T2_quote,T3_range,T3_quote,T4_best_window,T4_quote,T5_no_trade,T5_quote,T6_trust,T6_quote,T7_prepare_order,T7_quote,one_word,most_confusing,open_tomorrow,would_change,notes
+P1,,yes/no,pass/partial/fail,,pass/partial/fail,,pass/partial/fail,,pass/partial/fail,,pass/partial/fail,,pass/partial/fail,,pass/partial/fail,,,,yes/no,,
+P2,,,,,,,,,,,,,,,,,,,,,
+P3,,,,,,,,,,,,,,,,,,,,,
+P4,,,,,,,,,,,,,,,,,,,,,
+P5,,,,,,,,,,,,,,,,,,,,,

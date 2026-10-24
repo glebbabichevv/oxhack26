@@ -105,7 +105,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Invest", href: "/invest" }, { label: "Live", href: "#live" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Invest", href: "/invest" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
@@ -199,6 +199,9 @@ export default function Home() {
   );
 }
 
+// +0.127 per $1 staked → "+12.7¢"
+const perDollar = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)}¢`;
+
 const MIN_DOMAIN_TRADES = 100; // below this a domain's CI is too wide to headline
 
 const domainName = (d: string) => (d[0].toUpperCase() + d.slice(1)).replace("_", " & ");
@@ -222,15 +225,20 @@ function Kpis({ b }: { b: Backtest }) {
   return (
     <KpiRow
       items={[
+        ...(b.return_per_dollar_staked != null && b.return_per_dollar_ci ? [{
+          label: "Per $1 staked, after fees",
+          value: perDollar(b.return_per_dollar_staked),
+          note: `90% CI ${perDollar(b.return_per_dollar_ci[0])} to ${perDollar(b.return_per_dollar_ci[1])} · ${int(b.n_trades)} trades, ${pct(b.with_costs.hit_rate)} hit rate`,
+          tone: (b.return_per_dollar_ci[0] > 0 ? "up" : "down") as "up" | "down",
+        }] : []),
         {
-          label: "Return after fees and spread",
+          label: "Bankroll, ≤1 at risk",
           value: bankroll(head.return),
-          note: head.return_ci ? `of bankroll${b.capped_exposure ? ", ≤1 bankroll at risk" : ""} · 90% CI ${bankroll(head.return_ci[0])} to ${bankroll(head.return_ci[1])}` : `max drawdown ${Math.round(head.max_drawdown * 100)}% of bankroll`,
+          note: head.return_ci ? `90% CI ${bankroll(head.return_ci[0])} to ${bankroll(head.return_ci[1])} · concentrated: mostly sports` : `max drawdown ${Math.round(head.max_drawdown * 100)}% of bankroll`,
           tone: head.return_ci ? (head.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
         { label: "Brier score, model", value: b.overall.brier_model.toFixed(4), note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
         { label: "Where it pays", value: where.value, note: where.note },
-        { label: "Trades", value: int(b.n_trades), note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
       ]}
     />
   );

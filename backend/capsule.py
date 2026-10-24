@@ -147,19 +147,28 @@ def score(df, rng, n_boot=2000):
 def open_seal(seal_path):
     sealed = json.loads(Path(seal_path).read_text())
     df = pd.DataFrame(sealed["markets"])
-    res = {}
+    res, closed_at = {}, {}
     for i in range(0, len(df), 50):
         ids = df["gamma_id"].iloc[i:i + 50].tolist()
         for m in get(f"{GAMMA}/markets", [("id", x) for x in ids] + [("limit", 50)]):
             res[str(m["id"])] = resolution(m)
+            ct = parse_ts(m.get("closedTime"))
+            closed_at[str(m["id"])] = ct.isoformat() if ct else None
     df["y"] = df["gamma_id"].map(res)
-    scored = df[df["y"].notna()].astype({"y": int})
+    df["resolved_at"] = df["gamma_id"].map(closed_at)
+    # Amendment 1: only markets that resolved after the seal's hash was posted publicly count.
+    posts = json.loads((CAPSULE / "posts.json").read_text()) if (CAPSULE / "posts.json").exists() else {}
+    posted_at = posts.get(Path(seal_path).name)
+    before_post = df["resolved_at"].notna() & (df["resolved_at"] <= posted_at) if posted_at else pd.Series(False, index=df.index)
+    scored = df[df["y"].notna() & ~before_post].astype({"y": int})
     rng = np.random.default_rng(0)
     now = datetime.now(timezone.utc).replace(microsecond=0)
     out = {
         "seal": Path(seal_path).name, "seal_sha256": sha256(seal_path), "sealed_at": sealed["sealed_at"],
         "opened_at": now.isoformat(), "n_sealed": int(len(df)), "n_scored": int(len(scored)),
-        "n_excluded_unresolved": int(len(df) - len(scored)),
+        "posted_at": posted_at,
+        "n_excluded_resolved_before_post": int(before_post.sum()),
+        "n_excluded_unresolved": int(df["y"].isna().sum()),
     }
     for tier, part in (("primary", scored[scored["volume_usd"] >= PRIMARY_VOLUME]), ("secondary", scored)):
         out[tier] = {

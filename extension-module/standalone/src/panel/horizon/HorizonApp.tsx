@@ -1,25 +1,28 @@
 /**
- * Horizon: the whole side panel is an analysis instrument for the active Polymarket event:
- * verdict, every yes/no leg on a scale, the time curve (Horizon's q if the price holds), the best
- * window, tonight's edges elsewhere, and the backtest + sealed-capsule credentials. "Prepare order"
- * drives the page through the browser-use layer (select leg + outcome, type the stake) and stops
- * before confirm.
+ * Horizon side panel. First run: a one-screen welcome. Then two tabs: Bet (this market's best
+ * outcome, or tonight's best bet elsewhere: one line, one button) and My decisions (journal). Numbers, the
+ * time curve and the backtest live behind "Details". The agent composer sits at the bottom; its
+ * run (thinking orb, live steps, one confirmation) takes over the content area.
  * All maths is horizon.ts (parity-checked against the Python model); prices come from Gamma.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { decide, decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
+import { decide, decideEvent, type Decision, type Leg, type Model } from './horizon';
 import { When, cents, loadModel, pct, slugFrom, when } from './HorizonCard';
-import type { Account } from './demo';
-import { AccountBar, Agent, BetBox, MyBets, PlainCall, Settings, Tabs, Tonight, useAccount, useMarking, type TabName } from './Play';
+import type { Account } from './ledger';
+import { pageDrive } from './agent';
+import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
+import { flush } from './journal';
+import { stylePage } from './pageStyle';
+import { Md } from './argos/Message';
 import './horizon-mode.css';
 
-const API = 'https://horizon-api-iota.vercel.app';
-const SITE_URL = 'https://horizon-two-gilt.vercel.app';
+const API = 'https://oxhack26-production.up.railway.app';
+const SITE_URL = 'https://web-production-c7376.up.railway.app';
 const UP = '#15803d';
 const DOWN = '#e11d48';
 const MARKET = '#a1a1aa';
-const INK = '#111113';
-const BANKROLL_KEY = 'horizonBankroll';
+const INK = '#0f172a';
+const WELCOME_KEY = 'horizonWelcomed';
 
 // ---------- the active tab ----------
 
@@ -45,28 +48,50 @@ function useActiveTab() {
 export function HorizonApp() {
   const account = useAccount();
   const tab = useActiveTab();
-  const onEvent = !!slugFrom(tab.url);
-  const [view, setView] = useState<TabName>(onEvent ? 'market' : 'tonight');
-  const [settings, setSettings] = useState(false);
+  const slug = slugFrom(tab.url);
+  const [view, setView] = useState<TabName>('bet');
+  const [screen, setScreen] = useState<'main' | 'settings' | 'details'>('main');
+  const [welcome, setWelcome] = useState<boolean>();
   const [model, setModel] = useState<Model>();
-  useEffect(() => { void loadModel().then(setModel); }, []);
-  // Follow the page: landing on a Polymarket event opens "This market".
+  const agent = useAgent(model, tab.id);
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => { void loadModel().then(setModel); void flush(); }, []);
+  useEffect(() => { void chrome.storage.local.get(WELCOME_KEY).then((r) => setWelcome(!r[WELCOME_KEY])).catch(() => setWelcome(false)); }, []);
+  const dismiss = () => { setWelcome(false); setView('bet'); void chrome.storage.local.set({ [WELCOME_KEY]: true }); };
+  // Landing on a Polymarket market shows its bet (unless Horizon itself is steering the tab).
   const lastSlug = useRef<string | undefined>(undefined);
-  useEffect(() => { const s = slugFrom(tab.url); if (s && s !== lastSlug.current) setView('market'); lastSlug.current = s; }, [tab.url]);
+  useEffect(() => { if (slug && slug !== lastSlug.current && !pageDrive.active) { setView('bet'); setScreen('main'); } lastSlug.current = slug; }, [slug]);
+  useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [view, screen]);
   useMarking(model, account);
-  const openCount = account?.positions.filter((p) => p.status === 'open').length ?? 0;
+  // Restyle the page overlay whenever the panel's tab finishes loading a Polymarket page.
+  useEffect(() => {
+    const l = (id: number, info: chrome.tabs.TabChangeInfo, t: chrome.tabs.Tab) => {
+      if (id === tab.id && info.status === 'complete' && /polymarket\.com/.test(t.url ?? '')) void stylePage(id);
+    };
+    chrome.tabs.onUpdated.addListener(l);
+    if (tab.id !== undefined && /polymarket\.com/.test(tab.url ?? '')) void stylePage(tab.id);
+    return () => chrome.tabs.onUpdated.removeListener(l);
+  }, [tab.id, tab.url]);
+  const go = (t: TabName) => { agent.clear(); setScreen('main'); setView(t); };
+  const showRun = !!agent.run && screen === 'main' && !welcome;
   return (
-    <div className="hz-mode flex h-full flex-col bg-white">
-      {/* Chrome's side-panel title bar already shows the Horizon name and icon; no second brand row. */}
-      <AccountBar a={account} onSettings={() => setSettings((x) => !x)} />
-      {settings ? null : <Tabs tab={view} setTab={setView} openCount={openCount} />}
-      <div className="relative min-h-0 flex-1 overflow-y-auto">
-        {settings ? <Settings a={account} onClose={() => setSettings(false)} />
-          : view === 'tonight' ? (model ? <Tonight model={model} a={account} tabId={tab.id} /> : null)
-          : view === 'bets' ? (model ? <MyBets model={model} a={account} /> : null)
-          : <HorizonAnalysis account={account} tab={tab} />}
+    <div className="hz-mode hz-ambient flex h-full flex-col">
+      {welcome ? null : <Header onSettings={() => { agent.clear(); setScreen((x) => (x === 'settings' ? 'main' : 'settings')); }} />}
+      {welcome || screen !== 'main' ? null : <Tabs tab={showRun ? undefined : view} setTab={go} />}
+      <div ref={scroller} className="relative min-h-0 flex-1 overflow-y-auto">
+        {welcome ? <Welcome onGo={dismiss} />
+          : screen === 'settings' ? <Settings a={account} onClose={() => setScreen('main')} />
+          : screen === 'details' ? <Details model={model} slug={slug} a={account} onBack={() => setScreen('main')} />
+          : !model ? null
+          : showRun ? <AgentRun model={model} tabId={tab.id} run={agent.run!} onBack={agent.clear} />
+          : view === 'decisions' ? <MyDecisions model={model} />
+          : slug ? <MarketBet model={model} a={account} slug={slug} tabId={tab.id} onDetails={() => setScreen('details')} />
+          : <Tonight model={model} a={account} tabId={tab.id} url={tab.url} title={tab.title} onDetails={() => setScreen('details')} />}
       </div>
-      <Agent model={model} tabId={tab.id} onActivity={() => { setSettings(false); setView('bets'); }} />
+      {welcome === false ? (
+        <Composer busy={!!agent.run?.busy} ready={!!model} showChips={!agent.run}
+          onSend={(t) => { setScreen('main'); void agent.go(t); }} onStop={agent.stop} />
+      ) : null}
     </div>
   );
 }
@@ -74,17 +99,6 @@ export function HorizonApp() {
 // ---------- helpers ----------
 
 const cleanLabel = (l: string) => l.replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
-const signedCents = (x: number) => `${x >= 0 ? '+' : '−'}${(Math.abs(x) * 100).toFixed(1)}¢`;
-
-function verdict(legs: Leg[], band: [number, number]) {
-  const top = legs[0]?.decision;
-  if (!top) return 'Nothing to price on this page.';
-  const name = cleanLabel(legs[0].label);
-  if (top.action === 'BUY_YES') return `Good bet: ${name} YES. Market says ${pct(top.price)}, Horizon thinks ${pct(top.q)}.`;
-  if (top.action === 'BUY_NO') return `Good bet: ${name} NO. Market says ${pct(top.price)}, Horizon thinks ${pct(top.q)}.`;
-  if (legs.every((l) => l.decision!.price < band[0] || l.decision!.price > band[1])) return 'Too close to certain to trade.';
-  return 'No advantage here after costs. Horizon would skip this one.';
-}
 
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -98,117 +112,59 @@ function useWidth<T extends HTMLElement>() {
   return [ref, w] as const;
 }
 
-// ---------- the analysis view ----------
+// ---------- Details: the full analysis, one tap away ----------
 
-type EventState = { title: string; legs: Leg[]; tags: string[]; model: Model } | 'loading' | 'error' | 'notfound';
+/** The model and the decision rule, in the same notation as backend/model.py. */
+const MATH = String.raw`Horizon corrects the market price $p$ for the time left $h$ (hours to the scheduled end):
 
-function HorizonAnalysis({ account, tab }: { account?: Account; tab: { id?: number; url?: string; title?: string } }) {
-  const slug = slugFrom(tab.url);
-  const [model, setModel] = useState<Model>();
-  const [ev, setEv] = useState<EventState>('loading');
-  const [showAll, setShowAll] = useState(false);
+$$q = \sigma\!\left(\beta_0 + \beta_1\,\operatorname{logit} p + \beta_2 \log\tfrac{h}{24} + \beta_3\,\operatorname{logit} p \cdot \log\tfrac{h}{24}\right)$$
 
-  useEffect(() => { void loadModel().then(setModel); }, []);
+Its range $[q_{10}, q_{90}]$ comes from 40 refits on resampled events. With cost $c$ = half the spread (at least 1¢) plus Polymarket's fee, it backs **Yes** only if $q_{10} > p + c$ and **No** only if $q_{90} < p - c$, and stakes a quarter of the Kelly fraction:
 
-  const load = useCallback(async (s: string) => {
-    setEv('loading');
-    try {
-      const m = await loadModel();
-      setEv({ ...(await decideEvent(m, s)), model: m });
-    } catch (e) {
-      setEv(e instanceof Error && e.message === 'event not found' ? 'notfound' : 'error');
-    }
-  }, []);
-  useEffect(() => { setShowAll(false); if (slug) void load(slug); }, [slug, load]);
+$$f = \min\!\left(\tfrac14 \cdot \frac{q_{10} - (p + c)}{1 - (p + c)},\; 5\%\right)$$`;
 
-  const data = typeof ev === 'object' ? ev : undefined;
-  const legs = useMemo(() => (data ? data.legs.filter((l) => l.decision).sort((a, b) =>
-    Number(b.decision!.action !== 'NO_TRADE') - Number(a.decision!.action !== 'NO_TRADE') || b.decision!.netEdge - a.decision!.netEdge) : []), [data]);
+function Details({ model, slug, a, onBack }: { model?: Model; slug?: string; a?: Account; onBack: () => void }) {
+  const [ev, setEv] = useState<{ title: string; legs: Leg[] }>();
+  useEffect(() => { if (model && slug) decideEvent(model, slug).then(setEv).catch(() => setEv(undefined)); }, [model, slug]);
   const band = (model?.tradable ?? [0.03, 0.97]) as [number, number];
-  const top = legs.find((l) => { const d = l.decision!; return d.price >= band[0] && d.price <= band[1]; });
-  const shown = showAll ? legs : legs.slice(0, 5);
-
+  const legs = (ev?.legs ?? []).filter((l) => l.decision).sort((x, y) => y.decision!.netEdge - x.decision!.netEdge);
+  const top = legs.find((l) => l.decision!.price >= band[0] && l.decision!.price <= band[1]);
+  const bankroll = a?.bankroll ?? 1000;
   return (
-    <div className="hz-mode relative z-[75] bg-white">
-      <div className="px-4 pb-6 pt-4">
-        {/* a. Headline + verdict */}
-        {!slug ? (
-          model ? <PageBridge model={model} url={tab.url} title={tab.title} tabId={tab.id} /> : null
-        ) : ev === 'loading' ? (
-          <header aria-busy>
-            <div className="hz-eyebrow">Reading the market</div>
-            <div className="mt-2 h-7 w-4/5 animate-pulse rounded bg-black/[0.05]" />
-            <div className="mt-2 h-4 w-3/5 animate-pulse rounded bg-black/[0.04]" />
-            <div className="mt-6 h-24 animate-pulse rounded bg-black/[0.035]" />
-          </header>
-        ) : ev === 'error' || ev === 'notfound' ? (
-          <header>
-            <div className="hz-eyebrow">Horizon</div>
-            <h1 className="hz-serif mt-1 text-[24px] font-medium leading-tight">{ev === 'notfound' ? 'Event not found on Polymarket' : 'Horizon unavailable'}</h1>
-            <p className="mt-1.5 text-[13px] text-[#676e7e]">{ev === 'notfound' ? 'Gamma has no event with this address yet.' : 'Could not reach Polymarket prices.'}</p>
-            <button type="button" onClick={() => void load(slug)} className="mt-3 w-full rounded-[11px] bg-black/[0.05] py-2 text-[13px] font-medium">Retry</button>
-          </header>
-        ) : data ? (
-          <header>
-            <div className="hz-eyebrow">{legs.length ? `${legs.length} yes/no market${legs.length === 1 ? '' : 's'} · ${when(legs[0].decision!.hours)} to the end` : 'Horizon'}</div>
-            <h1 className="hz-serif mt-1 text-[24px] font-medium leading-[1.15] [overflow-wrap:anywhere] [text-wrap:balance]">{data.title}</h1>
-            <p className="mt-2 text-[15px] font-medium leading-snug" style={{ color: legs[0]?.decision?.action === 'BUY_YES' ? UP : legs[0]?.decision?.action === 'BUY_NO' ? DOWN : INK }}>
-              {verdict(legs, band)}
-            </p>
-          </header>
-        ) : null}
-
-        {/* b. Legs */}
-        {data && legs.length ? (
-          <section className="mt-4">
-            {shown.map((l, i) => <LegRow key={`${slug}-${i}`} leg={l} band={band} account={account} model={data.model} tabId={tab.id} />)}
-            {legs.length > 5 ? (
-              <button type="button" onClick={() => setShowAll((s) => !s)} className="hz-rule w-full pt-2.5 text-left text-[12px] font-semibold text-[#111113]">
-                {showAll ? 'Show fewer' : `Show all ${legs.length} markets`}
-              </button>
-            ) : null}
-          </section>
-        ) : data ? (
-          <p className="mt-3 text-[13px] text-[#676e7e]">No open yes/no market with a two-sided book on this page.</p>
-        ) : null}
-
-        {/* c. Time curve + d. best window */}
-        {data && top && model ? (
-          <section className="hz-rule mt-5 pt-4">
-            <div className="hz-eyebrow">Time · {cleanLabel(top.label)}</div>
-            <h2 className="hz-serif mt-1 text-[18px] font-medium leading-snug">How Horizon reads this price as the end nears</h2>
-            <TimeCurve key={`${slug}-${top.question}`} model={model} d={top.decision!} />
-            <p className="mt-1 text-[11px] leading-snug text-[#71717a]">Model view if the price holds; averages, not a forecast.</p>
-            <When hours={top.decision!.hours} />
-          </section>
-        ) : null}
-
-
-        {/* f. Credentials */}
-        <Credentials />
-      </div>
-    </div>
-  );
-}
-
-// ---------- b. one leg ----------
-
-function LegRow({ leg, band, account, model, tabId }: {
-  leg: Leg; band: [number, number]; account?: Account; model: Model; tabId?: number;
-}) {
-  const d = leg.decision!;
-  const outOfBand = d.price < band[0] || d.price > band[1];
-  return (
-    <div className="hz-rule py-3.5" title={d.reason}>
-      <div className="mb-1.5 text-[14px] font-semibold leading-snug" title={leg.question}>{cleanLabel(leg.label)}</div>
-      {outOfBand ? (
-        <p className="text-[12.5px] text-[#676e7e]">Market says {pct(d.price)}: too close to certain, costs would eat any advantage.</p>
-      ) : (
-        <>
-          <PlainCall d={d} />
-          {leg.marketSlug ? <BetBox model={model} a={account} marketSlug={leg.marketSlug} d={d} tabId={tabId} label={leg.label} /> : null}
-        </>
-      )}
+    <div className="hz-enter px-4 pb-6 pt-3">
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-footnote font-medium text-[#64748b] hover:text-[#0f172a]">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M15 6l-6 6 6 6" /></svg> Back
+      </button>
+      <h1 className="hz-display mt-2 text-[30px] leading-[1.08]">{ev?.title ?? 'How Horizon decides'}</h1>
+      <Md className="mt-2" text={MATH} />
+      {legs.length ? (
+        <section className="mt-4">
+          {legs.map((l) => {
+            const d = l.decision!;
+            const out = d.price < band[0] || d.price > band[1];
+            return (
+              <div key={l.marketSlug ?? l.label} className="hz-rule py-2.5 text-footnote">
+                <div className="font-semibold text-[#0f172a]">{cleanLabel(l.label)}</div>
+                {out ? <div className="text-[#64748b]">Market {pct(d.price)}: outside {pct(band[0])}–{pct(band[1])}, not traded.</div> : (
+                  <div className="text-[#475569]">
+                    Market {pct(d.price)} · Horizon {pct(d.q)} (range {pct(d.lo)}–{pct(d.hi)}) · {d.action === 'NO_TRADE' ? 'no trade' : `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · suggested ${(d.kelly * 100).toFixed(1)}% = $${(d.kelly * bankroll).toFixed(2)}`}
+                    {d.action !== 'NO_TRADE' ? <Scale d={d} /> : null}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
+      {top && model ? (
+        <section className="hz-rule mt-5 pt-4">
+          <h2 className="hz-display text-[22px] leading-snug">When to bet on {cleanLabel(top.label)}</h2>
+          <p className="mt-0.5 text-footnote text-[#64748b]">How Horizon reads this price as the end nears, if the price holds.</p>
+          <TimeCurve key={`${slug}-${top.question}`} model={model} d={top.decision!} />
+          <When hours={top.decision!.hours} />
+        </section>
+      ) : null}
+      <Credentials />
     </div>
   );
 }
@@ -311,79 +267,10 @@ function TimeCurve({ model, d }: { model: Model; d: Decision }) {
   );
 }
 
-// ---------- bridge: markets about any page ----------
-
-function PageBridge({ model, url, title, tabId }: { model: Model; url?: string; title?: string; tabId?: number }) {
-  const onPolymarket = !!url && /^https:\/\/([a-z0-9-]+\.)?polymarket\.com\//.test(url);
-  const subject = useMemo(() => (url && /^https?:/.test(url) && !onPolymarket ? subjectOf(title, url) : undefined), [url, title, onPolymarket]);
-  const [rows, setRows] = useState<ScanRow[] | 'loading' | 'error'>('loading');
-  const run = useCallback(() => {
-    if (!subject) return;
-    setRows('loading');
-    searchMarkets(model, subject.query, 6).then(setRows).catch(() => setRows('error'));
-  }, [model, subject]);
-  useEffect(() => { run(); }, [run]);
-  const open = (u: string) => { if (tabId !== undefined) void chrome.tabs.update(tabId, { url: u }); else void chrome.tabs.create({ url: u }); };
-
-  if (!subject) {
-    return (
-      <header>
-        <div className="hz-eyebrow">Horizon</div>
-        <h1 className="hz-serif mt-1 text-[26px] font-medium leading-[1.12]">Open a Polymarket market</h1>
-        <p className="mt-2 text-[14px] leading-snug text-[#3f3f46]">
-          On a polymarket.com event page, Horizon prices every yes/no leg for its time to resolution. On any other page it looks for markets about what you are reading. Meanwhile, here is where it sees edge in the next 24 hours.
-        </p>
-      </header>
-    );
-  }
-  const list = typeof rows === 'object' ? rows : [];
-  const crypto = subject.crypto || list.some((r) => r.decision.domain === 'crypto');
-  return (
-    <header>
-      <div className="hz-eyebrow">From this page · {subject.query}</div>
-      <h1 className="hz-serif mt-1 text-[26px] font-medium leading-[1.12]">
-        {rows === 'loading' || list.length ? <>Markets about {subject.query}</> : <>No open prediction markets about this page</>}
-      </h1>
-      <p className="mt-2 text-[12.5px] leading-snug text-[#676e7e]">
-        Horizon's model is validated on Polymarket prices only{crypto ? '; on crypto markets our backtest shows no lift, so treat these calls as unproven.' : '. Tap a market to open its full analysis.'}
-      </p>
-      {rows === 'loading' ? (
-        <div className="mt-3 space-y-2" aria-busy>{[0, 1, 2].map((i) => <div key={i} className="h-10 animate-pulse rounded bg-black/[0.04]" />)}</div>
-      ) : rows === 'error' ? (
-        <p className="mt-3 text-[13px] text-[#676e7e]">Search failed. <button type="button" onClick={run} className="font-semibold text-[#111113] underline decoration-black/20 underline-offset-2">Retry</button></p>
-      ) : list.length ? (
-        <div className="mt-3">
-          {list.map((r) => <EdgeRow key={r.question + r.slug} r={r} onOpen={open} />)}
-        </div>
-      ) : null}
-    </header>
-  );
-}
-
-function EdgeRow({ r, onOpen }: { r: ScanRow; onOpen: (url: string) => void }) {
-  const d = r.decision;
-  const hue = d.action === 'BUY_YES' ? UP : d.action === 'BUY_NO' ? DOWN : INK;
-  return (
-    <button type="button" onClick={() => onOpen(r.url)} title={d.reason}
-      className="hz-row-link hz-rule -mx-1 flex w-[calc(100%+8px)] items-center gap-3 px-1 py-2 text-left">
-      <span className="min-w-0 flex-1">
-        <span className="line-clamp-2 block text-[13px] font-medium leading-snug">{r.question}</span>
-        <span className="block text-[11.5px] text-[#71717a]">
-          <span style={{ color: MARKET }}>{cents(d.price)}</span> → <span className="font-semibold text-[#111113]">{pct(d.q)}</span> · {when(d.hours)} left
-        </span>
-      </span>
-      <span className="shrink-0 text-right">
-        <span className="block text-[13px] font-semibold" style={{ color: hue }}>{d.action === 'NO_TRADE' ? '—' : signedCents(d.netEdge)}</span>
-        <span className="block text-[10.5px] text-[#71717a]">{d.action === 'BUY_YES' ? 'buy YES' : d.action === 'BUY_NO' ? 'buy NO' : 'no trade'}</span>
-      </span>
-    </button>
-  );
-}
-
 // ---------- f. credentials ----------
 
 type Creds = { ret: number; ci: [number, number]; brierModel: number; brierMarket: number; nTest: number; sha: string; sealedAt: string };
-const FALLBACK_CREDS: Creds = { ret: 3.0447, ci: [1.84, 4.4], brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
+const FALLBACK_CREDS: Creds = { ret: 2.0536, ci: [1.15, 3.06], brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
   sha: '31d2510c13ee29c0a4c9ac26aa498b7ca1cffca58d4bf553f6d5bfd5acb73326', sealedAt: '2026-10-24T15:31:30+00:00' };
 let credsCache: Creds | undefined;
 
@@ -412,16 +299,14 @@ function Credentials() {
   const p = (x: number) => `+${Math.round(x * 100)}%`;
   const sealed = new Date(c.sealedAt).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', hour: '2-digit', minute: '2-digit' });
   return (
-    <footer className="hz-rule mt-6 pt-3 text-[11.5px] leading-relaxed text-[#676e7e]">
-      <div className="hz-eyebrow mb-1">How we know</div>
+    <footer className="hz-rule mt-6 pt-4 text-footnote text-[#475569]">
+      <h2 className="mb-1 text-body font-semibold text-[#0f172a]">How we know it works</h2>
       <p>
-        Out-of-time backtest on <b className="font-semibold text-[#111113]">{c.nTest.toLocaleString()}</b> markets:{' '}
-        <b className="font-semibold" style={{ color: UP }}>{p(c.ret)}</b> of bankroll after costs (90% CI {p(c.ci[0])} to {p(c.ci[1])}),
-        Brier <b className="font-semibold text-[#111113]">{c.brierModel.toFixed(4)}</b> vs market {c.brierMarket.toFixed(4)}.
+        Tested on <b className="font-semibold text-[#0f172a]">{c.nTest.toLocaleString()}</b> past markets it had never seen: it predicted them better than the market price,
+        and betting its way would have made <b className="font-semibold" style={{ color: UP }}>{p(c.ret)}</b> of the starting money after costs and fees (likely range {p(c.ci[0])} to {p(c.ci[1])}).
       </p>
-      <p className="mt-1">
-        Sealed predictions: <a href={`${SITE_URL}/#sealed`} target="_blank" rel="noreferrer" className="font-mono text-[11px] text-[#111113] underline decoration-black/20 underline-offset-2">{c.sha.slice(0, 8)}…{c.sha.slice(-4)}</a>{' '}
-        (Seal 1, {sealed} London).
+      <p className="mt-1 text-caption text-[#64748b]">
+        Brier {c.brierModel.toFixed(4)} vs market {c.brierMarket.toFixed(4)}. Predictions sealed before the results: <a href={`${SITE_URL}/#sealed`} target="_blank" rel="noreferrer" className="font-mono text-[#0f172a] underline decoration-black/20 underline-offset-2">{c.sha.slice(0, 8)}…{c.sha.slice(-4)}</a> (Seal 1, {sealed} London).
       </p>
     </footer>
   );
