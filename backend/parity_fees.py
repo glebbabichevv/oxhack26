@@ -19,7 +19,7 @@ sys.path.insert(0, str(HERE.parent / "integrations"))
 import export_model  # noqa: E402
 import horizon_mcp  # noqa: E402
 import live  # noqa: E402
-from model import decide, evaluate, load_horizons, trade_cost  # noqa: E402
+from model import ENTER_FROM_H, MIN_EDGE, POLICY, decide, evaluate, load_horizons, trade_cost  # noqa: E402
 
 out = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "data" / "raw" / "parity_fees.json"
 model, cal, bt = evaluate(load_horizons(HERE.parent / "data" / "horizons.csv"))
@@ -39,9 +39,11 @@ p = np.array([r["price_yes"] for r in rows])
 q, lo, hi = model.predict(p, [r["hours_to_resolution"] for r in rows], [r["domain"] for r in rows])
 fee = np.array([r["fee_rate"] * (r["price_yes"] * (1 - r["price_yes"])) ** r["fee_exponent"] for r in rows])
 cost = trade_cost(np.array([r["spread"] for r in rows]), fee, 0.01)
-action, kelly, net = decide(p, q, cost, lo, hi)
+hours = np.array([r["hours_to_resolution"] for r in rows])
+action, kelly, net = decide(p, q, cost, lo, hi, hours, MIN_EDGE, ENTER_FROM_H)  # policy V3
+policy = {k: v for k, v in POLICY.items() if k != "note"}
 for i, r in enumerate(rows):
-    r.update(q_yes=float(q[i]), q_low=float(lo[i]), q_high=float(hi[i]), action=str(action[i]),
+    r.update(policy=policy, q_yes=float(q[i]), q_low=float(lo[i]), q_high=float(hi[i]), action=str(action[i]),
              kelly_fraction=float(kelly[i]), net_edge=float(net[i]), cost=float(cost[i]))
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({"made_at": now.isoformat(timespec="seconds"), "markets": rows}))

@@ -23,7 +23,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "integrations"))
 
 from common import DOMAIN_TAGS  # noqa: E402
-from model import EPS, KELLY_CAP, KELLY_SCALE, TRADABLE, MarketBaseline, evaluate, load_horizons  # noqa: E402
+from model import EPS, POLICY, KELLY_CAP, KELLY_SCALE, TRADABLE, MarketBaseline, evaluate, load_horizons  # noqa: E402
 
 LOGIT_P, LOG_H = "logit(p)", "log(clip(hours, 12, 720) / 24)"
 
@@ -70,6 +70,7 @@ def export(model, backtest, calibration=None, now=None):
         "by_horizon": [{"horizon_hours": h["horizon_hours"], "mean_return_per_trade": h["with_costs"]["mean_return_per_trade"]}
                        for h in backtest["by_horizon"]],
         "train_cutoff": backtest["cutoff"], "model_selection": backtest["model_selection"],
+        "policy": {k: v for k, v in POLICY.items() if k != "note"},
     }
     out["version"] = f"{now:%Y-%m-%d}-{model_hash(out)}"
     out["fitted_at"] = now.isoformat(timespec="seconds")

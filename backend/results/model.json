@@ -507,23 +507,23 @@
  "by_horizon": [
   {
    "horizon_hours": 720,
-   "mean_return_per_trade": -0.1903
+   "mean_return_per_trade": null
   },
   {
    "horizon_hours": 168,
-   "mean_return_per_trade": 0.023
+   "mean_return_per_trade": 0.0777
   },
   {
    "horizon_hours": 72,
-   "mean_return_per_trade": 0.0495
+   "mean_return_per_trade": 0.088
   },
   {
    "horizon_hours": 24,
-   "mean_return_per_trade": 0.1255
+   "mean_return_per_trade": 0.1381
   },
   {
    "horizon_hours": 12,
-   "mean_return_per_trade": 0.1484
+   "mean_return_per_trade": 0.1853
   }
  ],
  "train_cutoff": "2026-05-18",
@@ -557,5 +557,23 @@
   "culture": 0.05,
   "other": 0.05,
   "geopolitics": 0.0
+ },
+ "policy": {
+  "name": "V3",
+  "min_edge": 0.01,
+  "enter_from_hours": 24
+ },
+ "headline": {
+  "per_dollar": 0.1723,
+  "per_dollar_ci": [
+   0.1184,
+   0.2346
+  ],
+  "return": 4.0081,
+  "return_ci": [
+   2.78,
+   5.44
+  ],
+  "n_trades": 3653
  }
 }

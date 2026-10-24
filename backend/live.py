@@ -2,8 +2,8 @@
 
 Same market filter as integrations/fetch_live.py (open yes/no, accepting orders, two-sided book,
 volume >= $50k, scheduled end within 45 days), same math as model.live_report via horizon_mcp.decide
-(pure Python, no pandas at runtime), same selection: top 30 trades by net edge + 15 biggest in-band
-NO_TRADE. Cached in-process for CACHE_TTL seconds. If Gamma fails, serves results/live.json and says so.
+(pure Python, no pandas at runtime), same selection: top 30 trades by net edge (policy V3: net edge >= 1¢,
+within 24 h of the end), 15 WAIT rows (edge now, enter later; soonest first), 10 biggest in-band NO_TRADE. Cached in-process for CACHE_TTL seconds. If Gamma fails, serves results/live.json and says so.
 
   python backend/live.py      # refresh results/live.json (the fallback snapshot) from Gamma now
 """
@@ -25,7 +25,7 @@ SNAPSHOT = HERE / "results" / "live.json"
 CACHE_TTL = 300  # seconds
 MIN_VOLUME = 50_000
 MAX_DAYS = 45
-N_TRADES, N_NO_TRADE = 30, 15
+N_TRADES, N_WAIT, N_NO_TRADE = 30, 15, 10
 PAGE, MAX_OFFSET = 100, 2000  # Gamma caps offset around 2,000
 
 _lock = threading.Lock()
@@ -96,7 +96,8 @@ def _row(m, now, model):
             "action": d["action"], "kelly_fraction": round(d["kelly"], 4), "reason": d["reason"],
             "url": f"https://polymarket.com/event/{event.get('slug') or m.get('slug')}",
             "volume_usd": round(float(m.get("volumeNum") or 0), 2), "spread": spread,
-            "fee": round(rate * (price * (1 - price)) ** exp, 4)}
+            "fee": round(rate * (price * (1 - price)) ** exp, 4),
+            "wait": d["wait"], "would_be": d["would_be"], "check_back_in_hours": d["check_back_in_hours"]}
 
 
 def snapshot(model=None):
@@ -109,12 +110,16 @@ def snapshot(model=None):
         raise RuntimeError("Gamma returned no open yes/no markets with a two-sided book")
     lo, hi = model["tradable"]
     trades = sorted((r for r in rows if r["action"] != "NO_TRADE"), key=lambda r: -r["net_edge"])[:N_TRADES]
-    passes = sorted((r for r in rows if r["action"] == "NO_TRADE" and lo <= r["price_yes"] <= hi),
+    # WAIT: an edge today, but the rule enters only within 24 h of the end; soonest first.
+    waits = sorted((r for r in rows if r["wait"]), key=lambda r: r["check_back_in_hours"])[:N_WAIT]
+    passes = sorted((r for r in rows if r["action"] == "NO_TRADE" and not r["wait"] and lo <= r["price_yes"] <= hi),
                     key=lambda r: -r["volume_usd"])[:N_NO_TRADE]
     return {"updated_at": now.isoformat(timespec="seconds"), "model_version": model_version(model),
             "source": "live", "cache_ttl_s": CACHE_TTL, "n_markets_scanned": len(markets),
             "n_markets_priced": len(rows), "n_trades": sum(r["action"] != "NO_TRADE" for r in rows),
-            "markets": trades + passes}
+            "n_wait": sum(r["wait"] for r in rows), "policy": model.get("policy"),
+            "best_window": horizon_mcp._best_window_note(),
+            "markets": trades + waits + passes}
 
 
 def _fallback(error):
