@@ -38,11 +38,12 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [ ] (stretch) Gemini labels "Other" markets into domains
 
 ## Pitch (Role C, from Saturday evening)
-- [ ] Demo script, 90 seconds, one scenario end to end
-- [ ] Backup demo video recorded by Sunday morning
-- [ ] Devpost page: what it does, how we built it, sponsor tech used, what we brought in vs built here; cite arXiv 2602.19520
-- [ ] Collect best Delta thread links (ideation, build, testing) for the Zed track
-- [ ] Rehearse pitch 5x with a timer
+- [ ] [TheMarkz3] Demo script, 90 seconds, one scenario end to end
+- [ ] [TheMarkz3] Backup demo video recorded by Sunday morning
+- [ ] [TheMarkz3] Devpost page: what it does, how we built it, sponsor tech used, what we brought in vs built here; cite arXiv 2602.19520
+- [ ] [TheMarkz3] Collect best Delta thread links (ideation, build, testing) for the Zed track
+- [ ] [TheMarkz3] Rehearse pitch 5x with a timer
+- [ ] [TheMarkz3] MLH × DEV post draft: integrations/pitch/DEVTO_POST.md (publish from a team dev.to account after Devpost)
 - [ ] Before the repo goes public: delete `docs/design-reference/` (old-product screenshots)
 
 ## Done
