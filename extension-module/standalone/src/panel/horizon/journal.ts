@@ -6,8 +6,8 @@
  */
 import type { Decision } from './horizon';
 
-export const API = 'https://horizon-api-iota.vercel.app';
-export const SITE = 'https://horizon-two-gilt.vercel.app';
+export const API = 'https://oxhack26-production.up.railway.app';
+export const SITE = 'https://web-production-c7376.up.railway.app';
 const ID_KEY = 'horizonInstallId';
 const LOG_KEY = 'horizonJournal';
 const QUEUE_KEY = 'horizonJournalQueue';

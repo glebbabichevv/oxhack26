@@ -9,7 +9,7 @@
     "https://polymarket.com/*",
     "https://*.polymarket.com/*",
     "https://gamma-api.polymarket.com/*",
-    "https://horizon-api-iota.vercel.app/*"
+    "https://oxhack26-production.up.railway.app/*"
   ],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [

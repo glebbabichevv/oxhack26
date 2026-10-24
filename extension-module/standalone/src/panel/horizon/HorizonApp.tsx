@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { decide, decideEvent, type Decision, type Leg, type Model } from './horizon';
 import { When, cents, loadModel, pct, slugFrom, when } from './HorizonCard';
-import type { Account } from './ledger';
+import { migrate, type Account } from './ledger';
 import { pageDrive } from './agent';
 import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
 import { flush } from './journal';
@@ -16,8 +16,8 @@ import { stylePage } from './pageStyle';
 import { Md } from './argos/Message';
 import './horizon-mode.css';
 
-const API = 'https://horizon-api-iota.vercel.app';
-const SITE_URL = 'https://horizon-two-gilt.vercel.app';
+const API = 'https://oxhack26-production.up.railway.app';
+const SITE_URL = 'https://web-production-c7376.up.railway.app';
 const UP = '#15803d';
 const DOWN = '#e11d48';
 const MARKET = '#a1a1aa';
@@ -55,7 +55,7 @@ export function HorizonApp() {
   const [model, setModel] = useState<Model>();
   const agent = useAgent(model, tab.id);
   const scroller = useRef<HTMLDivElement>(null);
-  useEffect(() => { void loadModel().then(setModel); void flush(); }, []);
+  useEffect(() => { void migrate(); void loadModel().then(setModel); void flush(); }, []);
   useEffect(() => { void chrome.storage.local.get(WELCOME_KEY).then((r) => setWelcome(!r[WELCOME_KEY])).catch(() => setWelcome(false)); }, []);
   const dismiss = () => { setWelcome(false); setView('bet'); void chrome.storage.local.set({ [WELCOME_KEY]: true }); };
   // Landing on a Polymarket market shows its bet (unless Horizon itself is steering the tab).
@@ -83,7 +83,7 @@ export function HorizonApp() {
           : screen === 'settings' ? <Settings a={account} onClose={() => setScreen('main')} />
           : screen === 'details' ? <Details model={model} slug={slug} a={account} onBack={() => setScreen('main')} />
           : !model ? null
-          : showRun ? <AgentRun model={model} tabId={tab.id} run={agent.run!} onBack={agent.clear} />
+          : showRun ? <AgentRun model={model} tabId={tab.id} run={agent.run!} onBack={agent.clear} budget={account?.bankroll ?? 1000} />
           : view === 'decisions' ? <MyDecisions model={model} />
           : slug ? <MarketBet model={model} a={account} slug={slug} tabId={tab.id} onDetails={() => setScreen('details')} />
           : <Tonight model={model} a={account} tabId={tab.id} url={tab.url} title={tab.title} onDetails={() => setScreen('details')} />}
