@@ -118,9 +118,12 @@ Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. 
 1. Work only inside your own role's folder unless the task in `TASKS.md` says otherwise. Never edit another role's folder — ask instead.
 2. Before starting: `git pull`, read `TASKS.md`, claim a task by putting your name on it.
 3. One branch per person/feature → pull request → someone else glances at it → merge. (Judges score "best practices".)
-4. Small commits, often. Never commit secrets. `git pull` at least every hour.
-5. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
-6. Feature freeze ~02:00 Sunday. After that: bugs, backup video, Devpost, pitch only. Submission by 11:30 Sunday.
+4. Small commits, often. Never commit secrets.
+5. **Sync with the team often.** Open a small PR into `main` as soon as something works (aim for every ~45–60 min); Role A merges quickly. Before each new task: `git pull origin main` (merge it into your branch) so you see everyone's latest work.
+6. To look at a teammate's unmerged work: `git fetch` then `git log origin/<their-branch>` / `git diff main...origin/<their-branch>`. Read it, never edit it.
+7. Changing the API or data contract? Update it in this file first, in its own small PR, and tell the team.
+8. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
+9. Feature freeze ~02:00 Sunday. After that: bugs, backup video, Devpost, pitch only. Submission by 11:30 Sunday.
 
 ## Hackathon mindset (applies to every task)
 - The demo is the product. Optimise for what judges see in the 90-second demo, not for code quality.
