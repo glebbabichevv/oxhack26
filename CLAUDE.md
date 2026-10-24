@@ -7,7 +7,7 @@ Update it whenever a decision changes; it is how our three agents stay in sync.
 - OxHack '26, Mathematical Institute, Oxford. Sat 24 Oct 09:00 → Sun 25 Oct ~16:30.
 - Clocks go back 1 hour on Sunday night (02:00 → 01:00).
 - Submission deadline: TBA (fill in after opening ceremony).
-- **Platinum sponsor challenge — HRT (Hudson River Trading): "Best use of Data for Predictions & Decision Making".** Prize: £1,000 per winner (announced at opening; per person vs per team, and per track vs overall: TBA).
+- **Platinum sponsor challenge — HRT (Hudson River Trading): "Best use of Data for Predictions & Decision Making".** Prize: £1,000 per team member of the winning team (per track vs overall: TBA).
 - **Silver sponsor challenge — Zed: "Built with Delta".** Show how we worked together in Delta (teammates + agents, from ideation through building to testing); share Delta threads as evidence. Extra points for solving real problems.
 - Only HRT and Zed have challenges; the other sponsors (Citadel, Jane Street, Oxford Asset Management, Entangl) are recruiting only.
 - **Strategy: one project for both.** Build the HRT data/prediction/decision project, and do the work inside Delta so the Zed track comes for free. MLH prizes (Gemini, ElevenLabs, Tiger Data) only if they fit naturally.
