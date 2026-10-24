@@ -44,13 +44,25 @@ def load_horizons(path):
     return df.reset_index(drop=True)
 
 
+def event_key(df):
+    """Column grouping correlated markets (legs of one event); falls back to the market itself."""
+    for col in ("event_id", "event_slug"):
+        if col in df and df[col].notna().any():
+            return col
+    return "market_id"
+
+
 def split_by_time(df, cutoff):
+    """Train on events whose last market resolved before the cutoff, test on the rest:
+    all legs of one event stay on the same side."""
+    key = event_key(df)
+    event_end = df.groupby(key)["resolved_at"].transform("max")
     if cutoff is None:
-        per_market = df.groupby("market_id")["resolved_at"].first().sort_values()
-        cutoff = per_market.iloc[int(len(per_market) * 0.7)].normalize()
+        per_event = df.groupby(key)["resolved_at"].max().sort_values()
+        cutoff = per_event.iloc[int(len(per_event) * 0.7)].normalize()
     else:
         cutoff = pd.Timestamp(cutoff, tz="UTC")
-    return df[df["resolved_at"] < cutoff], df[df["resolved_at"] >= cutoff], cutoff
+    return df[event_end < cutoff], df[event_end >= cutoff], cutoff
 
 
 # ---------- model ----------
@@ -75,7 +87,7 @@ class Calibrator:
         y = df["outcome"].to_numpy()
         self.main = LogisticRegression(C=1.0, max_iter=2000).fit(X, y)
         # Bootstrap over events (rows of one market, and markets of one event, are correlated).
-        cluster = "event_id" if "event_id" in df else "market_id"
+        cluster = event_key(df)
         ids = df[cluster].unique()
         rows = df.groupby(cluster).indices
         self.boot = []
