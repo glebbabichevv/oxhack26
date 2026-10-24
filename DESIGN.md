@@ -8,14 +8,14 @@ colors:
   ink: "#0a0a0a"
   ink-strong: "#111113"
   ink-muted: "#676e7e"
-  ink-faint: "#a1a1aa"
-  ink-second-line: "rgba(10,10,10,0.42)"
+  ink-faint: "#71717a"
+  ink-second-line: "rgba(10,10,10,0.50)"
   hairline: "rgba(9,9,11,0.08)"
   hairline-soft: "rgba(9,9,11,0.06)"
   fill-soft: "rgba(15,23,42,0.05)"
   ash: "#a1a1aa"
-  up: "#16a34a"
-  up-tint: "rgba(22,163,74,0.10)"
+  up: "#15803d"
+  up-tint: "rgba(21,128,61,0.10)"
   down: "#e11d48"
   down-tint: "rgba(225,29,72,0.10)"
 typography:
@@ -142,7 +142,7 @@ components:
 
 **Creative North Star: "The Quiet Page"**
 
-A white editorial page that makes one argument. A big classical serif headline states the finding, its second line in grey; a calm sans explains it; numbers sit in a single ruled row; each piece of evidence lives in one soft white card that looks like a product screenshot laid on the page. Nothing is glass, nothing blurs, nothing floats except the navigation pill.
+A white editorial page that makes one argument, like a newspaper data story. A big classical serif headline states the finding, its second line in grey; directly under it the hero figure (how often a 15¢ contract wins, by time left) is drawn on the page and annotated in place in italic serif; numbers sit in a single ruled row; each piece of evidence is a figure under a 1px Ink rule, not a card. Nothing is glass, nothing blurs, nothing is boxed, nothing floats except the navigation pill.
 
 The material is soft matte: opaque white surfaces, an 8% hairline, a very low and wide shadow. Depth comes from the faint grey frame around each card, not from effects. The only object with real volume is the dark call-to-action pill, which sits on its own soft grounding shadow.
 
@@ -150,7 +150,8 @@ The material is soft matte: opaque white surfaces, an 8% hairline, a very low an
 - White page, generous whitespace, content max 1120px.
 - Playfair Display headlines (second line grey), Plus Jakarta Sans for everything else.
 - KPIs as one ruled row with hairline separators, not as cards.
-- Evidence in "framed cards": a white 16px card inside a #fafafa 22px frame with a wide soft shadow.
+- Evidence as editorial figures: 1px Ink rule on top, title + Faint meta on one line, the chart below. No boxes, frames or card shadows (changed 15:55: the framed cards read as generic and blocky).
+- One hero figure under the headline, annotated in place (italic Playfair notes, leader-free), with 90% intervals.
 - Pills everywhere: nav, buttons, tabs, chips. Green and rose only for meaning.
 
 ## Colors
@@ -164,13 +165,13 @@ White and zinc with two signal hues.
 - **Page White** (#ffffff): page and card surface.
 - **Frame Grey** (#fafafa): the 8px frame around each evidence card.
 - **Slate Muted** (#676e7e): lead paragraphs, labels, secondary text.
-- **Faint** (#a1a1aa): meta text (n = 573, dates), axis labels; also the market / baseline series (Ash).
-- **Second-Line Grey** (rgba(10,10,10,0.42)): the second line of a serif headline.
+- **Faint** (#71717a): meta text (n = 573, dates), axis labels; passes 4.5:1 on white. **Ash** (#a1a1aa) stays for the market / baseline chart series only.
+- **Second-Line Grey** (rgba(10,10,10,0.50), 3.8:1, large text only): the second line of a serif headline.
 - **Hairline** (rgba(9,9,11,0.08)): KPI row rules, card borders, nav border; soft hairline 6% for rows inside cards.
 - **Soft Fill** (rgba(15,23,42,0.05)): quiet chips, quiet buttons, hover wash.
 
 ### Semantic
-- **Signal Green** (#16a34a, tint 10%): up, profit, BUY YES.
+- **Signal Green** (#15803d, tint 10%; #16a34a failed 4.5:1 for small labels): up, profit, BUY YES.
 - **Signal Rose** (#e11d48, tint 10%): down, loss, BUY NO, "no lift".
 
 ### Named Rules

@@ -1,6 +1,6 @@
 """Horizon model pipeline.
 
-data/horizons.csv + data/live.csv  ->  backend/results/{calibration,backtest,live}.json
+data/horizons.csv  ->  backend/results/{calibration,backtest}.json  (live decisions: live.py; refits: refit.py)
 
   .venv/bin/python model.py [--data ../data] [--cutoff YYYY-MM-DD] [--fee 0] [--min-half-spread 0.01]
 
@@ -22,10 +22,17 @@ EPS = 0.01
 # Outside this price band a 1¢ cost swamps any edge and tiny prices make logit features unstable:
 # the model is neither trained nor traded there (q = market price, NO_TRADE).
 TRADABLE = (0.03, 0.97)
+# Brier gains smaller than this are reported as "no lift" (the UI says "about equal" for the same gap).
+NO_LIFT_MARGIN = 0.0005
 KELLY_SCALE = 0.25
 KELLY_CAP = 0.05
 N_BOOT = 40
 MIN_DOMAIN_ROWS = 50
+# Polymarket taker fee per share = rate * (p * (1 - p)) ** exponent (docs.polymarket.com/trading/fees; makers pay
+# nothing, we assume taker fills). Each market's own schedule (Gamma feeSchedule) wins; this domain table is the
+# fallback for a market with fees enabled but no schedule. Geopolitics markets are fee-free.
+FEE_RATES = {"sports": 0.05, "crypto": 0.07, "politics": 0.04, "science_tech": 0.04, "economics": 0.05,
+             "culture": 0.05, "other": 0.05, "geopolitics": 0.0}
 
 
 def logit(p):
@@ -42,6 +49,23 @@ def load_horizons(path):
     df["domain"] = df["domain"].fillna("other").str.lower()
     df["spread"] = pd.to_numeric(df.get("spread"), errors="coerce")
     return df.reset_index(drop=True)
+
+
+def fee_per_share(df, use_fees=True):
+    """Taker fee per $1 contract at each row's price. Uses the fees_enabled / fee_rate / fee_exponent columns
+    (Gamma's per-market schedule, backfilled by refit.py) when present; without them every market is assumed
+    fee-enabled at its domain's rate (FEE_RATES)."""
+    p = df["price_yes"].to_numpy(dtype=float)
+    if not use_fees:
+        return np.zeros(len(df))
+    domain_rate = df["domain"].map(FEE_RATES).fillna(FEE_RATES["other"]).to_numpy(dtype=float)
+    if "fees_enabled" not in df:
+        return domain_rate * p * (1 - p)
+    enabled = df["fees_enabled"].astype(str).str.lower().eq("true").to_numpy()
+    rate = pd.to_numeric(df.get("fee_rate"), errors="coerce").to_numpy(dtype=float)
+    rate = np.where(np.isnan(rate), domain_rate, rate)
+    exp = pd.to_numeric(df.get("fee_exponent"), errors="coerce").fillna(1).to_numpy(dtype=float)
+    return np.where(enabled, rate * (p * (1 - p)) ** exp, 0.0)
 
 
 def event_key(df):
@@ -62,7 +86,9 @@ def split_by_time(df, cutoff):
         cutoff = per_event.iloc[int(len(per_event) * 0.7)].normalize()
     else:
         cutoff = pd.Timestamp(cutoff, tz="UTC")
-    return df[event_end < cutoff], df[event_end >= cutoff], cutoff
+    # Test = events still running at the cutoff, and only their markets that resolved after it:
+    # a leg that resolved before the cutoff would be scored by a model trained on later data.
+    return df[event_end < cutoff], df[(event_end >= cutoff) & (df["resolved_at"] >= cutoff)], cutoff
 
 
 # ---------- model ----------
@@ -253,6 +279,16 @@ def return_ci(trades, rng, n=1000, level=90):
     return [round(float(np.percentile(sums, tail)), 2), round(float(np.percentile(sums, 100 - tail)), 2)]
 
 
+def by_domain(trades, rng):
+    """With-costs P&L of the main policy split by domain (additive, starting-bankroll units)."""
+    out = []
+    for dom, g in trades.groupby("domain"):
+        pnl = g["kelly"] * g["ret"]
+        out.append({"domain": dom, "n_trades": int(len(g)), "return": round(float(pnl.sum()), 4),
+                    "hit_rate": round(float((g["ret"] > 0).mean()), 4), "return_ci": return_ci(g, rng)})
+    return sorted(out, key=lambda d: -d["return"])
+
+
 def by_horizon(test, q, cost, lo, hi):
     """If you could only act at one fixed horizon: is the edge tradable there?"""
     rows = []
@@ -271,6 +307,41 @@ def by_horizon(test, q, cost, lo, hi):
     return rows
 
 
+def exposure(trades, stake):
+    """Open stake over time (entry = scheduled end - horizon, exit = resolution), in starting bankrolls:
+    the peak, and a capped variant where a new trade only gets what is left of 1 bankroll."""
+    entry = (pd.to_datetime(trades["end_date"], utc=True, format="ISO8601")
+             - pd.to_timedelta(trades["horizon_hours"], unit="h")).to_numpy()
+    exit_ = trades["resolved_at"].to_numpy()
+    stake = np.asarray(stake, float)
+    times = np.concatenate([entry, exit_])
+    delta = np.concatenate([stake, -stake])
+    order = np.lexsort((delta, times))  # at equal times, exits (negative) before entries
+    peak = float(np.max(np.cumsum(delta[order]))) if len(delta) else 0.0
+    capped, open_ = np.zeros(len(stake)), []  # open_: (exit, stake)
+    for i in np.argsort(entry, kind="stable"):
+        open_ = [(e, s) for e, s in open_ if e > entry[i]]
+        room = 1.0 - sum(s for _, s in open_)
+        capped[i] = max(0.0, min(stake[i], room))
+        if capped[i] > 0:
+            open_.append((exit_[i], capped[i]))
+    return peak, capped
+
+
+def capped_report(trades, rng):
+    peak, capped = exposure(trades, trades["kelly"].to_numpy())
+    pnl = trades["kelly"].to_numpy() * trades["ret"].to_numpy()
+    t = trades.assign(kelly=capped)[capped > 0]
+    s = equity_stats(t, t["kelly"].to_numpy())
+    staked = float(trades["kelly"].sum())
+    return {"peak_open_stake": round(peak, 3),
+            "return_per_dollar_staked": round(float(pnl.sum()) / staked, 4) if staked else None,
+            "capped_exposure": {**s, "cap": 1.0, "return_ci": return_ci(t, rng),
+                                "return_per_dollar_staked": round(float((t["kelly"] * t["ret"]).sum() / t["kelly"].sum()), 4) if len(t) else None,
+                                "note": "Same trades in entry order; a trade is cut to whatever is left when open stakes "
+                                        "would exceed 1 starting bankroll, skipped when nothing is left."}}
+
+
 def naive_favourite(test, cost, stake=0.02):
     t = test.assign(cost=cost)[in_band(test["price_yes"])].sort_values("horizon_hours", ascending=False).groupby("market_id").head(1)
     action = np.where(t["price_yes"] >= 0.5, "BUY_YES", "BUY_NO")
@@ -283,7 +354,7 @@ def failures(test, q, cal, trades):
     out = []
     for dom, rep in cal.items():
         for h in rep["horizons"]:
-            if h["n"] >= 30 and h["brier_model"] >= h["brier_market"]:
+            if h["n"] >= 30 and h["brier_model"] > h["brier_market"] - NO_LIFT_MARGIN:
                 out.append({"kind": "no_lift", "domain": dom, "horizon_hours": h["horizon_hours"], "n": h["n"],
                             "text": f"{dom}, {h['horizon_hours']}h: model Brier {h['brier_model']} vs market {h['brier_market']} — no lift"})
             elif h["n"] < 30:
@@ -339,31 +410,18 @@ def live_report(model, live, fee, min_half_spread, n_trades=30, n_no_trade=15):
     return trades + no_trade
 
 
-# ---------- main ----------
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default=str(HERE.parent / "data"))
-    ap.add_argument("--out", default=str(HERE / "results"))
-    ap.add_argument("--cutoff", default=None, help="markets resolved before this date train (default: 70th percentile)")
-    ap.add_argument("--fee", type=float, default=0.0, help="fee per $1 contract")
-    ap.add_argument("--min-half-spread", type=float, default=0.01, help="cost floor per contract when spread is unknown/tiny")
-    ap.add_argument("--seed", type=int, default=0)
-    a = ap.parse_args()
-    rng = np.random.default_rng(a.seed)
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
-
-    df = load_horizons(Path(a.data) / "horizons.csv")
-    train, test, cutoff = split_by_time(df, a.cutoff)
-    model, selection = select_model(train, rng)
+def evaluate(df, cutoff=None, fee=0.0, min_half_spread=0.01, seed=0, model=None, selection=None, use_fees=True):
+    """Time split -> (model, calibration by domain, backtest dict), every number on the test set only.
+    model=None picks and fits one on train (exactly main()'s model); pass any object with
+    predict(price, hours, domain) -> (q, lo, hi) to score an already fitted model on identical inputs."""
+    rng = np.random.default_rng(seed)
+    train, test, cutoff = split_by_time(df, cutoff)
+    if model is None:
+        model, selection = select_model(train, rng)
     q, lo, hi = model.predict(test["price_yes"], test["horizon_hours"], test["domain"])
     y = test["outcome"].to_numpy()
-    cost = trade_cost(test["spread"].to_numpy(dtype=float), a.fee, a.min_half_spread)
-
+    cost = trade_cost(test["spread"].to_numpy(dtype=float), fee + fee_per_share(test, use_fees), min_half_spread)
     cal = calibration_report(test, q)
-    (out / "calibration.json").write_text(json.dumps({"cutoff": str(cutoff.date()), "by_domain": cal}, indent=1))
-
     with_c = run_policy(test, q, cost, lo, hi)
     without_c = run_policy(test, q, np.zeros(len(test)), lo, hi)
     fails, worst = failures(test, q, cal, with_c)
@@ -374,27 +432,49 @@ def main():
         "model_selection": selection,
         "with_costs": equity_stats(with_c, with_c["kelly"].to_numpy()),
         "return_ci": return_ci(with_c, rng),
+        "by_domain": by_domain(with_c, rng),
         "without_costs": equity_stats(without_c, without_c["kelly"].to_numpy()),
+        **capped_report(with_c, rng),
         "naive_favourite": naive_favourite(test, cost),
         "overall": {"brier_market": round(brier(test["price_yes"], y), 4), "brier_model": round(brier(q, y), 4),
                     "logloss_market": round(log_loss(test["price_yes"], y), 4), "logloss_model": round(log_loss(q, y), 4)},
         "by_horizon": by_horizon(test, q, cost, lo, hi),
         "failures": fails, "worst_trades": worst,
         "assumptions": [
-            "Split by time: train on markets resolved before the cutoff, test on markets resolved after it.",
-            f"Cost per contract = max(spread / 2, {a.min_half_spread}) + fee {a.fee}; spread is the market's quoted spread, not the historical one.",
+            "Split by time: train on events that ended before the cutoff; test on markets of the remaining events that resolved after it (legs resolved earlier are dropped). Legs of one event never straddle the split.",
+            (f"Cost per contract = max(spread / 2, {min_half_spread}) + Polymarket taker fee (rate x p(1-p), each market's own "
+             f"fee schedule from Gamma; {'fees on' if use_fees else 'fees OFF'}) + flat fee {fee}; historical spreads are unknown, so the 1¢ floor applies."),
+            "Stakes are fractions of the starting bankroll and positions overlap: peak_open_stake is the most staked at once; capped_exposure re-runs the same trades with total open stake capped at 1 bankroll.",
             "One trade per market, at the earliest horizon with positive net edge, held to resolution.",
             f"Only prices in {TRADABLE[0]:.0%}–{TRADABLE[1]:.0%} are modelled or traded; edge must survive the model's 10–90% bootstrap interval (resampled by event).",
             f"Stake = {KELLY_SCALE} Kelly on the conservative q, capped at {KELLY_CAP:.0%} of the starting bankroll; P&L is additive (no compounding) because positions overlap.",
             "Prices are Polymarket price history at each horizon; fills at that price are assumed.",
         ],
     }
+    return model, cal, backtest
+
+
+# ---------- main ----------
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default=str(HERE.parent / "data"))
+    ap.add_argument("--out", default=str(HERE / "results"))
+    ap.add_argument("--cutoff", default=None, help="markets resolved before this date train (default: 70th percentile)")
+    ap.add_argument("--fee", type=float, default=0.0, help="fee per $1 contract")
+    ap.add_argument("--min-half-spread", type=float, default=0.01, help="cost floor per contract when spread is unknown/tiny")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--no-fees", action="store_true", help="ignore Polymarket taker fees (the pre-audit numbers)")
+    a = ap.parse_args()
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    df = load_horizons(Path(a.data) / "horizons.csv")
+    model, cal, backtest = evaluate(df, a.cutoff, a.fee, a.min_half_spread, a.seed, use_fees=not a.no_fees)
+    selection, cutoff = backtest["model_selection"], pd.Timestamp(backtest["cutoff"])
+    (out / "calibration.json").write_text(json.dumps({"cutoff": backtest["cutoff"], "by_domain": cal}, indent=1))
     (out / "backtest.json").write_text(json.dumps(backtest, indent=1, default=str))
 
-    live_path = Path(a.data) / "live.csv"
-    if live_path.exists():
-        live = live_report(model, pd.read_csv(live_path), a.fee, a.min_half_spread)
-        (out / "live.json").write_text(json.dumps(live, indent=1))
+    # results/live.json (the /api/live fallback snapshot) is written by live.py from Gamma, not here.
 
     o = backtest["overall"]
     print(f"model selection: {selection}")
@@ -403,6 +483,8 @@ def main():
     for k in ("with_costs", "without_costs"):
         s = backtest[k]
         print(f"{k:14s} trades {s['n_trades']:4d}  return {s['return']:+.3f}  hit {s['hit_rate']}  maxDD {s['max_drawdown']}")
+    print(f"peak open stake {backtest['peak_open_stake']}  per $ staked {backtest['return_per_dollar_staked']}  "
+          f"capped at 1 bankroll: return {backtest['capped_exposure']['return']:+.3f} CI {backtest['capped_exposure']['return_ci']}")
     print(f"naive favourite return {backtest['naive_favourite']['return']:+.3f}")
     for h in backtest["by_horizon"]:
         print(f"  {h['horizon_hours']:4d}h  n {h['n_markets']:4d}  with costs {h['with_costs']}")

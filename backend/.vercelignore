@@ -2,3 +2,8 @@
 __pycache__
 model.py
 requirements-model.txt
+export_model.py
+capsule.py
+refit.py
+parity_fees.py
+results/model_candidates
