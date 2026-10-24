@@ -1,7 +1,7 @@
 # Horizon — Devpost draft (Role C)
 
 Paste section by section into Devpost. Placeholders: `[public URL]`, `[video]`, `[Delta thread links]`, `[team names]`.
-Numbers from `backend/results/*.json` (14:25 Sat) — re-check before submitting. "Mostly sports" is provisional until the tweet-count markets are relabelled (A, 14:22).
+Numbers from `backend/results/*.json` (14:25 Sat) — re-check before submitting.
 
 ## Tagline
 Prediction markets are overconfident. Horizon tells you when it pays to trade against them.
@@ -16,7 +16,7 @@ and how far before resolution should you act?
 ## What it does
 - Collects 34,677 resolved yes/no Polymarket markets and the price each one had 30 days, 7 days, 3 days, 1 day and
   12 hours before its scheduled end.
-- Learns a calibration map: the probability a contract really resolves YES, given its price, horizon and domain.
+- Learns a calibration map: the probability a contract really resolves YES, given its price and time to resolution.
 - Turns that into a decision for every open market: buy YES, buy NO, or **no trade, costs eat the edge**, with a
   quarter-Kelly stake.
 - Shows the evidence on one page: calibration curves per horizon, the backtest with and without costs, and a panel

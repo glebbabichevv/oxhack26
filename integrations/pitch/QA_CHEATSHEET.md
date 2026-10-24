@@ -78,6 +78,11 @@ ask could be worse. Next step: on-chain fills for true historical spreads.
 only trade at this horizon". The main backtest enters at the *earliest* horizon with an edge, so most profit is booked
 from 1–7 days out.
 
+**Q: Why does the test equity curve start in 2025 if the cutoff is May 2026?** The split is by *event*: an event goes
+to test if its last market resolved after the cutoff, so early legs of long events (e.g. a tennis major's "winner"
+markets) resolved earlier. That's 260 of 10,839 test markets (2.4%). It keeps correlated legs together; for those 260 the model
+was trained on slightly later data. [A to confirm whether dropping them changes the result.]
+
 **Q: Test period?** Markets resolved after 18 May 2026: about five months, one regime. That's a fair limitation.
 
 ## Where it fails (say it proudly)
@@ -85,9 +90,7 @@ from 1–7 days out.
 - Crypto at 1–7 days, politics at most horizons: no lift.
 - "Other" domain: 2–3 test markets, too few to say anything.
 - Under 10¢ a day out, contracts resolve YES ~3%. Very cheap longshots are *not* underpriced; the effect is ~10–35¢.
-- ⚠ **Per-domain numbers are provisional:** 39% of "politics" markets are Elon Musk tweet-count bins (being relabelled
-  by Ayaz). Overall numbers don't change, since the model ignores domain. Until relabelled, don't quote the
-  "sports +1.84 / politics +0.11" split as final.
+- By domain after the tweet-count relabel (A, 14:29): sports +1.84 of the 2.77 (4,484 trades).
 
 ## The honesty story (use it if asked "what went wrong?")
 Our first 3,100-market sample said "politics, a month out". On 34,677 markets that didn't replicate: the small sample

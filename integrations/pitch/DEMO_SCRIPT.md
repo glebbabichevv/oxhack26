@@ -1,9 +1,9 @@
 # Demo script — 90 seconds (Role C, TheMarkz3)
 
-Built against `docs/design-reference/horizon-target-mock.png` and the numbers in `backend/results/*.json` (14:25 Sat).
+Walked against the real screen (main, 14:36 Sat, localhost) and the numbers in `backend/results/*.json` (14:25 Sat).
 Rule: say only numbers that are on the screen or in `backend/results/`. If Gleb regenerates results, update this file.
 Live cards change hourly — pick the hero card on the morning of the demo (see "Hero card" below).
-Length: ~215 spoken words ≈ 90 s at a calm 145 wpm. Rehearse with a timer; if over, cut the line marked (cut first).
+Length: ~228 spoken words ≈ 95 s at 145 wpm; ~205 (≈ 85 s) without the (cut first) line — cut it unless you speak fast. Rehearse with a timer; if over, cut the line marked (cut first).
 
 ## 0:00–0:10 — hook · screen: headline
 "A prediction-market price is a probability with a clock on it. Research says those prices are off, depending on the
@@ -13,19 +13,19 @@ clock. We asked a trader's question: can you make money on it, and *when*?"
 "34,677 resolved Polymarket markets. We train on events that ended before mid-May, test on the 10,839 after, never a
 random split. Out of sample, our model beats the market price: Brier 0.1274 against 0.1281."
 
-## 0:25–0:45 — what it learned, and when · screen: calibration chart, 1d → 30d
+## 0:25–0:40 — what it learned · screen: calibration chart (1d)
 "Prices are overconfident. A day out, contracts around 15 cents win 20% of the time. The model learns how far to pull each
-price back."
-(Click 30d.) "A month out, the correction buys nothing. The edge only shows up in the last week."
+price back, separately for each horizon."
 
-## 0:45–1:05 — the decision · screen: Live decisions
+## 0:40–1:00 — the decision · screen: Live decisions
 "So, for every open market right now: price, our probability, and a call after a one-cent cost."
 (Point at hero card.) "[Question]: market [p], model [q]. Buy YES, quarter-Kelly."
-(Point at a NO_TRADE card.) "Here the gap doesn't cover costs: no trade. Most markets are no trade."
+(Point at a "No trade" card.) "Here the gap doesn't cover costs: no trade. A third of the markets are no trade."
 
-## 1:05–1:30 — money + honesty · screen: KPI "Return"
-"On the held-out markets that's 7,228 trades and 2.77 starting bankrolls of profit after costs, interval 1.4 to 4.1.
+## 1:00–1:30 — money, and *when* · screen: equity chart + "When to act" bars
+"On the held-out markets: 7,228 trades, 2.77 starting bankrolls of profit after costs, interval 1.4 to 4.1.
 Always backing the favourite loses 7."
+(Point at "When to act".) "And here's the time part: a month out, it loses. A week out, plus 2.5% a trade. A day out, plus 14."
 (cut first) "Our first small sample said 'politics, a month out'. It didn't replicate on 11 times more data, so we threw it out."
 "Horizon tells you when a market is wrong enough to trade, and when it isn't."
 
