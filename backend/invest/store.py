@@ -51,6 +51,17 @@ class Store:
         self.save_plan(plan)
         return plan
 
+    def update_plan(self, plan_id, fn):
+        """Read-modify-write one plan under the lock. fn mutates the plan in place; if it raises, nothing is written."""
+        with _lock:
+            plans = self._read("plans.json", [])
+            plan = next((p for p in plans if p["id"] == plan_id), None)
+            if plan is None:
+                return None
+            fn(plan)
+            self._write("plans.json", plans)
+            return plan
+
     def log(self, plan_id, kind, now, **fields):
         event = {"id": uuid.uuid4().hex[:10], "plan_id": plan_id, "kind": kind, "t": now, **fields}
         with _lock:

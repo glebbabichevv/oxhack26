@@ -7,20 +7,50 @@ import asyncio
 import hmac
 import json
 import os
+import sys
+import threading
 import time
 from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
 from invest.rules import plan_value
 from invest.store import Store, now_iso
 
+try:  # local runs: DASHBOARD_PIN lives in the repo's .env.local, which polymarket_trading loads
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "integrations"))
+    from polymarket_trading import load_env
+    load_env()
+except Exception:
+    pass
+
 HERE = Path(__file__).parent
-router = APIRouter()
+
+
+class _StrictJSONRoute(APIRoute):
+    """Validation errors echo the bad input back, and Infinity cannot be sent as strict JSON: drop the echo."""
+
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+
+        async def wrapped(request):
+            try:
+                return await handler(request)
+            except RequestValidationError as exc:
+                errors = [{k: v for k, v in e.items() if k not in ("input", "ctx")} for e in exc.errors()]
+                return JSONResponse({"detail": errors}, status_code=422)
+
+        return wrapped
+
+
+router = APIRouter(route_class=_StrictJSONRoute)
 store = Store()
-PIN = os.environ.get("DASHBOARD_PIN")
 _fails = {"n": 0, "until": 0.0}
+_fails_lock = threading.Lock()
 
 
 def _broker_meta():
@@ -31,17 +61,24 @@ def _broker_meta():
         return "paper", float(os.environ.get("POLYMARKET_MAX_BET_USD") or 10)
 
 
+def require_trader_host():
+    if os.environ.get("TRADER_ENABLED") != "1":
+        raise HTTPException(503, "This server does not run the trader; use the trading host")
+
+
 def require_pin(pin):
-    if not PIN:
+    expected = os.environ.get("DASHBOARD_PIN")
+    if not expected:
         raise HTTPException(503, "DASHBOARD_PIN is not set on the server")
-    if time.time() < _fails["until"]:
-        raise HTTPException(429, "Too many wrong PINs; try again in 5 minutes")
-    if not hmac.compare_digest(pin or "", PIN):
-        _fails["n"] += 1
-        if _fails["n"] >= 3:
-            _fails.update(n=0, until=time.time() + 300)
-        raise HTTPException(401, "Wrong PIN")
-    _fails["n"] = 0
+    with _fails_lock:
+        if time.time() < _fails["until"]:
+            raise HTTPException(429, "Too many wrong PINs; try again in 5 minutes")
+        if not hmac.compare_digest((pin or "").encode(), expected.encode()):
+            _fails["n"] += 1
+            if _fails["n"] >= 3:
+                _fails.update(n=0, until=time.time() + 300)
+            raise HTTPException(401, "Wrong PIN")
+        _fails["n"] = 0
 
 
 def summary(plan):
@@ -54,9 +91,9 @@ def summary(plan):
 
 
 class PlanIn(BaseModel):
-    budget: float = Field(gt=0, le=1_000_000)
-    max_bet: float = Field(gt=0)
-    daily_loss_stop: float = Field(gt=0)
+    budget: float = Field(gt=0, le=1_000_000, allow_inf_nan=False)
+    max_bet: float = Field(gt=0, allow_inf_nan=False)
+    daily_loss_stop: float = Field(gt=0, allow_inf_nan=False)
 
 
 @router.get("/api/plans")
@@ -68,10 +105,15 @@ def list_plans():
 
 @router.post("/api/plans")
 def create_plan(body: PlanIn, x_dashboard_pin: str | None = Header(default=None)):
+    require_trader_host()
     require_pin(x_dashboard_pin)
     _, ceiling = _broker_meta()
     if body.max_bet > ceiling:
         raise HTTPException(400, f"Max per bet can be at most ${ceiling:g} on this server")
+    if body.max_bet > body.budget:
+        raise HTTPException(400, "Max per bet can't be more than the budget")
+    if body.daily_loss_stop > body.budget:
+        raise HTTPException(400, "The daily loss stop can't be more than the budget")
     now = now_iso()
     plan = store.new_plan(body.budget, body.max_bet, body.daily_loss_stop, now)
     store.log(plan["id"], "start", now, budget=body.budget, max_bet=body.max_bet)
@@ -80,22 +122,33 @@ def create_plan(body: PlanIn, x_dashboard_pin: str | None = Header(default=None)
 
 @router.post("/api/plans/{plan_id}/{action}")
 def control_plan(plan_id: str, action: str, x_dashboard_pin: str | None = Header(default=None)):
+    require_trader_host()
     require_pin(x_dashboard_pin)
-    plan = store.plan(plan_id)
-    if plan is None:
-        raise HTTPException(404, "No such plan")
     if action not in ("pause", "resume", "stop"):
         raise HTTPException(404, "Unknown action")
-    if plan["status"] == "stopped":
-        raise HTTPException(400, "This plan is stopped; start a new one")
-    if action == "resume":  # a person chose to carry on: today's loss stop counts from now
-        plan.update(status="running", pause_reason=None, errors=0)
-        plan["day"]["start_value"] = plan_value(plan)
-    else:
-        plan.update(status="paused" if action == "pause" else "stopped", pause_reason="by_person" if action == "pause" else None)
-    store.save_plan(plan)
-    store.log(plan_id, action, now_iso())
-    return summary(plan)
+    logged = {}
+
+    def change(plan):
+        if plan["status"] == "stopped":
+            raise HTTPException(400, "This plan is stopped; start a new one")
+        if action == "resume":  # only a paused plan; a person chose to carry on, so today's loss stop counts from now
+            if plan["status"] != "paused":
+                raise HTTPException(400, "Only a paused plan can be resumed")
+            logged["prev_reason"] = plan.get("pause_reason")
+            plan.update(status="running", pause_reason=None, errors=0)
+            plan["day"]["start_value"] = plan_value(plan)
+        elif action == "pause":  # never overwrites an auto-pause reason such as check_fill
+            if plan["status"] != "running":
+                raise HTTPException(400, "This plan is not running")
+            plan.update(status="paused", pause_reason="by_person")
+        else:
+            plan.update(status="stopped", pause_reason=None)
+
+    updated = store.update_plan(plan_id, change)
+    if updated is None:
+        raise HTTPException(404, "No such plan")
+    store.log(plan_id, action, now_iso(), **logged)
+    return summary(updated)
 
 
 @router.get("/api/orders")
@@ -120,6 +173,16 @@ def pnl():
     return {"real": real, "backtest": backtest, "backtest_budget": budget}
 
 
+def _on_trader_done(task):
+    if task.cancelled():
+        why = "cancelled"
+    elif task.exception() is not None:
+        why = str(task.exception()) or type(task.exception()).__name__
+    else:
+        why = "ended"
+    store.log(None, "error", now_iso(), text=f"trader loop stopped: {why}"[:300])
+
+
 def start_trader(app):
     """Run the 10-minute loop inside this process when TRADER_ENABLED=1."""
     if os.environ.get("TRADER_ENABLED") != "1":
@@ -128,6 +191,8 @@ def start_trader(app):
     async def _start():
         from invest.broker import Broker
         from invest.trader import loop
-        asyncio.get_running_loop().create_task(loop(store, Broker()))
+        task = asyncio.get_running_loop().create_task(loop(store, Broker()))
+        app.state.trader_task = task  # keep a reference; the done callback records how it ended
+        task.add_done_callback(_on_trader_done)
 
     app.add_event_handler("startup", _start)

@@ -58,3 +58,16 @@ def test_no_tmp_file_left_after_writes(tmp_path):
     s.log("a", "buy", NOW)
     s.add_equity(NOW, 1000, 1010)
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_update_plan_mutates_and_persists(tmp_path):
+    s = Store(tmp_path)
+    p = s.new_plan(1000, 25, 100, NOW)
+    updated = s.update_plan(p["id"], lambda plan: plan.update(cash=750))
+    assert updated["cash"] == 750 and Store(tmp_path).plan(p["id"])["cash"] == 750
+
+
+def test_update_plan_unknown_id_returns_none(tmp_path):
+    s = Store(tmp_path)
+    s.new_plan(1000, 25, 100, NOW)
+    assert s.update_plan("nope", lambda plan: plan.update(cash=0)) is None

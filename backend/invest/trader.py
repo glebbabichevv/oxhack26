@@ -116,11 +116,18 @@ def run_cycle(store, broker, live, now, total_cap):
                 if plan["errors"] >= MAX_ERRORS:
                     plan.update(status="paused", pause_reason="polymarket_errors")
                     store.log(plan["id"], "pause", _iso(now), reason="polymarket_errors")
-        fresh = store.plan(plan["id"])
-        if fresh and fresh["status"] != status_at_start:  # the person changed status mid-cycle: their change wins
-            plan.update(status=fresh["status"], pause_reason=fresh.get("pause_reason"))
         plan["last_check"] = _iso(now)
-        store.save_plan(plan)
+
+        def merge(stored):
+            # the person changed status mid-cycle: their status and pause reason win; everything else is ours
+            if stored["status"] != status_at_start:
+                status = {"status": stored["status"], "pause_reason": stored.get("pause_reason")}
+            else:
+                status = {"status": plan["status"], "pause_reason": plan.get("pause_reason")}
+            stored.update({k: v for k, v in plan.items() if k not in ("status", "pause_reason")})
+            stored.update(status)
+
+        store.update_plan(plan["id"], merge)
     plans = store.plans()
     store.add_equity(_iso(now), round(sum(p["budget"] for p in plans), 2), round(sum(plan_value(p) for p in plans), 2))
 
