@@ -7,8 +7,17 @@ Update it whenever a decision changes; it is how our three agents stay in sync.
 - OxHack '26, Mathematical Institute, Oxford. Sat 24 Oct 09:00 → Sun 25 Oct ~16:30.
 - Clocks go back 1 hour on Sunday night (02:00 → 01:00).
 - Submission deadline: TBA (fill in after opening ceremony).
-- Theme / tracks / main prize: TBA (fill in after opening ceremony).
-- MLH sponsor prizes we target: Best Use of Gemini, ElevenLabs, Presage (+ Tiger Data / Vultr if natural).
+- **Platinum sponsor challenge — HRT (Hudson River Trading): "Best use of Data for Predictions & Decision Making".** Prize and whether there is also an overall winner: TBA.
+- Other tracks / main prize: TBA.
+- MLH sponsor prizes we target alongside: Best Use of Gemini, ElevenLabs (+ Tiger Data if we use live time-series, Presage if natural).
+
+## What HRT judges will look for (design every feature around this)
+HRT is a quant trading firm. A pretty chart is not enough. Our project must show:
+1. **Real data → a prediction**, evaluated honestly on held-out data. Show the actual accuracy / error, including where it fails.
+2. **Probabilities, not yes/no.** Calibrated where possible ("72% likely"), with uncertainty shown in the UI.
+3. **A decision made from the prediction** — "therefore do X", with the expected value or trade-off spelled out. This is the step most teams skip.
+4. A baseline to beat (naive / last-value / majority class), so the model's lift is visible.
+Never fake data or accuracy numbers; judges will ask how they were measured.
 
 ## What we are building
 TBA — one paragraph, written after the idea is locked (after /office-hours).
@@ -30,7 +39,7 @@ At the start of every session, ask the human which role they have (if not obviou
 ### Role B — Frontend & demo screen
 - Folder: `frontend/`. Branches: `front/<feature>`. First command in a session: `/freeze frontend/`.
 - Owns: the one main demo screen, styled strictly by `DESIGN.md`, calling the API exactly as the contract says.
-- gstack flow: `/design-shotgun` → pick one → `/design-html`; `/design-review` in the evening. The frontend-design skill applies to every screen.
+- gstack flow: `/design-shotgun` → pick one → `/design-html`; `/design-review` in the evening. Impeccable applies to every screen automatically.
 - Until the backend exists, use the contract's example responses — but replace them with real calls before the 14:00 gate.
 
 ### Role C — Integrations, demo data, then pitch
