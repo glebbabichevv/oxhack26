@@ -67,10 +67,14 @@ export function sentence(e: InvestEvent): { text: string; tone: "up" | "down" | 
       return e.outcome
         ? { chip: `Won ${money(e.pnl ?? 0, true)}`, tone: "up", text: `${e.side} on ${q} won. Paid out ${money(e.payout ?? 0)}.` }
         : { chip: `Lost ${money(e.pnl ?? 0, true)}`, tone: "down", text: `${e.side} on ${q} lost.` };
-    case "skip":
-      return { chip: "Skipped", tone: "muted", text: `Skipped ${q}: ${SKIP[e.reason ?? ""] ?? e.reason}.` };
-    case "pause":
-      return { chip: "Paused", tone: "down", text: `Investing paused because ${PAUSE[e.reason ?? ""] ?? e.reason}.` };
+    case "skip": {
+      const why = SKIP[e.reason ?? ""] ?? e.reason;
+      return { chip: "Skipped", tone: "muted", text: why ? `Skipped ${q}: ${why}.` : `Skipped ${q}.` };
+    }
+    case "pause": {
+      const why = PAUSE[e.reason ?? ""] ?? e.reason;
+      return { chip: "Paused", tone: "down", text: why ? `Investing paused because ${why}.` : "Investing paused." };
+    }
     case "start":
       return { chip: "Started", tone: "muted", text: `New plan started with ${money(e.budget ?? 0)}.` };
     case "resume":

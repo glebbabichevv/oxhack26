@@ -141,6 +141,7 @@ def control_plan(plan_id: str, action: str, x_dashboard_pin: str | None = Header
             if plan["status"] != "running":
                 raise HTTPException(400, "This plan is not running")
             plan.update(status="paused", pause_reason="by_person")
+            logged["reason"] = "by_person"
         else:
             plan.update(status="stopped", pause_reason=None)
 

@@ -76,6 +76,13 @@ def test_pause_on_paused_plan_keeps_auto_pause_reason(client):
     assert invest_router.store.plan(pid)["pause_reason"] == "check_fill"
 
 
+def test_pause_logs_by_person_reason(client):
+    pid = client.post("/api/plans", json=BODY, headers=PIN).json()["id"]
+    client.post(f"/api/plans/{pid}/pause", headers=PIN)
+    pause = client.get(f"/api/orders?plan={pid}").json()[0]
+    assert pause["kind"] == "pause" and pause["reason"] == "by_person"
+
+
 def test_resume_logs_previous_reason(client):
     pid = client.post("/api/plans", json=BODY, headers=PIN).json()["id"]
     client.post(f"/api/plans/{pid}/pause", headers=PIN)
