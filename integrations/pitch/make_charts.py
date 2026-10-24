@@ -42,8 +42,8 @@ def when_to_trade():
     fig.text(0.06, 0.95, "When to trade: after fees, only the last week pays",
              fontsize=19, color=INK, fontweight="bold", va="top")
     fig.text(0.06, 0.885,
-             f"Mean return per trade after the spread and Polymarket's taker fee, out-of-time test on {bt['n_test_markets']:,} Polymarket markets "
-             f"(resolved after {bt['cutoff']})",
+             f"Mean return per trade after spread + Polymarket taker fee · out-of-time test, {bt['n_test_markets']:,} markets "
+             f"resolved after {bt['cutoff']}",
              fontsize=11, color=MUTED, va="top")
     fig.text(0.06, 0.03, "Each horizon backtested on its own: one trade per market at that horizon, ¼ Kelly, held to "
              "resolution. Source: backend/results/backtest.json", fontsize=8.5, color=FAINT)
