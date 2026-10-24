@@ -1,18 +1,23 @@
 """Ensemble playoff (Gleb's 23:05 task): which probability q should V3 trade on? VALIDATION ONLY, then one test.
 
-  python integrations/ensemble/ensemble.py [--raw data/raw]   # -> integrations/ensemble/results.json + README.md
+  python integrations/ensemble/ensemble.py [--raw data/raw]          # VALIDATION only -> results.json
+  python integrations/ensemble/ensemble.py [--raw data/raw] --test   # at 01:00: also scores the test ONCE
 
-Candidate list, fixed before the first comparison (6 candidates; the agreement threshold in (f) is a 7th
-choice made inside (f) on validation):
+Candidate list (fixed; Gleb 23:08: no new variants after 00:00, ~9 in total). Ayaz's 5: V3, COH, BETA, ENS,
+AGREE (below). TheMarkz3's 4 are read from members/<name>_val.csv and members/<name>_test.csv (columns
+market_id, horizon_hours, q; validation q fitted on the fit slice, test q fitted on all of train, same split
+as here): shin, power, isotonic, hier. Each is scored as its own candidate (V3 rules on that q) and joins the
+ensemble. If Mark's shin is missing at 00:00, the built-in SHIN below is used as the ensemble's Shin member
+(stated in results.json). Ayaz's candidates:
   (a) V3      M0 (backend Calibrator, the shipped model) — the baseline
   (b) COH     (a) + event coherence: in neg-risk events, q normalised across the legs priced at that horizon
               so they sum to 1 (only when the legs' prices sum to 0.95–1.25, i.e. the book looks complete),
               and at most ONE bet per event (the largest net edge)
   (c) BETA    beta calibration (Kull et al. 2017): logit q = a*ln p - b*ln(1-p) + c, per horizon bucket
               (log horizon as an extra term), fitted on the fit slice
-  (d) SHIN    Shin (1993) "fair" probabilities from all outcome prices of a neg-risk event (books summing to
-              1.0–1.25; otherwise q = p). Binary markets have no overround, so Shin = market price there
-  (e) ENS     mean of M0, M1, M2 (integrations/model_v2), BETA and SHIN
+  fallback SHIN (ensemble member only, not a candidate): Shin (1993) from all outcome prices of a neg-risk
+              event (books summing to 1.0–1.25; otherwise q = p)
+  (e) ENS     mean of M0, M1, M2 (integrations/model_v2), BETA and Mark's members (or the fallback SHIN)
   (f) AGREE   ENS, trading only when every member's edge has the same sign and the members' q spread is
               below a threshold chosen on validation from {2, 4, 6, 10}c
 
@@ -42,7 +47,9 @@ import playoff as P  # noqa: E402
 from features import build_table  # noqa: E402
 from models import make  # noqa: E402
 
-CANDIDATES = ["V3", "COH", "BETA", "SHIN", "ENS", "AGREE"]
+CANDIDATES = ["V3", "COH", "BETA", "ENS", "AGREE"]
+MARK = ["shin", "power", "isotonic", "hier"]
+MEMBERS_DIR = HERE / "members"
 AGREE_GRID = (0.02, 0.04, 0.06, 0.10)
 TIE = 0.005
 MIN_EDGE, ENTER_FROM = 0.01, 24
@@ -152,14 +159,15 @@ class Members:
 
 def trades_for(d, name, qs, dlo, dhi, agree=None):
     p = d["price_yes"].to_numpy(float)
-    q = {"V3": qs["M0"], "COH": coherent(d, qs["M0"]), "BETA": qs["BETA"], "SHIN": qs["SHIN"]}.get(name)
+    ens = ensemble_keys(qs)
+    q = {"V3": qs["M0"], "COH": coherent(d, qs["M0"]), "BETA": qs["BETA"]}.get(name, qs.get(name))
     if q is None:  # ENS / AGREE
-        q = np.mean([qs[k] for k in ("M0", "M1", "M2", "BETA", "SHIN")], axis=0)
+        q = np.mean([qs[k] for k in ens], axis=0)
     lo, hi = np.clip(q - dlo, 0, 1), np.clip(q + dhi, 0, 1)
     cost = B.trade_cost(d["spread"].to_numpy(float), B.fee_per_share(d), 0.01)
     action, kelly, edge = B.decide(p, q, cost, lo, hi, d["horizon_hours"].to_numpy(), MIN_EDGE, ENTER_FROM)
     if agree is not None:
-        members = np.stack([qs[k] for k in ("M0", "M1", "M2", "BETA", "SHIN")])
+        members = np.stack([qs[k] for k in ens])
         sign = np.sign(members - p)
         same = (np.abs(sign.sum(0)) == len(members)) & ((sign[0] > 0) == (action == "BUY_YES"))
         ok = same & ((members.max(0) - members.min(0)) < agree)
@@ -171,6 +179,22 @@ def trades_for(d, name, qs, dlo, dhi, agree=None):
         t = t.sort_values("edge", ascending=False).groupby(B.event_key(t)).head(1)
     t["ret"] = B.payoff(t["action"].to_numpy(), t["price_yes"].to_numpy(), t["cost"].to_numpy(), t["outcome"].to_numpy())
     return t.sort_values("resolved_at"), q
+
+
+def ensemble_keys(qs):
+    keys = ["M0", "M1", "M2", "BETA"] + [m for m in MARK if m in qs]
+    return keys if "shin" in qs else keys + ["SHIN"]
+
+
+def load_mark(d, part):
+    """Mark's member q's for these rows; rows he did not price fall back to the market price."""
+    out = {}
+    for m in MARK:
+        f = MEMBERS_DIR / f"{m}_{part}.csv"
+        if f.exists():
+            x = d[["market_id", "horizon_hours"]].merge(pd.read_csv(f), on=["market_id", "horizon_hours"], how="left")
+            out[m] = np.where(x["q"].notna(), x["q"], d["price_yes"].to_numpy(float)).astype(float)
+    return out
 
 
 def score(d, name, qs, dlo, dhi, agree=None):
@@ -190,6 +214,7 @@ def scored_rows(rows, start):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=str(ROOT / "data" / "raw"))
+    ap.add_argument("--test", action="store_true", help="score the test set once (01:00, after the list is frozen)")
     a = ap.parse_args()
     df = B.load_horizons(ROOT / "data" / "horizons.csv")
     feats = build_table(ROOT / "data", Path(a.raw))  # model_v2 feature table (M1/M2 train on it)
@@ -202,8 +227,11 @@ def main():
     # ---- validation ----
     mem = Members().fit(fit, feats)
     qs, dlo, dhi = mem.predict(val, feats)
+    qs.update(load_mark(val, "val"))
+    cands = CANDIDATES + [m for m in MARK if m in qs]
+    print("candidates:", cands, "| ensemble members:", ensemble_keys(qs), flush=True)
     validation, agree_grid = {}, {}
-    for c in CANDIDATES:
+    for c in cands:
         if c == "AGREE":
             for thr in AGREE_GRID:
                 agree_grid[thr] = score(val, c, qs, dlo, dhi, thr)
@@ -216,22 +244,25 @@ def main():
         print(f"val {c:5s} brier {v['brier']} logloss {v['logloss']} per$ {v.get('per_dollar')} "
               f"{v.get('per_dollar_ci')} n={v['n_trades']}", flush=True)
     winner, best = "V3", validation["V3"].get("per_dollar", -9)
-    for c in CANDIDATES[1:]:
+    for c in cands[1:]:
         if validation[c].get("per_dollar", -9) > best + TIE:
             winner, best = c, validation[c]["per_dollar"]
     print("validation winner:", winner, flush=True)
 
-    # ---- test, once: winner + V3 reference ----
-    mem_t = Members().fit(train, feats)
-    test_rows = scored_rows(test, cutoff)
-    qs_t, dlo_t, dhi_t = mem_t.predict(test_rows, feats)
-    testing = {c: score(test_rows, c, qs_t, dlo_t, dhi_t, validation[c].get("threshold"))
-               for c in dict.fromkeys(["V3", winner])}
+    testing = {}
+    if a.test:  # ---- test, once: winner + V3 reference ----
+        mem_t = Members().fit(train, feats)
+        test_rows = scored_rows(test, cutoff)
+        qs_t, dlo_t, dhi_t = mem_t.predict(test_rows, feats)
+        qs_t.update(load_mark(test_rows, "test"))
+        testing = {c: score(test_rows, c, qs_t, dlo_t, dhi_t, validation[c].get("threshold"))
+                   for c in dict.fromkeys(["V3", winner])}
     for c, v in testing.items():
         print(f"TEST {c:5s} brier {v['brier']} logloss {v['logloss']} per$ {v.get('per_dollar')} {v.get('per_dollar_ci')} "
               f"bankrolls {v.get('return')} {v.get('return_ci')} n={v['n_trades']} maxDD {v.get('max_drawdown')}", flush=True)
 
-    res = {"protocol": __doc__.strip(), "n_candidates_compared": len(CANDIDATES), "agree_thresholds_tried": list(AGREE_GRID),
+    res = {"protocol": __doc__.strip(), "candidates": cands, "n_candidates_compared": len(cands),
+           "ensemble_members": ensemble_keys(qs), "test_opened": bool(a.test), "agree_thresholds_tried": list(AGREE_GRID),
            "n_validation_markets": len(val_ids), "n_test_markets": int(test["market_id"].nunique()),
            "winner": winner, "validation": validation, "validation_agree_grid": {str(k): v for k, v in agree_grid.items()},
            "test": testing}
