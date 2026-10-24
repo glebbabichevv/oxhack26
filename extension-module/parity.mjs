@@ -26,5 +26,12 @@ const offsetsKept = coh.every((l, i) => Math.abs((l.decision.q - l.decision.lo) 
 const backed = coh.filter((l) => l.decision.action !== "NO_TRADE" || l.decision.wait).length;
 const notNeg = cohere(model, legs, false).reduce((s, l) => s + l.decision.q, 0);
 console.log(`COH: sum q ${sumQ.toFixed(6)} (was ${legs.reduce((s, l) => s + l.decision.q, 0).toFixed(4)}; not negRisk ${notNeg.toFixed(4)}) · offsets kept ${offsetsKept} · backed legs ${backed}`);
-const cohOk = Math.abs(sumQ - 1) < 1e-6 && offsetsKept && backed <= 1;
+// El Clasico (Sat night): the backend's live path (backend/parity_coh.py -> results/parity_coh.json) backs Barça NO
+// and nothing else; cohere() must agree leg by leg (the extension's scan once showed a fake Draw YES here).
+const clasico = JSON.parse(readFileSync(new URL("../backend/results/parity_coh.json", import.meta.url)));
+const cl = cohere(model, clasico.map((r) => ({ question: r.label, label: r.label, bid: r.bid, ask: r.ask, fee: { rate: 0, exponent: 1 },
+  decision: decide(model, (r.bid + r.ask) / 2, 20, "sports", r.ask - r.bid, { rate: 0, exponent: 1 }) })), true);
+const clMismatch = cl.filter((l, i) => l.decision.action !== clasico[i].action || Math.abs(l.decision.q - clasico[i].q) > 1e-4).length;
+console.log(`El Clasico: TS ${cl.map((l) => `${l.label} ${l.decision.action} ${l.decision.q.toFixed(4)}`).join(' · ')} · mismatches vs backend ${clMismatch}`);
+const cohOk = Math.abs(sumQ - 1) < 1e-6 && offsetsKept && backed <= 1 && clMismatch === 0;
 process.exit(worst < 1e-4 && mismatched === 0 && cohOk ? 0 : 1);

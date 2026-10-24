@@ -4,7 +4,7 @@
  * through checkBet (Horizon's call; at least $1, at most the budget). The plan is shown as a
  * list; the panel sets up Polymarket's ticket for the top few, one at a time; the user presses Trade.
  */
-import { decide, decideEvent, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
+import { cohere, decide, decideEvent, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
 import { caution, context,
   checkBet, getAccount, inPlay, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
   type Position, type Quote, type Side,
@@ -56,6 +56,7 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
   const batches = await Promise.all(Array.from({ length: 6 }, (_, i) =>
     fetch(`${GAMMA}/markets?${base}&offset=${i * 100}`).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
   const seen = new Set<string>();
+  const negRisk = new Set<string>();
   const picks: MarketPick[] = [];
   for (const mk of batches.flat() as Record<string, any>[]) {
     if (seen.has(mk.id)) continue;
@@ -67,7 +68,8 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
     if (!(bid > 0 && bid < ask && ask < 1)) continue;
     const hours = (new Date(mk.endDate).getTime() - now.getTime()) / 3.6e6;
     const price = (bid + ask) / 2;
-    if (!(hours > 0) || price < m.tradable[0] || price > m.tradable[1]) continue;
+    // Out-of-band legs stay in (q = price) so an event's book sums the same way as on the site; dropped after coherence.
+    if (!(hours > 0)) continue;
     const tags = (mk.tags ?? []).map((x: { slug: string }) => x.slug);
     const ev = mk.events?.[0];
     const domain = domainOf(m, tags);
@@ -76,16 +78,35 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
     if (caution({ ...ctx, endDate: mk.endDate }, now.getTime())) continue; // in progress, or smaller than anything tested
     picks.push({ marketSlug: mk.slug, eventSlug: ev?.slug ?? mk.slug, question: mk.question, label: mk.groupItemTitle || mk.question,
       bid, ask, closed: false, endDate: mk.endDate, domain, fee, ...ctx, decision: decide(m, price, hours, domain, ask - bid, fee) });
+    if (mk.negRisk || ev?.negRisk) negRisk.add(ev?.slug ?? mk.slug);
   }
-  picks.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
+  // COH, exactly as /api/live: per event and end time, scale q across the legs (cohere), then one bet per event.
+  const groups = new Map<string, MarketPick[]>();
+  for (const p of picks) { const k = `${p.eventSlug}|${p.endDate}`; groups.set(k, [...(groups.get(k) ?? []), p]); }
+  for (const g of groups.values()) {
+    const legs = cohere(m, g.map((p) => ({ question: p.question, label: p.label, marketSlug: p.marketSlug, bid: p.bid, ask: p.ask, decision: p.decision, fee: p.fee })), negRisk.has(g[0].eventSlug));
+    legs.forEach((l, i) => { if (l.decision) g[i].decision = l.decision; });
+  }
+  const inBand = picks.filter((p) => p.decision.price >= m.tradable[0] && p.decision.price <= m.tradable[1]);
+  inBand.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
   // One bet per event: the best leg of each event only.
   const events = new Set<string>();
-  const one = picks.filter((p) => verdictOf(p.decision) !== 'SKIP').filter((p) => (events.has(p.eventSlug) ? false : (events.add(p.eventSlug), true)));
+  const one = inBand.filter((p) => verdictOf(p.decision) !== 'SKIP').filter((p) => (events.has(p.eventSlug) ? false : (events.add(p.eventSlug), true)));
   return { picks: one.slice(0, top), scanned: seen.size };
 }
 
 async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
-  return (await quotes(m, [slug])).get(slug);
+  return withEventDecision(m, (await quotes(m, [slug])).get(slug));
+}
+
+/** A quote's decision made the COH way: from its whole event (cohere + one bet per event), not the market alone. */
+export async function withEventDecision(m: Model, q?: Quote): Promise<Quote | undefined> {
+  if (!q?.decision || !q.eventSlug) return q;
+  try {
+    const ev = await decideEvent(m, q.eventSlug);
+    const leg = ev.legs.find((l) => l.marketSlug === q.marketSlug);
+    return leg?.decision ? { ...q, decision: leg.decision } : q;
+  } catch { return q; }
 }
 async function findPosition(ref: string): Promise<Position | undefined> {
   const a = await getAccount();

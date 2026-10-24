@@ -1,0 +1,23 @@
+[
+ {
+  "label": "FC Barcelona",
+  "bid": 0.59,
+  "ask": 0.6,
+  "q": 0.545034,
+  "action": "BUY_NO"
+ },
+ {
+  "label": "Draw",
+  "bid": 0.15,
+  "ask": 0.16,
+  "q": 0.186843,
+  "action": "NO_TRADE"
+ },
+ {
+  "label": "Real Madrid CF",
+  "bid": 0.24,
+  "ask": 0.25,
+  "q": 0.268122,
+  "action": "NO_TRADE"
+ }
+]

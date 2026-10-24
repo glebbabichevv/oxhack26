@@ -308,8 +308,10 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   useEffect(() => {
     let dead = false;
     void quotes(model, [marketSlug]).then((m) => {
-      const q = m.get(marketSlug);
-      if (dead || !q) return;
+      const q0 = m.get(marketSlug);
+      if (dead || !q0) return;
+      // The card's d was decided with the whole event (COH); never let the single-market quote override it.
+      const q = q0.decision ? { ...q0, decision: d } : q0;
       setQuote(q);
       if (q.decision) void record({ marketId: q.conditionId, slug: q.marketSlug, question: q.question, d: q.decision, stake: side ? stakeFor(a, q.decision) : 0, source: 'card', status: 'shown' });
     });
