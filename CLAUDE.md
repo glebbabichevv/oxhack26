@@ -52,7 +52,7 @@ Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabe
 Out-of-time test: events whose last market resolved before 2026-05-18 train (23,838 markets), the rest test (10,839). All legs of an event stay on one side. Prices 3–97% only; 1¢ cost floor (no historical spreads).
 - **Calibration:** slope ≈ 0.85 at every horizon, same in train and test → prices are overconfident (longshots underpriced, favourites overpriced). Sports ≈ 0.85 at 12h–3d but ≈ 1.0 at 30d; crypto ≈ 0.8 everywhere; politics ≈ 0.9.
 - **Model beats the market** on the test set: Brier 0.1274 vs 0.1281, log loss 0.3851 vs 0.3871 (simple model, picked on validation).
-- **Money after costs:** 7,228 trades, +2.77 starting-bankroll units (additive, ¼ Kelly), 90% CI by event bootstrap [+1.41, +4.07], P(loss) ≈ 0; top 10 events are 1.03 of it. Sports +1.84, science/tech +0.40, politics +0.11. Edge sits at 1–7 days (24h +1.37, 7d +1.14); at 30d ≈ 0. Naive "always back the favourite" loses −7.1 (2% flat stakes).
+- **Money after costs:** 7,228 trades, +2.77 starting-bankroll units (additive, ¼ Kelly), 90% CI by event bootstrap [+1.41, +4.07], P(loss) ≈ 0; top 10 events are 1.03 of it. Sports +1.84, science/tech +0.40, politics +0.11 (**domain split provisional**: 39% of "politics" are Elon tweet-count markets, C is relabelling; overall numbers unaffected — the model ignores domain). Edge sits at 1–7 days (24h +1.37, 7d +1.14); at 30d ≈ 0. Naive "always back the favourite" loses −7.1 (2% flat stakes).
 - **Earlier 3.1k sample (TheMarkz3)** said "politics, a month out": it did not replicate on 11× more data (that sample was top-volume, politics-heavy). Keep this in the pitch as the honesty moment.
 
 ## Stack (locked)
