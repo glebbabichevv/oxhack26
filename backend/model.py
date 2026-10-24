@@ -86,6 +86,32 @@ class Calibrator:
         return q, np.percentile(qs, 10, axis=0), np.percentile(qs, 90, axis=0)
 
 
+class MarketBaseline:
+    """q = market price. Chosen when no model beats the market on validation, so every decision is NO_TRADE."""
+
+    def predict(self, price, hours, domain):
+        p = np.asarray(price, float)
+        return p, p, p
+
+
+def select_model(train, rng):
+    """Pick market / simple / full by log loss on the last 20% of train (by resolution time). Test is untouched."""
+    order = train.groupby("market_id")["resolved_at"].first().sort_values()
+    val_ids = set(order.index[int(len(order) * 0.8):])
+    fit, val = train[~train["market_id"].isin(val_ids)], train[train["market_id"].isin(val_ids)]
+    y = val["outcome"].to_numpy()
+    scores = {"market": log_loss(val["price_yes"], y)}
+    candidates = {"simple": ["other"], "full": pick_domains(fit)}
+    for name, domains in candidates.items():
+        q, _, _ = Calibrator(domains).fit(fit, rng).predict(val["price_yes"], val["horizon_hours"], val["domain"])
+        scores[name] = log_loss(q, y)
+    best = min(scores, key=scores.get)
+    model = MarketBaseline() if best == "market" else Calibrator(
+        ["other"] if best == "simple" else pick_domains(train)).fit(train, rng)
+    return model, {"chosen": best, "val_markets": len(val_ids),
+                   "val_logloss": {k: round(v, 4) for k, v in scores.items()}}
+
+
 def pick_domains(train):
     counts = train["domain"].value_counts()
     keep = [d for d in counts.index if counts[d] >= MIN_DOMAIN_ROWS and d != "other"]
@@ -275,7 +301,7 @@ def main():
 
     df = load_horizons(Path(a.data) / "horizons.csv")
     train, test, cutoff = split_by_time(df, a.cutoff)
-    model = Calibrator(pick_domains(train)).fit(train, rng)
+    model, selection = select_model(train, rng)
     q, _, _ = model.predict(test["price_yes"], test["horizon_hours"], test["domain"])
     y = test["outcome"].to_numpy()
     cost = trade_cost(test["spread"].to_numpy(dtype=float), a.fee, a.min_half_spread)
@@ -290,6 +316,7 @@ def main():
         "cutoff": str(cutoff.date()),
         "n_train_markets": int(train["market_id"].nunique()), "n_test_markets": int(test["market_id"].nunique()),
         "n_trades": int(len(with_c)),
+        "model_selection": selection,
         "with_costs": equity_stats(with_c, with_c["kelly"].to_numpy()),
         "without_costs": equity_stats(without_c, without_c["kelly"].to_numpy()),
         "naive_favourite": naive_favourite(test, cost),
@@ -313,6 +340,7 @@ def main():
         (out / "live.json").write_text(json.dumps(live, indent=1))
 
     o = backtest["overall"]
+    print(f"model selection: {selection}")
     print(f"cutoff {cutoff.date()}  train {backtest['n_train_markets']}  test {backtest['n_test_markets']} markets")
     print(f"Brier market {o['brier_market']}  model {o['brier_model']}   logloss market {o['logloss_market']}  model {o['logloss_model']}")
     for k in ("with_costs", "without_costs"):
