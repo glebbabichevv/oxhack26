@@ -2724,7 +2724,7 @@
   "hi": 0.3982,
   "n": 1899,
   "split": "test",
-  "note": "return/maxDD 20.69; maxDD 0.2319; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "note": "return/maxDD 20.69; maxDD 0.2319; SECOND test look (after V3 vs COH), gated on COH+DYNAMIC beating COH on VAL2 return/maxDD; descriptive, not a fresh out-of-sample read",
   "source": "C-Ayaz"
  },
  {
@@ -2735,7 +2735,7 @@
   "hi": 0.3943,
   "n": 1899,
   "split": "test",
-  "note": "return/maxDD 23.352; maxDD 0.2037; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "note": "return/maxDD 23.352; maxDD 0.2037; SECOND test look (after V3 vs COH), gated on COH+DYNAMIC beating COH on VAL2 return/maxDD; descriptive, not a fresh out-of-sample read",
   "source": "C-Ayaz"
  },
  {
@@ -2746,7 +2746,7 @@
   "hi": 0.2318,
   "n": 3840,
   "split": "test",
-  "note": "return/maxDD 10.016; maxDD 0.4467; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "note": "return/maxDD 10.016; maxDD 0.4467; SECOND test look (after V3 vs COH), gated on COH+DYNAMIC beating COH on VAL2 return/maxDD; descriptive, not a fresh out-of-sample read",
   "source": "C-Ayaz"
  },
  {
@@ -2757,7 +2757,7 @@
   "hi": 0.2308,
   "n": 3840,
   "split": "test",
-  "note": "return/maxDD 10.383; maxDD 0.4276; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "note": "return/maxDD 10.383; maxDD 0.4276; SECOND test look (after V3 vs COH), gated on COH+DYNAMIC beating COH on VAL2 return/maxDD; descriptive, not a fresh out-of-sample read",
   "source": "C-Ayaz"
  },
  {
@@ -2768,7 +2768,7 @@
   "hi": -0.1628,
   "n": 3081,
   "split": "test",
-  "note": "return/maxDD -0.995; maxDD 3.2182; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "note": "return/maxDD -0.995; maxDD 3.2182; SECOND test look (after V3 vs COH), gated on COH+DYNAMIC beating COH on VAL2 return/maxDD; descriptive, not a fresh out-of-sample read",
   "source": "C-Ayaz"
  },
  {
