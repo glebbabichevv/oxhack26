@@ -136,6 +136,23 @@ def read_ledger():
     return json.loads(LEDGER.read_text()) if LEDGER.exists() else []
 
 
+def resolution(m, side):
+    """1 if `side` won, 0 if it lost, None while unresolved (closed markets settle to outcome prices 1/0)."""
+    if not m["closed"]:
+        return None
+    price = m["outcomes"].get("Yes" if side == "YES" else "No")
+    if price is None or 0.02 < price < 0.98:
+        return None
+    return 1 if price >= 0.98 else 0
+
+
+def exit_mark(m, side):
+    """What selling one share now would fetch: the YES bid, or 1 - YES ask for a NO share."""
+    if side == "YES":
+        return float(m["best_bid"]) if m.get("best_bid") is not None else None
+    return 1 - float(m["best_ask"]) if m.get("best_ask") is not None else None
+
+
 def positions(summarise_market):
     """Paper: every bet marked to the live bid (exit price), or settled if resolved. Live: balance, open orders, trades."""
     if LIVE:

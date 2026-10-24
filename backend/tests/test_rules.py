@@ -73,3 +73,25 @@ def test_pause_reasons():
     assert pause_reason(plan(), 1000.0, "2026-10-24T15:00:00+00:00", NOW) == "stale_data"
     assert pause_reason(plan(), 1000.0, None, NOW) == "stale_data"
     assert pause_reason(plan(), 899.0, "2026-10-24T17:00:00+00:00", NOW) == "daily_loss"
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "integrations"))
+from polymarket_trading import exit_mark, resolution  # noqa: E402
+
+
+def test_resolution_reads_settled_outcome_prices():
+    open_m = dict(closed=False, outcomes={"Yes": 0.6, "No": 0.4})
+    won_yes = dict(closed=True, outcomes={"Yes": 1.0, "No": 0.0})
+    pending = dict(closed=True, outcomes={"Yes": 0.5, "No": 0.5})
+    assert resolution(open_m, "YES") is None
+    assert resolution(won_yes, "YES") == 1 and resolution(won_yes, "NO") == 0
+    assert resolution(pending, "YES") is None
+
+
+def test_exit_mark_is_what_selling_fetches():
+    m = dict(best_bid="0.40", best_ask="0.43")
+    assert exit_mark(m, "YES") == 0.40
+    assert round(exit_mark(m, "NO"), 2) == 0.57
+    assert exit_mark(dict(best_bid=None, best_ask=None), "YES") is None
