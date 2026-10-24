@@ -31,6 +31,8 @@ export type Decision = {
   q: number; lo: number; hi: number; action: Action; kelly: number; netEdge: number; reason: string;
   /** true when the edge is there but the rule says enter later; wouldBe = the action then. */
   wait: boolean; wouldBe: Action | null; checkBackInHours: number | null;
+  /** Under 12 h to the end: shorter than any horizon Horizon was trained or tested on, so no call. */
+  untested?: boolean;
   /** One bet per event: set when another outcome of the same event has the larger edge. */
   blockedBy?: string;
 };
@@ -95,6 +97,9 @@ export function decide(m: Model, price: number, hours: number, domain: string, s
 }
 
 /** The decision rule for a given probability and band (used by decide and by event coherence). */
+export const TESTED_MIN_H = 12;
+export const UNTESTED_REASON = "Closer to the end than anything Horizon was tested on (12 h)";
+
 export function decideWithQ(m: Model, price: number, q: number, lo: number, hi: number, hours: number, domain: string, spread: number,
   fee: Fee = { rate: domainFeeRate(m, domain), exponent: 1 }, policy: Policy | false = m.policy ?? {}): Decision {
   const pol: Policy = policy || {};
@@ -119,6 +124,10 @@ export function decideWithQ(m: Model, price: number, q: number, lo: number, hi: 
     ? `Model ${pct(q)} (range ${pct(lo)}–${pct(hi)}) vs market ${pct(price)}: the ${gap.toFixed(1)}¢ gap is inside the model's uncertainty plus ${Math.round(cost * 100)}¢ cost`
     : `${horizonLabel(hours)} out, ${domain}: model ${pct(q)} vs market ${pct(price)}, net edge ${(netEdge * 100).toFixed(1)}¢`;
   const base: Decision = { price, hours, domain, cost, q, lo, hi, action, kelly, netEdge, reason, wait: false, wouldBe: null, checkBackInHours: null };
+  // Nothing under 12 h was ever trained or backtested (features clip hours at 12): no call there under any policy.
+  if (policy !== false && hours < TESTED_MIN_H) {
+    return { ...base, action: "NO_TRADE", kelly: 0, untested: true, reason: UNTESTED_REASON };
+  }
   if (action !== "NO_TRADE" && netEdge < (pol.min_edge ?? 0)) {
     return { ...base, action: "NO_TRADE", kelly: 0,
       reason: `Net edge ${(netEdge * 100).toFixed(1)}¢ is under the ${Math.round((pol.min_edge ?? 0) * 100)}¢ minimum: not worth the risk` };

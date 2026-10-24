@@ -33,5 +33,10 @@ const cl = cohere(model, clasico.map((r) => ({ question: r.label, label: r.label
   decision: decide(model, (r.bid + r.ask) / 2, 20, "sports", r.ask - r.bid, { rate: 0, exponent: 1 }) })), true);
 const clMismatch = cl.filter((l, i) => l.decision.action !== clasico[i].action || Math.abs(l.decision.q - clasico[i].q) > 1e-4).length;
 console.log(`El Clasico: TS ${cl.map((l) => `${l.label} ${l.decision.action} ${l.decision.q.toFixed(4)}`).join(' · ')} · mismatches vs backend ${clMismatch}`);
-const cohOk = Math.abs(sumQ - 1) < 1e-6 && offsetsKept && backed <= 1 && clMismatch === 0;
+// Under 12 h: no call, same as the backend (backend/parity_coh.py -> results/parity_untested.json).
+const short = JSON.parse(readFileSync(new URL("../backend/results/parity_untested.json", import.meta.url)));
+const shortMismatch = short.filter((r) => { const d = decide(model, r.price, r.hours, "sports", 0.01, { rate: 0, exponent: 1 });
+  return d.action !== r.action || !!d.untested !== r.untested; }).length;
+console.log(`Under 12 h: ${short.map((r) => `${r.price}@${r.hours}h ${r.action}${r.untested ? " (untested)" : ""}`).join(' · ')} · mismatches vs backend ${shortMismatch}`);
+const cohOk = Math.abs(sumQ - 1) < 1e-6 && offsetsKept && backed <= 1 && clMismatch === 0 && shortMismatch === 0;
 process.exit(worst < 1e-4 && mismatched === 0 && cohOk ? 0 : 1);

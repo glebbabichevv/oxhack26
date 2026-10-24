@@ -296,7 +296,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   useEffect(() => { if (quote?.eventSlug) void heldOnEvent(quote.eventSlug).then(setHeld); }, [quote?.eventSlug]);
   const mine = held.find((p) => p.conditionId && p.conditionId === quote?.conditionId && (p.size ?? 0) > 0);
   const holding = mine ? 0 : held.length;
-  const unsure = quote ? caution(quote) : undefined;
+  const unsure = d.untested ? 'Closer to the end than anything Horizon was tested on (12 h).' : quote ? caution(quote) : undefined;
   const verdict = unsure || holding || mine ? 'SKIP' : verdictOf(d);
   const side = verdict === 'SKIP' ? undefined : sideOf(d);
   const sug = stakeFor(a, d);
@@ -415,7 +415,7 @@ function PositionAdvice({ pos, q, d, unsure, title, onSell, busy }: { pos: Walle
             className="hz-cta mt-3 h-11 w-full rounded-control text-subhead font-semibold text-white disabled:opacity-50" style={{ background: INK }}>Set up sale of {shares.toLocaleString()} shares</button>
         </>
       ) : <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold: Horizon values it at {c(worth)}, the market pays {c(pays)}.</p>}
-      <p className="mt-1.5 text-caption text-[#94a3b8]">Selling by this rule kept the same profit with a smaller drawdown in our out-of-time test (+30.9¢ vs +31.2¢ per $1, maxDD 0.20 vs 0.23).</p>
+      <p className="mt-1.5 text-caption text-[#94a3b8]">Selling early did not add profit in our test; it slightly reduced drawdown (+30.9¢ vs +31.2¢ per $1, max drawdown 0.20 vs 0.23).</p>
     </div>
   );
 }

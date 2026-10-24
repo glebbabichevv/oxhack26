@@ -112,7 +112,7 @@ export function When({ hours }: { hours: number }) {
     ? <>Best window: <b className="font-semibold text-[#0a0a0a]">{at(WINDOW_H[0])} – {at(WINDOW_H[1])}</b>. In our test, bets placed within 24h of the end earned the most per $1; earlier ones earned about half as much.</>
     : hours > WINDOW_H[1]
       ? <><b className="font-semibold" style={{ color: UP }}>In the best window now</b>: within 24h of the end, where the test earned the most per $1.</>
-      : <>Under 12h to the end: still inside the window, but order books thin out; check the spread.</>;
+      : <>Under 12h to the end: closer than anything Horizon was tested on, so it makes no call.</>;
   return (
     <div className="mt-2.5 rounded-control bg-black/[0.035] px-2.5 py-2 text-[12px] leading-snug text-[#3f3f46]">
       <span className="text-[#71717a]">{when(hours)} to resolution · </span>{text}

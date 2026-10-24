@@ -423,7 +423,7 @@ function DomainBreakdown() {
         );
       })}
       <p className="mt-1.5 text-[12px] text-ink-faint">Descriptive, not used to choose the rule. Culture is the one domain that lost; crypto is about zero; small domains are too thin to read.</p>
-      <p className="mt-1 text-[12px] text-ink-faint">Selling before the end did not beat holding on validation (+33.6¢ vs +34.3¢ per $1), so Horizon holds to resolution.</p>
+      <p className="mt-1 text-[12px] text-ink-faint">Selling early did not add profit in our test; it slightly reduced drawdown (+30.9¢ vs +31.2¢ per $1, max drawdown 0.20 vs 0.23). No call under 12 hours to the end: nothing that short was ever tested.</p>
     </div>
   );
 }

@@ -15,3 +15,8 @@ H.one_bet_per_event(ds, [l["group"] for l in legs], [l["label"] for l in legs])
 out = [{"label": l["label"], "bid": b, "ask": a, "q": round(d["q"], 6), "action": d["action"]} for l, (_, b, a), d in zip(legs, BOOK, ds)]
 Path(__file__).parent.joinpath("results", "parity_coh.json").write_text(json.dumps(out, indent=1))
 print(json.dumps(out))
+# Under 12 h: the same longshot that trades at 20 h gets no call at 8 h (nothing that short was ever tested).
+short = [{"price": p, "hours": h, "action": d["action"], "untested": bool(d.get("untested"))}
+         for p, h in ((0.2, 20.0), (0.2, 8.0), (0.6, 3.0)) for d in [H.decide(p, h, "sports", 0.01, fee_rate=0.0)]]
+Path(__file__).parent.joinpath("results", "parity_untested.json").write_text(json.dumps(short, indent=1))
+print(json.dumps(short))
