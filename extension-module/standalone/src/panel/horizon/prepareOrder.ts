@@ -116,6 +116,72 @@ export async function prepareOrder(opts: {
       const byPrice = (await find(tabId, `${wantCents}¢ button`)).filter((h) => short(h) && priceOk(h));
       return byPrice.length === 1 ? click(tabId, byPrice[0].ref) : false;
     };
+    // Multi-outcome rows ("4°C", "82-83°F"): find the row whose label is exactly this outcome
+    // (so "4°C" never matches "14°C" or "4°C or below"), expand "show more" if needed, mark the
+    // Buy Yes/No button INSIDE that row and click it through the browser-use layer. Read-only DOM
+    // look-up via scripting; the click itself is the content script's.
+    const byDomRow = async () => {
+      let marked = false;
+      for (let pass = 0; pass < 2 && !marked; pass++) {
+        const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, args: [label, word, pass === 1], func: (lbl: string, w: string, expand: boolean) => {
+          const norm = (x: string) => x.replace(/[\u00a0\s]+/g, ' ').replace(/º/g, '°').replace(/\s*°\s*/g, '°').replace(/\s*-\s*/g, '-').trim().toLowerCase();
+          if (expand) {
+            for (const b of Array.from(document.querySelectorAll<HTMLElement>('button, [role="button"]'))) {
+              if (/^(show|see|view) (all|more)\b|more outcomes|^more$/i.test(norm(b.textContent || ''))) b.click();
+            }
+          }
+          const want = norm(lbl);
+          const hits = Array.from(document.querySelectorAll<HTMLElement>('body *')).filter((e) => !['BUTTON', 'SCRIPT', 'STYLE'].includes(e.tagName) && norm(e.textContent || '') === want);
+          // the deepest element carrying exactly this text
+          const leaves = hits.filter((e) => !hits.some((o) => o !== e && e.contains(o)));
+          document.querySelectorAll('[data-hz-target]').forEach((x) => x.removeAttribute('data-hz-target'));
+          const re = new RegExp(`^buy\\s+${w}\\b`, 'i');
+          for (const el of leaves) {
+            let row: HTMLElement | null = el;
+            for (let i = 0; i < 10 && row; i++) {
+              row = row.parentElement;
+              if (!row) break;
+              const btns = Array.from(row.querySelectorAll<HTMLElement>('button, [role="button"]')).filter((b) => re.test(norm(b.textContent || '')));
+              if (btns.length === 1) { btns[0].setAttribute('data-hz-target', '1'); btns[0].scrollIntoView({ block: 'center' }); return true; }
+              if (btns.length > 1) break; // climbed past the row
+            }
+          }
+          return false;
+        } }).catch(() => [{ result: false }]);
+        marked = !!r?.result;
+        if (!marked && pass === 0) await new Promise((res) => setTimeout(res, 400));
+      }
+      if (!marked) return false;
+      await new Promise((res) => setTimeout(res, 250));
+      return click(tabId, '[data-hz-target="1"]');
+    };
+    /** Does the order ticket's header name this outcome? undefined if the ticket can't be read. */
+    const headerShows = async (): Promise<boolean | undefined> => {
+      const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, args: [label], func: (lbl: string) => {
+        const norm = (x: string) => x.replace(/[\u00a0\s]+/g, ' ').replace(/º/g, '°').replace(/\s*°\s*/g, '°').replace(/\s*-\s*/g, '-').trim().toLowerCase();
+        const input = document.querySelector('#market-order-amount-input');
+        let box: HTMLElement | null = input as HTMLElement | null;
+        for (let i = 0; i < 12 && box; i++) { box = box.parentElement; if (box && /\bbuy\b/i.test(box.innerText) && /\bsell\b/i.test(box.innerText) && box.innerText.length > 40) break; }
+        if (!box) return null;
+        const want = norm(lbl);
+        return box.innerText.split('\n').map(norm).some((l) => l === want || l.startsWith(`${want} ·`) || l.endsWith(`/ ${want}`) || l.endsWith(`/${want}`));
+      } }).catch(() => [{ result: null }]);
+      return typeof r?.result === 'boolean' ? r.result : undefined;
+    };
+    const legOk = async (dom: boolean) => (await sameLeg()) && (!dom || (await headerShows()) !== false);
+    /** Second chance when the ticket did not switch: a full pointer sequence on the marked button. */
+    const pointerClick = async () => {
+      const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => {
+        const b = document.querySelector<HTMLElement>('[data-hz-target="1"]');
+        if (!b) return false;
+        const rect = b.getBoundingClientRect();
+        const o = { bubbles: true, cancelable: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, button: 0 };
+        for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) b.dispatchEvent(new (t.startsWith('pointer') ? PointerEvent : MouseEvent)(t, o));
+        b.click();
+        return true;
+      } }).catch(() => [{ result: false }]);
+      return !!r?.result;
+    };
     const byLabel = async () => {
       const hits = await find(tabId, label);
       const hit = hits.find((h) => ['button', 'link', 'row', 'radio', 'option', 'tab'].includes(h.role)
@@ -129,10 +195,14 @@ export async function prepareOrder(opts: {
       if (t) { await click(tabId, t.ref); await new Promise((r) => setTimeout(r, 900)); }
       say(`Choosing ${label}`);
     }
-    for (const attempt of opts.tab ? [byRow, byRow] : [bySuffix, bySports, byRow, byLabel, byRow]) {
+    for (const attempt of opts.tab ? [byDomRow, byRow, byRow] : [bySuffix, bySports, byDomRow, byRow, byLabel, byRow]) {
       if (!(await attempt())) continue;
       // The ticket re-renders after the click: give it up to ~2s to show this leg.
-      for (let k = 0; k < 6 && !picked; k++) { await new Promise((r) => setTimeout(r, 350)); picked = await sameLeg(); }
+      const dom = attempt === byDomRow;
+      for (let k = 0; k < 6 && !picked; k++) { await new Promise((r) => setTimeout(r, 350)); picked = await legOk(dom); }
+      if (!picked && dom && (await pointerClick())) {
+        for (let k = 0; k < 6 && !picked; k++) { await new Promise((r) => setTimeout(r, 350)); picked = await legOk(dom); }
+      }
       if (picked) break;
     }
     let shown: number | undefined;
