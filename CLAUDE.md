@@ -93,7 +93,7 @@ At the start of every session, ask the human which role they have (if not obviou
 - From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
 
 ## API contract (Role A maintains this) — v1
-**Demo screen: https://horizon-jet-mu.vercel.app** · API base URL: `https://horizon-api-five.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
+**Demo screen: https://horizon-two-gilt.vercel.app** · API base URL: `https://horizon-api-iota.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
 
 `GET /api/live` → open markets with a decision
 ```json
