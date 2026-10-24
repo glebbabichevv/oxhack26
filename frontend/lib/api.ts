@@ -21,7 +21,16 @@ export type LiveMarket = {
   reason: string;
   url: string;
   volume_usd: number;
+  trade_from_hours?: number | null; // NO_TRADE only: hours before close at which the edge would clear costs, if the price holds
 };
+
+/** "Check back ~2 days before it closes, if the price holds" for a NO_TRADE market; undefined when there is no such time. */
+export function checkBack(m: Pick<LiveMarket, "action" | "trade_from_hours">) {
+  const h = m.trade_from_hours;
+  if (m.action !== "NO_TRADE" || h == null || !(h > 0)) return undefined;
+  const when = h >= 48 ? `${Math.round(h / 24)} days` : `${Math.max(1, Math.round(h))} hours`;
+  return `Check back ~${when} before it closes, if the price holds`;
+}
 
 export type CalibrationBin = { price_mid: number; observed: number; model: number; n: number };
 export type CalibrationHorizon = {
