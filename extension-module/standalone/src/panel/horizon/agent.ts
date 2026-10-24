@@ -11,6 +11,7 @@ import {
 } from './ledger';
 import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
+import { intendedAction, verdictOf } from './policy';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -35,7 +36,7 @@ export const money = (x: number) => `${x < 0 ? '−' : ''}$${Math.abs(x) >= 100 
 const short = (s: string, n = 48) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 /** The leg label alone ("24°C", "<8M") means nothing out of context: use the question then. */
 export const nameOf = (x: { label: string; question: string }) => (x.label && x.label !== x.question && x.label.length >= 14 ? x.label : x.question);
-const sideOf = (d: Decision): Side | undefined => (d.action === 'BUY_YES' ? 'YES' : d.action === 'BUY_NO' ? 'NO' : undefined);
+const sideOf = (d: Decision): Side | undefined => { const a = intendedAction(d); return a === 'BUY_YES' ? 'YES' : a === 'BUY_NO' ? 'NO' : undefined; };
 
 // ---------- market scan ----------
 
@@ -74,7 +75,7 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
       bid, ask, closed: false, endDate: mk.endDate, domain, fee, decision: decide(m, price, hours, domain, ask - bid, fee) });
   }
   picks.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
-  return { picks: picks.filter((p) => p.decision.action !== 'NO_TRADE').slice(0, top), scanned: seen.size };
+  return { picks: picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, top), scanned: seen.size };
 }
 
 async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
@@ -129,6 +130,7 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const q = await quoteOne(m, slug);
       if (!q) return { error: 'market not found' };
       const a = await getAccount();
+      if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: 'price is fair after costs (advantage under 1¢): skip' };
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });

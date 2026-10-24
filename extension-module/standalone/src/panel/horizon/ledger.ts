@@ -135,7 +135,8 @@ export type Check = { ok: true; amount: number; suggested: number; above: boolea
 export function checkBet(a: Account, q: Quote, side: Side, amount: number | undefined, override = false): Check {
   const d = q.decision;
   if (q.closed || !d) return { ok: false, error: 'This market is closed or has no live price' };
-  const backs = d.action === (side === 'YES' ? 'BUY_YES' : 'BUY_NO');
+  // A market Horizon will back once its window opens (V3 "wait") counts as backed for planning.
+  const backs = (d.action !== 'NO_TRADE' ? d.action : d.wait ? d.wouldBe : null) === (side === 'YES' ? 'BUY_YES' : 'BUY_NO');
   if (!backs && !override) {
     return { ok: false, error: d.action === 'NO_TRADE' ? 'Horizon sees no advantage here after costs' : `Horizon backs ${d.action === 'BUY_YES' ? 'Yes' : 'No'} here, not ${side === 'YES' ? 'Yes' : 'No'}` };
   }

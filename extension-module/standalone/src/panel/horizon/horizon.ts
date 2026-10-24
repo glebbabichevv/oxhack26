@@ -14,8 +14,13 @@ export type Model = {
   domain_tags: [string, string[]][];
   by_horizon: { horizon_hours: number; mean_return_per_trade: number }[];
   fee_rates?: Record<string, number>; // taker fee rate by domain, used when a market has no feeSchedule
+  policy?: Policy; // V3: min net edge + enter only within enter_from_hours of the end
   version?: string;
 };
+/** Trading rule chosen on validation (integrations/playoff): V3 = net edge >= 1¢ and within 24 h of the end. */
+export type Policy = { name?: string; min_edge?: number; enter_from_hours?: number | null };
+export const WAIT_REASON = "Wait: best time is within 24h of the end";
+
 /** Polymarket taker fee per share = rate * (p(1-p))^exponent (docs.polymarket.com/trading/fees). */
 export type Fee = { rate: number; exponent: number };
 type Fit = { intercept: number; coef: number[] };
@@ -24,6 +29,8 @@ export type Action = "BUY_YES" | "BUY_NO" | "NO_TRADE";
 export type Decision = {
   price: number; hours: number; domain: string; cost: number;
   q: number; lo: number; hi: number; action: Action; kelly: number; netEdge: number; reason: string;
+  /** true when the edge is there but the rule says enter later; wouldBe = the action then. */
+  wait: boolean; wouldBe: Action | null; checkBackInHours: number | null;
 };
 
 const clip = (x: number, a: number, b: number) => Math.min(Math.max(x, a), b);
@@ -68,12 +75,13 @@ function horizonLabel(h: number) {
 /** price = order-book mid, spread = ask - bid (NaN if unknown), hours = to the scheduled end.
  *  fee = feeOf(m, market, domain); omitted = the domain's rate (as if fees are on). */
 export function decide(m: Model, price: number, hours: number, domain: string, spread: number,
-  fee: Fee = { rate: domainFeeRate(m, domain), exponent: 1 }): Decision {
+  fee: Fee = { rate: domainFeeRate(m, domain), exponent: 1 }, policy: Policy | false = m.policy ?? {}): Decision {
+  const pol: Policy = policy || {};
   const feePerShare = fee.rate * Math.pow(price * (1 - price), fee.exponent);
   const cost = (Number.isFinite(spread) ? Math.max(spread / 2, m.min_half_spread) : m.min_half_spread) + feePerShare;
   const inBand = price >= m.tradable[0] && price <= m.tradable[1];
   if (!inBand) {
-    return { price, hours, domain, cost, q: price, lo: price, hi: price, action: "NO_TRADE", kelly: 0, netEdge: 0,
+    return { price, hours, domain, cost, q: price, lo: price, hi: price, action: "NO_TRADE", kelly: 0, netEdge: 0, wait: false, wouldBe: null, checkBackInHours: null,
       reason: `Market at ${(price * 100).toFixed(1)}%: too close to certain, a ${Math.round(cost * 100)}¢ cost exceeds any edge` };
   }
   const x = features(m, price, hours);
@@ -94,7 +102,16 @@ export function decide(m: Model, price: number, hours: number, domain: string, s
   const reason = action === "NO_TRADE"
     ? `Model ${pct(q)} (range ${pct(lo)}–${pct(hi)}) vs market ${pct(price)}: the ${gap.toFixed(1)}¢ gap is inside the model's uncertainty plus ${Math.round(cost * 100)}¢ cost`
     : `${horizonLabel(hours)} out, ${domain}: model ${pct(q)} vs market ${pct(price)}, net edge ${(netEdge * 100).toFixed(1)}¢`;
-  return { price, hours, domain, cost, q, lo, hi, action, kelly, netEdge, reason };
+  const base: Decision = { price, hours, domain, cost, q, lo, hi, action, kelly, netEdge, reason, wait: false, wouldBe: null, checkBackInHours: null };
+  if (action !== "NO_TRADE" && netEdge < (pol.min_edge ?? 0)) {
+    return { ...base, action: "NO_TRADE", kelly: 0,
+      reason: `Net edge ${(netEdge * 100).toFixed(1)}¢ is under the ${Math.round((pol.min_edge ?? 0) * 100)}¢ minimum: not worth the risk` };
+  }
+  if (action !== "NO_TRADE" && pol.enter_from_hours != null && hours > pol.enter_from_hours) {
+    return { ...base, action: "NO_TRADE", kelly: 0, wait: true, wouldBe: action, reason: WAIT_REASON,
+      checkBackInHours: Math.round((hours - pol.enter_from_hours) * 10) / 10 };
+  }
+  return base;
 }
 
 // ---------- Gamma ----------
