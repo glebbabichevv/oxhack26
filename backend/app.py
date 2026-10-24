@@ -50,3 +50,9 @@ def calibration(domain: str = "all"):
 @app.get("/api/backtest")
 def backtest():
     return load("backtest")[0]
+
+
+@app.get("/api/model")
+def model():
+    """Fitted coefficients + bootstrap sets + decision constants, for computing q in the browser."""
+    return load("model")[0]
