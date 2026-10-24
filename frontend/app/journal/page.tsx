@@ -85,7 +85,7 @@ export default function JournalPage() {
   const s = data?.summary;
   return (
     <>
-      <Nav links={[{ label: "Evidence", href: "/" }, { label: "Decisions", href: "#decisions" }, { label: "Seals", href: "#seals" }]} />
+      <Nav links={[{ label: "Evidence", href: "/" }, { label: "Decisions", href: "#decisions" }, { label: "My results", href: me ? `/me?id=${encodeURIComponent(me)}` : "/me" }, { label: "Seals", href: "#seals" }]} />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
         {error ? (
           <div className="mt-6 rounded-input bg-down-tint px-4 py-3 text-[13px] text-down">Can&apos;t load the journal from {API_URL} ({error}).</div>
@@ -115,7 +115,10 @@ export default function JournalPage() {
             controls={
               <div className="flex flex-col items-start gap-3">
                 {me ? (
-                  <Segmented label="Whose decisions" options={[{ value: "all", label: "Everyone" }, { value: "me", label: "Mine" }]} value={scope} onChange={setScope} />
+                  <>
+                    <Segmented label="Whose decisions" options={[{ value: "all", label: "Everyone" }, { value: "me", label: "Mine" }]} value={scope} onChange={setScope} />
+                    <a href={`/me?id=${encodeURIComponent(me)}`} className="text-[13px] font-medium text-ink-strong underline decoration-hairline underline-offset-4 hover:decoration-ink-faint">My results: am I up or down?</a>
+                  </>
                 ) : (
                   <p className="text-[12px] text-ink-faint">Open this page from the extension to see your own decisions (?me=…).</p>
                 )}
