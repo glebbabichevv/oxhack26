@@ -56,6 +56,7 @@ export type Backtest = {
   worst_trades: WorstTrade[];
   assumptions: string[];
   return_ci?: [number, number];
+  by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };
 
 export async function getJSON<T>(path: string): Promise<T> {
@@ -68,7 +69,8 @@ export async function getJSON<T>(path: string): Promise<T> {
 
 export const cents = (p: number) => `${Math.round(p * 100)}¢`;
 export const pct = (p: number, digits = 0) => `${(p * 100).toFixed(digits)}%`;
-export const times = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(2)}×`;
+// Backtest P&L is additive, in units of the starting bankroll: 2.77 → "+277%" (of starting bankroll), not a multiple.
+export const bankroll = (x: number) => `${x >= 0 ? "+" : "−"}${Math.round(Math.abs(x) * 100).toLocaleString("en-GB")}%`;
 export const int = (n: number) => n.toLocaleString("en-GB");
 
 export function horizonShort(h: number) {

@@ -42,18 +42,20 @@ Pipeline:
 4. **Live (Roles A + C):** currently open markets → q, edge, recommended action ("buy YES / buy NO / **no trade — costs eat the edge**"), Kelly size, and *when* the edge is expected to be largest.
 5. **Screen (Role B):** live decision cards + calibration chart by horizon + backtest equity curve with/without costs + an honest "where it fails" panel.
 
-Pitch line (**updated 14:25 on the 34.7k-market team dataset**): *"Published research says prediction-market prices are miscalibrated depending on time to resolution. On 34,677 Polymarket markets, tested out of time on 10,839, we find prices are overconfident at every horizon — 10–35¢ longshots win more often than priced, favourites less (sub-10¢ tails are roughly fair) — and a model that corrects this beats the market and stays profitable after a 1¢ cost, mostly in sports in the last week before resolution. Our first 3k-market sample said 'politics, a month out'; it did not replicate, and we show why."* Cite the paper; never claim we discovered the bias.
+Pitch line (**updated 15:20: 30d test bins are ~fair, so no 'every horizon'**): *"Published research says prediction-market prices are miscalibrated depending on time to resolution. On 34,677 Polymarket markets, tested out of time on 10,579, we find prices get overconfident as resolution nears — from a week out, 10–35¢ longshots win more often than priced (a day out, 15¢ contracts win 20%), favourites less; a month out the test set is about fair — and a model that corrects this beats the market and stays profitable after a 1¢ cost. The edge grows as resolution nears and is solid only in sports. Our first 3k-market sample said 'politics, a month out'; it did not replicate, and we show why."* Cite the paper; never claim we discovered the bias.
 
 Honesty rules (quant judges will probe these): binary markets only; drop cancelled / MKT resolutions; split by **time**, never random; include costs; report where there is **no** edge as clearly as where there is.
 
 Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabelled "Other" markets into domains (the paper notes ~42% are unclassified) — real use of the Gemini prize.
 
-### Results (Role A, 14:25 Sat) — team dataset (Ayaz, 34,677 markets), numbers in `backend/results/*.json`
-Out-of-time test: events whose last market resolved before 2026-05-18 train (23,838 markets), the rest test (10,839). All legs of an event stay on one side. Prices 3–97% only; 1¢ cost floor (no historical spreads).
-- **Calibration:** slope ≈ 0.85 at every horizon, same in train and test → prices are overconfident: 10–35¢ longshots underpriced, favourites overpriced; the 0–10¢ tail is about fair (24h: 3.0% YES, n=3,904 — TheMarkz3). Sports ≈ 0.85 at 12h–3d but ≈ 1.0 at 30d; crypto ≈ 0.8 everywhere; politics ≈ 0.9.
-- **Model beats the market** on the test set: Brier 0.1274 vs 0.1281, log loss 0.3851 vs 0.3871 (simple model, picked on validation).
-- **Money after costs:** 7,228 trades, +2.77 starting-bankroll units (additive, ¼ Kelly), 90% CI by event bootstrap [+1.41, +4.07], P(loss) ≈ 0; top 10 events are 1.03 of it. After C's relabel (tweet/mention markets → culture): sports +1.84 (4,484 trades), science/tech +0.40, culture +0.13, politics +0.10 (560), crypto +0.07. Overall numbers unchanged (the model ignores domain). `return_ci` is now in `/api/backtest`. Edge sits at 1–7 days (24h +1.37, 7d +1.14); at 30d ≈ 0. Naive "always back the favourite" loses −7.1 (2% flat stakes).
-- **Earlier 3.1k sample (TheMarkz3)** said "politics, a month out": it did not replicate on 11× more data (that sample was top-volume, politics-heavy). Keep this in the pitch as the honesty moment.
+### Results (Role A, 15:05 Sat) — team dataset (Ayaz, 34,677 markets), numbers in `backend/results/*.json`
+Out-of-time test: train = events that ended before 2026-05-18 (23,838 markets); test = markets of the remaining events that resolved after the cutoff (10,579). Legs of one event never straddle the split; 260 legs that resolved before the cutoff were dropped from test (TheMarkz3's catch — they leaked time). Prices 3–97% only; 1¢ cost floor (no historical spreads).
+- **Calibration:** slope ≈ 0.85 pooled, same in train and test; on test the 30d bins are about fair (15¢ → 12.8%, n=492, within noise), 7d–12h clearly overconfident (15¢ → 18–20%) → prices are overconfident: 10–35¢ longshots underpriced, favourites overpriced; the 0–10¢ tail is about fair (24h: 3.0% YES, n=3,904).
+- **Model beats the market** out of time: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940 (simple 4-coefficient model, picked on validation).
+- **Money after costs:** 7,106 trades, +3.05 starting bankrolls (+304% on screen, additive, ¼ Kelly), 90% CI [1.84, 4.40] by event bootstrap; max drawdown 42%; hit rate 24%. Naive "always back the favourite": −7.41.
+- **When:** return per $1 trade grows toward resolution: 30d +4.6%, 7d +4.6%, 3d +7.3%, 1d +14.3%, 12h +16.3% (each horizon backtested on its own).
+- **Where:** sports +1.85 [1.11, 2.63] (4,475 trades), science/tech +0.42 [0.16, 0.72]; politics +0.35, geopolitics, economics, culture, crypto all have CIs touching zero. `by_domain[]` is in `/api/backtest`.
+- **Earlier 3.1k sample (TheMarkz3)** said "politics, a month out": it did not replicate on 11× more data. Keep it in the pitch as the honesty moment.
 
 ## Stack (locked)
 - **Backend + model: Python 3, FastAPI, pandas, scikit-learn** in `backend/`. Run: `uvicorn app:app --reload` from `backend/`.
@@ -91,7 +93,7 @@ At the start of every session, ask the human which role they have (if not obviou
 - From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
 
 ## API contract (Role A maintains this) — v1
-Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. Role B builds against the example shapes now.
+**Demo screen: https://horizon-jet-mu.vercel.app** · API base URL: `https://horizon-api-five.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
 
 `GET /api/live` → open markets with a decision
 ```json
@@ -101,7 +103,7 @@ Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. 
 ```
 `action` ∈ `BUY_YES | BUY_NO | NO_TRADE`.
 
-**v1.1 additions (13:44, additive — nothing removed):** `/api/live` items also have `net_edge` (edge after cost and model uncertainty), `volume_usd`; list = top 30 trades by net edge + 15 biggest in-band NO_TRADE. `/api/calibration` horizons have `n`, `logloss_market`, `logloss_model`; bins have `model` (mean model q). Domains: `all, sports, crypto, politics, economics, culture, science_tech, geopolitics, other` (lowercase). `/api/backtest` also has `n_train_markets`, `n_test_markets`, `model_selection`, `overall`, `by_horizon[]`, `failures[]` (`kind` ∈ losing_domain | no_lift | thin_data, `text`), `worst_trades[]`, `assumptions[]`; `return` and `max_drawdown` are in units of the starting bankroll (additive P&L).
+**v1.1 additions (13:44, additive — nothing removed):** `/api/live` items also have `net_edge` (edge after cost and model uncertainty), `volume_usd`; list = top 30 trades by net edge + 15 biggest in-band NO_TRADE. `/api/calibration` horizons have `n`, `logloss_market`, `logloss_model`; bins have `model` (mean model q). Domains: `all, sports, crypto, politics, economics, culture, science_tech, geopolitics, other` (lowercase). `/api/backtest` also has `return_ci` [lo, hi], `by_domain[]` ({domain, n_trades, return, hit_rate, return_ci}), `n_train_markets`, `n_test_markets`, `model_selection`, `overall`, `by_horizon[]`, `failures[]` (`kind` ∈ losing_domain | no_lift | thin_data, `text`), `worst_trades[]`, `assumptions[]`; `return` and `max_drawdown` are in units of the starting bankroll (additive P&L).
 
 `GET /api/calibration?domain=all` → reliability curves per horizon
 ```json

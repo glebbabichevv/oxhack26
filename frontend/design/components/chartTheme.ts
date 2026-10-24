@@ -6,7 +6,7 @@ export const ASH = "#a1a1aa"; // secondary series: market, without-costs equity,
 export const UP = "#16a34a";
 export const DOWN = "#e11d48";
 
-export const axisTick = { fill: "rgba(9,9,11,0.42)", fontSize: 11 } as const;
+export const axisTick = { fill: "#71717a", fontSize: 11 } as const;
 export const xAxisProps = { tick: axisTick, tickLine: false, axisLine: false, dy: 6 } as const;
 export const gridProps = { stroke: SEAM, vertical: false } as const;
 

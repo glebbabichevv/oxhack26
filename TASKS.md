@@ -10,19 +10,22 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [x] [Gleb] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
 - [x] [Gleb] Decision rule + backtest with/without costs; replace example JSON with real numbers
 - [x] [Gleb] `/api/live` from `data/live.csv`
-- [ ] [Gleb] Public URL for the API (Vercel deploy needs Gleb's OK) + split requirements so the bundle fits
+- [x] [Gleb] Public API: https://horizon-api-five.vercel.app
 
 ### Role B — frontend
 - [x] [Gleb] Design preset in `DESIGN.md` + tokens/Tailwind preset/starter components in `frontend/design/` — PR `gleb/design-preset`
 - [ ] `/impeccable init` for `PRODUCT.md`
 - [ ] Next.js app in `frontend/` built against the contract's example JSON: live decision cards, calibration chart, backtest equity curve, "where it fails" panel
-- [ ] Deploy to Vercel early (public URL by 16:30)
+- [x] Deploy to Vercel early (public URL by 16:30): https://horizon-jet-mu.vercel.app
 
 ### Role C — data pipeline
-- [x] [Ayaz] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv` — **team dataset: 34.7k markets** (`integrations/fetch_horizons.py`)
+- [x] [Ayaz (B), on C's behalf] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv` — **team dataset: 34.7k markets** (`integrations/fetch_horizons.py`)
 - [x] [Ayaz] Open markets → `data/live.csv` (`integrations/fetch_live.py`)
 - [x] [Ayaz] Sanity checks (`integrations/check_data.py`)
 - [x] [TheMarkz3] First pipeline + 3.1k-market sample and the calibration check that caught the sign flip (`integrations/polymarket.py`, `calibration_check.py`) — superseded as the main dataset by Ayaz's
+- [x] [Ayaz] Domain fix: tweet/post-count and `mention-markets` markets → culture (PR #4)
+- [x] [Ayaz] /qa of the main screen (PR #5) — 6 issues sent to B/A inboxes 15:35
+- [ ] [Ayaz] Refresh `data/live.csv` right before the demo and the backup video: `python integrations/fetch_live.py`
 - [ ] If Polymarket blocks you for >30 min: switch to Manifold (`/v0/search-markets?filter=resolved` + `/v0/bets`)
 
 ### Everyone
