@@ -18,9 +18,9 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [ ] Deploy to Vercel early (public URL by 16:30)
 
 ### Role C — data pipeline
-- [ ] [TheMarkz3] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv`
-- [ ] [TheMarkz3] Open markets → `data/live.csv`
-- [ ] [TheMarkz3] Sanity checks: counts per horizon/domain, no cancelled/MKT resolutions, no future leakage in prices
+- [x] [TheMarkz3] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv`
+- [x] [TheMarkz3] Open markets → `data/live.csv`
+- [x] [TheMarkz3] Sanity checks: counts per horizon/domain, no cancelled/MKT resolutions, no future leakage in prices
 - [ ] If Polymarket blocks you for >30 min: switch to Manifold (`/v0/search-markets?filter=resolved` + `/v0/bets`)
 
 ### Everyone

@@ -230,7 +230,7 @@ def cmd_live(args):
                 continue
             hours = (end_dt - now).total_seconds() / 3600
             bid, ask = m.get("bestBid"), m.get("bestAsk")
-            if hours <= 0 or bid is None or ask is None or not 0 < bid <= ask < 1:
+            if not 0 < hours <= args.max_hours or bid is None or ask is None or not 0 < bid <= ask < 1:
                 continue
             rows.append({
                 "market_id": m["id"],
@@ -259,8 +259,9 @@ def main():
     h.add_argument("--min-volume", type=float, default=10000)
     h.add_argument("--workers", type=int, default=8)
     lv = sub.add_parser("live")
-    lv.add_argument("--max-events", type=int, default=500)
-    lv.add_argument("--max-markets", type=int, default=300)
+    lv.add_argument("--max-events", type=int, default=2000)
+    lv.add_argument("--max-markets", type=int, default=500)
+    lv.add_argument("--max-hours", type=float, default=max(HORIZONS_H))  # model only knows <= 30d
     args = ap.parse_args()
     {"horizons": cmd_horizons, "live": cmd_live}[args.cmd](args)
 

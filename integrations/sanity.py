@@ -7,7 +7,9 @@ DATA = Path(__file__).resolve().parent.parent / "data"
 
 
 def check_horizons():
-    df = pd.read_csv(DATA / "horizons.csv", parse_dates=["resolved_at", "end_date"])
+    df = pd.read_csv(DATA / "horizons.csv")
+    for c in ["resolved_at", "end_date"]:
+        df[c] = pd.to_datetime(df[c], utc=True, format="ISO8601")
     print(f"horizons.csv: {len(df)} rows, {df.market_id.nunique()} markets, {df.event_id.nunique()} events")
     print(f"resolved_at range: {df.resolved_at.min():%Y-%m-%d} -> {df.resolved_at.max():%Y-%m-%d}")
     print("\nrows per horizon x domain:")
