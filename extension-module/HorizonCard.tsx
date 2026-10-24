@@ -13,12 +13,20 @@ const SITE_URL = 'https://horizon-two-gilt.vercel.app';
 const UP = '#15803d';
 const DOWN = '#e11d48';
 
-function slugFrom(url?: string) {
-  const m = url?.match(/^https:\/\/polymarket\.com\/(?:[a-z]{2}\/)?event\/([^/?#]+)/);
-  return m?.[1];
+export function slugFrom(url?: string) {
+  // polymarket.com/event/<slug>, /<lang>/event/<slug>, and sports pages, which Polymarket
+  // redirects to /sports/<league>/<slug> (e.g. /sports/laliga/lal-bar-rea-2026-10-25).
+  let u: URL;
+  try { u = new URL(url ?? ''); } catch { return undefined; }
+  if (!/(^|\.)polymarket\.com$/.test(u.hostname)) return undefined;
+  const parts = u.pathname.split('/').filter(Boolean);
+  const i = parts.indexOf('event');
+  if (i >= 0) return parts[i + 1];
+  if (parts[0] === 'sports' && parts.length >= 3 && /\d/.test(parts[parts.length - 1])) return parts[parts.length - 1];
+  return undefined;
 }
 
-async function loadModel(): Promise<Model> {
+export async function loadModel(): Promise<Model> {
   try {
     const res = await fetch(MODEL_URL, { signal: AbortSignal.timeout(2500) });
     if (!res.ok) throw new Error(String(res.status));
@@ -31,9 +39,9 @@ async function loadModel(): Promise<Model> {
   }
 }
 
-const pct = (x: number) => `${Math.round(x * 100)}%`;
-const cents = (x: number) => `${Math.round(x * 100)}¢`;
-const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
+export const pct = (x: number) => `${Math.round(x * 100)}%`;
+export const cents = (x: number) => `${Math.round(x * 100)}¢`;
+export const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
 
 /** ' (12 closed, 3 without a book)': why legs are missing, so an empty card is not a mystery. */
 function skipNote(legs: Leg[]) {
@@ -44,7 +52,7 @@ function skipNote(legs: Leg[]) {
   return parts.length ? ` (${parts.join(', ')})` : '';
 }
 
-function Chip({ d }: { d: Decision }) {
+export function Chip({ d }: { d: Decision }) {
   const style = d.action === 'BUY_YES' ? { color: UP, background: 'rgba(21,128,61,0.10)' }
     : d.action === 'BUY_NO' ? { color: DOWN, background: 'rgba(225,29,72,0.10)' }
     : { color: '#676e7e', background: 'rgba(15,23,42,0.05)' };
@@ -94,7 +102,7 @@ function Row({ leg, band }: { leg: Leg; band: [number, number] }) {
 // scheduled end (≈14–15%, vs ≈7% at 3d and ≈4–5% at 7d–30d), after dropping stale prices and
 // markets whose event was already over. The window is shown in the reader's local time.
 const WINDOW_H: [number, number] = [24, 12];
-function When({ hours }: { hours: number }) {
+export function When({ hours }: { hours: number }) {
   const far = hours - WINDOW_H[0] > 6 * 24; // a weekday alone is ambiguous beyond a week
   const at = (h: number) => new Date(Date.now() + (hours - h) * 3.6e6)
     .toLocaleString(undefined, far
