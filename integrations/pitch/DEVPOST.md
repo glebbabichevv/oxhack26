@@ -72,3 +72,7 @@ python, pandas, scikit-learn, fastapi, next.js, tailwind, recharts, polymarket-a
 ## What we brought in vs built here
 Brought in: the published finding (arXiv 2602.19520), public Polymarket APIs, open-source libraries, a starter
 design preset. Built at OxHack: the data pipeline, the dataset, the model, the backtest, the API and the app.
+
+## Gallery images
+- `integrations/pitch/when_to_trade.png`: mean return per trade after costs by entry horizon (30d −0.4% → 12h +15.5%).
+  Regenerate with `python integrations/pitch/make_charts.py` whenever backend/results change.

@@ -3,35 +3,31 @@
 Built against `docs/design-reference/horizon-target-mock.png` and the numbers in `backend/results/*.json` (14:25 Sat).
 Rule: say only numbers that are on the screen or in `backend/results/`. If Gleb regenerates results, update this file.
 Live cards change hourly — pick the hero card on the morning of the demo (see "Hero card" below).
+Length: ~215 spoken words ≈ 90 s at a calm 145 wpm. Rehearse with a timer; if over, cut the line marked (cut first).
 
-## 0:00–0:12 — hook (Time theme) · screen: headline
-"Every Polymarket price is a probability with a clock on it: how long until it resolves.
-Published research (arXiv 2602.19520) says those prices are miscalibrated depending on that clock.
-We asked the trader's question: can you actually make money on it, and *when*?"
+## 0:00–0:10 — hook · screen: headline
+"A prediction-market price is a probability with a clock on it. Research says those prices are off, depending on the
+clock. We asked a trader's question: can you make money on it, and *when*?"
 
-## 0:12–0:30 — data + honest test · screen: subline + KPI row
-"34,677 resolved Polymarket markets, each priced 30 days, 7 days, 3 days, 1 day and 12 hours before its scheduled end.
-We train on events that ended before 18 May 2026 and test on the 10,839 that ended after. No random split, and every
-market from one event stays on the same side."
-(Point at Brier.) "Our model beats the market price out of sample: Brier 0.1274 against 0.1281. Small, but the market
-is a hard baseline."
+## 0:10–0:25 — honest test · screen: subline + KPI row
+"34,677 resolved Polymarket markets. We train on events that ended before mid-May, test on the 10,839 after, never a
+random split. Out of sample, our model beats the market price: Brier 0.1274 against 0.1281."
 
-## 0:30–0:50 — what the model learned · screen: calibration chart, 1d selected
-"Prices are overconfident. A day out, contracts priced 10 to 20 cents resolve YES about 20% of the time, and favourites
-win less than their price says. The model learns how far to pull each price back toward the middle, per horizon and domain."
-(Click 30d.) "A month out, that correction buys nothing: no lift. Time matters."
+## 0:25–0:45 — what it learned, and when · screen: calibration chart, 1d → 30d
+"Prices are overconfident. A day out, contracts around 15 cents win 20% of the time. The model learns how far to pull each
+price back."
+(Click 30d.) "A month out, the correction buys nothing. The edge only shows up in the last week."
 
-## 0:50–1:10 — the decision · screen: Live decisions
-"So for every open market: price, our probability, and a call after a 1-cent cost."
-(Point at hero card.) "[Question], [h] hours out. Market [p]¢, model [q]%. Net edge [x]¢ after cost, so buy YES at a
-quarter-Kelly stake. Right below, a market where the model agrees with the price: no trade. Most of the screen is no trade,
-and that's on purpose."
+## 0:45–1:05 — the decision · screen: Live decisions
+"So, for every open market right now: price, our probability, and a call after a one-cent cost."
+(Point at hero card.) "[Question]: market [p], model [q]. Buy YES, quarter-Kelly."
+(Point at a NO_TRADE card.) "Here the gap doesn't cover costs: no trade. Most markets are no trade."
 
-## 1:10–1:30 — money + honesty · screen: KPI "Return" + backtest
-"Backtested on the held-out markets: 7,228 trades, plus 2.77 times the starting bankroll after costs, 90% interval 1.4 to 4.1.
-Mostly sports, in the last week. The naive 'always back the favourite' strategy loses 7.1 on the same markets.
-And our first 3,000-market sample said 'politics, a month out'. It didn't replicate on eleven times more data, so we dropped it.
-Horizon tells you when a prediction market is wrong enough to trade, and when it isn't."
+## 1:05–1:30 — money + honesty · screen: KPI "Return"
+"On the held-out markets that's 7,228 trades and 2.77 starting bankrolls of profit after costs, interval 1.4 to 4.1.
+Always backing the favourite loses 7."
+(cut first) "Our first small sample said 'politics, a month out'. It didn't replicate on 11 times more data, so we threw it out."
+"Horizon tells you when a market is wrong enough to trade, and when it isn't."
 
 ## Hero card (pick on the day)
 Prefer a **sports BUY_YES** card at 1–7 days, ≥ $1M volume, and a **NO_TRADE** card right next to it.
