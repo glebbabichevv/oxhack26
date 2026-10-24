@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ActionChip, FramedCard, KpiRow, Nav, Section } from "@/design/components/Page";
 import { ASH, INK, SEAM, axisTick, gridProps, tooltipProps, xAxisProps } from "@/design/components/chartTheme";
+import { CachedNote } from "@/components/CachedNote";
 import { API_URL, cents, getJSON, int, pct } from "@/lib/api";
 
 // My results (GET /api/me): am I making or losing money with Horizon?
@@ -122,13 +123,14 @@ export default function MePage() {
     <>
       <Nav links={[{ label: "Evidence", href: "/" }, { label: "Journal", href: id ? `/journal?me=${encodeURIComponent(id)}` : "/journal" }, { label: "My bets", href: "#bets" }, { label: "Wallet", href: "#wallet" }]} />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
+        <CachedNote paths={["/api/me"]} className="mt-4" />
         {error ? <div className="mt-6 rounded-input bg-down-tint px-4 py-3 text-[13px] text-down">{error.startsWith("A wallet") ? error : `Can't load your results from ${API_URL} (${error}).`}</div> : null}
         <header className="pt-[72px]">
           <h1 className="font-serif text-[40px] leading-[1.06] tracking-[-0.02em] text-ink md:text-[56px]">{ready && !id && !wallet ? "My results." : headline}</h1>
           <p className="mt-[18px] max-w-[620px] text-[17px] leading-[1.6] text-ink-muted">
             {!id && ready ? "Open this page from the Horizon extension (My results) so it knows your install, or add a public wallet address below."
               : placed && placed.n_resolved
-                ? `${perDollar(placed.per_dollar)} per $1 after fees · ${pct(placed.hit_rate ?? 0)} of ${int(placed.n_resolved)} resolved bets won · ${int(placed.n_open)} still open. Placed bets are self-reported in the extension.`
+                ? `${perDollar(placed.per_dollar)} per $1 after fees · ${pct(placed.hit_rate ?? 0)} of ${int(placed.n_resolved)} resolved bets won · ${int(placed.n_open)} still open. Placed bets are self-reported in the extension.${placed.n_resolved < 30 ? " Few decisions yet: too early to judge." : ""}`
                 : placed ? `${int(placed.n)} placed bets, all still open. Markets resolve overnight. Placed bets are self-reported in the extension.` : ""}
           </p>
         </header>

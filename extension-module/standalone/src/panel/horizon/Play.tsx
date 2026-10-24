@@ -7,18 +7,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
-import { checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Quote, type Side } from './ledger';
+import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Position, type Quote, type Side } from './ledger';
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
-import { fetchMe, getWallet, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
+import { apiJSON, gammaLastOk, gammaOk, hhmm } from './net';
+import { fetchMe, getWallet, heldOnEvent, type WalletPos, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
 import { intendedAction, verdictOf, verdictRank } from './policy';
 import { API } from './agent';
 
 /** "Why wait" numbers from the backtest (return per $1 by horizon, after costs); none if offline. */
 let whyCache: Promise<string | undefined> | undefined;
 function whyWait(): Promise<string | undefined> {
-  whyCache ??= fetch(`${API}/api/backtest`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).then((b) => {
+  whyCache ??= apiJSON<any>('/api/backtest').then(({ data: b }) => {
     const by = new Map<number, number>((b?.by_horizon ?? []).map((h: any) => [h.horizon_hours, h.with_costs?.mean_return_per_trade]));
     const late = [by.get(24), by.get(12)].filter((x): x is number => typeof x === 'number');
     if (!late.length) return undefined;
@@ -289,14 +290,20 @@ export function AmountControl({ value, onChange, max, compact = false, label }: 
 export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   model: Model; a?: Account; marketSlug: string; title: string; d: Decision; tabId?: number; onDetails?: () => void;
 }) {
-  const verdict = verdictOf(d);
+  const [quote, setQuote] = useState<Quote>();
+  const [held, setHeld] = useState<WalletPos[]>([]);
+  useEffect(() => { if (quote?.eventSlug) void heldOnEvent(quote.eventSlug).then(setHeld); }, [quote?.eventSlug]);
+  const mine = held.find((p) => p.conditionId && p.conditionId === quote?.conditionId && (p.size ?? 0) > 0);
+  const holding = mine ? 0 : held.length;
+  const unsure = quote ? caution(quote) : undefined;
+  const verdict = unsure || holding || mine ? 'SKIP' : verdictOf(d);
   const side = verdict === 'SKIP' ? undefined : sideOf(d);
   const sug = stakeFor(a, d);
+  const kellyUsd = a ? suggested(a, d) : 0; // the true ¼ Kelly amount, before Polymarket's $1 minimum
   const [chosen, setChosen] = useState<number>();
   const amount = chosen ?? sug;
   const [doing, setDoing] = useState<PlanItem[]>();
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
-  const [quote, setQuote] = useState<Quote>();
   useEffect(() => {
     let dead = false;
     void quotes(model, [marketSlug]).then((m) => {
@@ -320,9 +327,12 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
     <article className="hz-card hz-enter rounded-panel p-4">
       <h2 className="hz-display text-[27px] leading-[1.1] [overflow-wrap:anywhere]">{clean(title)}</h2>
       <p className="mt-2.5 text-subhead text-[#475569]">
-        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{priceWord(d)}</b>
+        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{unsure ? 'Not sure here' : mine ? 'You hold this' : holding ? 'Already in' : priceWord(d)}</b>
       </p>
-      {verdict === 'SKIP' && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
+      {unsure ? <p className="mt-1.5 text-footnote text-[#64748b]">{unsure} Horizon gives no advice on this one.</p> : null}
+      {!unsure && holding ? <p className="mt-1.5 text-footnote text-[#64748b]">You already hold {holding} bet{holding > 1 ? 's' : ''} on this event: a second one is the same risk, so Horizon won&apos;t suggest more.</p> : null}
+      {mine && quote ? <PositionAdvice pos={mine} q={quote} d={d} unsure={!!unsure} title={title} onSell={(it) => setDoing([it])} busy={!!doing} /> : null}
+      {verdict === 'SKIP' && !unsure && !holding && !mine && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
       {d.domain === 'crypto' ? <p className="mt-1 text-caption text-[#94a3b8]">Crypto: our tests show no edge here. Polymarket prices these well.</p> : null}
       {side && verdict === 'BET' ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
       {side && verdict === 'WAIT' ? (
@@ -340,7 +350,10 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
             </button>
           </div>
           <p className="mt-1.5 text-caption text-[#94a3b8]">
-            Horizon suggests {money(sug)} (¼ Kelly of your {money(a?.bankroll ?? 1000)} budget){amount > sug ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}
+            {kellyUsd < 1
+              ? <>Horizon suggests {money(kellyUsd)} (¼ Kelly of your {money(a?.bankroll ?? 1000)} budget) · Polymarket minimum is $1</>
+              : <>Horizon suggests {money(sug)} (¼ Kelly, at most 5% of your {money(a?.bankroll ?? 1000)} budget)</>}
+            {amount > Math.max(1, sug) ? <span className="text-[#64748b]"> · above Horizon&apos;s suggestion</span> : null}
           </p>
         </>
       ) : null}
@@ -352,13 +365,13 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
 }
 
 /** The test result in one line under the card, from /api/backtest's headline (fallback: the shipped V3 numbers). */
-let trustCache: Promise<{ c: number; lo: number; hi: number; n: number } | undefined> | undefined;
+let trustCache: Promise<{ c: number; lo: number; hi: number; n: number; cachedAt?: number } | undefined> | undefined;
 function TrustLine() {
-  const [t, setT] = useState({ c: 0.172, lo: 0.118, hi: 0.235, n: 10579 });
+  const [t, setT] = useState<{ c: number; lo: number; hi: number; n: number; cachedAt?: number }>({ c: 0.172, lo: 0.118, hi: 0.235, n: 10579 });
   useEffect(() => {
-    trustCache ??= fetch(`${API}/api/backtest`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).then((b) => {
+    trustCache ??= apiJSON<any>('/api/backtest').then(({ data: b, cachedAt }) => {
       const h = b?.headline;
-      return typeof h?.per_dollar === 'number' ? { c: h.per_dollar, lo: h.per_dollar_ci?.[0] ?? h.per_dollar, hi: h.per_dollar_ci?.[1] ?? h.per_dollar, n: b.n_test_markets ?? 10579 } : undefined;
+      return typeof h?.per_dollar === 'number' ? { c: h.per_dollar, lo: h.per_dollar_ci?.[0] ?? h.per_dollar, hi: h.per_dollar_ci?.[1] ?? h.per_dollar, n: b.n_test_markets ?? 10579, cachedAt } : undefined;
     }).catch(() => undefined);
     void trustCache.then((x) => { if (x) setT(x); });
   }, []);
@@ -367,7 +380,37 @@ function TrustLine() {
     <p className="mt-6 border-t border-[rgba(15,23,42,0.06)] pt-3 text-caption leading-relaxed text-[#94a3b8]">
       On {t.n.toLocaleString()} past markets it never saw, this rule made <b className="font-semibold text-[#475569]">{c(t.c)} per $1</b> after fees (likely {c(t.lo)} to {c(t.hi)}), mostly on sports. Most single bets lose; it adds up over many.{' '}
       <a href="https://web-production-c7376.up.railway.app" target="_blank" rel="noreferrer" className="text-[#64748b] underline decoration-[rgba(15,23,42,0.15)] underline-offset-2">How we know</a>
+      {t.cachedAt ? <span className="block">Offline copy · cached at {hhmm(t.cachedAt)}</span> : null}
     </p>
+  );
+}
+
+/**
+ * A position the public wallet already holds on this market: HOLD or SELL. Rule (under test until the
+ * dynamic-exit check lands): sell if what the market pays now (bid for Yes, 1 − ask for No) is at least
+ * Horizon's value of the side plus the cost. Sell only fills the ticket; the human presses.
+ */
+function PositionAdvice({ pos, q, d, unsure, title, onSell, busy }: { pos: WalletPos; q: Quote; d: Decision; unsure: boolean; title: string; onSell: (it: PlanItem) => void; busy: boolean }) {
+  const side: Side = /^no$/i.test(pos.outcome ?? '') ? 'NO' : 'YES';
+  const pays = side === 'YES' ? q.bid : 1 - q.ask;
+  const worth = side === 'YES' ? d.q : 1 - d.q;
+  const sell = !unsure && pays >= worth + d.cost;
+  const shares = Math.floor((pos.size ?? 0) * 100) / 100;
+  const c = (x: number) => `${Math.round(x * 100)}¢`;
+  const synthetic: Position = { id: `wallet-${q.conditionId}-${side}`, marketSlug: q.marketSlug, eventSlug: q.eventSlug, question: q.question, label: q.label, side,
+    shares, stake: shares * (pos.avgPrice ?? pays), avgPrice: pos.avgPrice ?? pays, qAtOpen: worth, openedAt: new Date().toISOString(), by: 'you', status: 'open' };
+  return (
+    <div className="mt-4 rounded-card bg-[rgba(15,23,42,0.04)] px-3.5 py-3">
+      <p className="text-footnote text-[#475569]">You hold {shares.toLocaleString()} {side === 'YES' ? 'Yes' : 'No'} shares{pos.avgPrice ? ` (bought at ${c(pos.avgPrice)})` : ''}.</p>
+      {unsure ? null : sell ? (
+        <>
+          <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Sell: the market now pays {c(pays)}, Horizon values it at {c(worth)}.</p>
+          <button type="button" disabled={busy} onClick={() => onSell({ kind: 'sell', q, pos: synthetic, fraction: 1, name: title })}
+            className="hz-cta mt-3 h-11 w-full rounded-control text-subhead font-semibold text-white disabled:opacity-50" style={{ background: INK }}>Set up sale of {shares.toLocaleString()} shares</button>
+        </>
+      ) : <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold: Horizon values it at {c(worth)}, the market pays {c(pays)}.</p>}
+      <p className="mt-1.5 text-caption text-[#94a3b8]">Rule under test: we are still checking whether selling early beats holding to the end.</p>
+    </div>
   );
 }
 
@@ -397,13 +440,28 @@ function Row({ title, d, onClick, active }: { title: string; d: Decision; onClic
 
 // ---------- Bet tab: this market, or tonight's best ----------
 
+/** Never a blank card: when Polymarket's prices can't be fetched, say so and when they last were. */
+function Unreachable({ onRetry }: { onRetry: () => void }) {
+  const [last, setLast] = useState<number>();
+  useEffect(() => { void gammaLastOk().then(setLast); }, []);
+  return (
+    <div className="px-4 pt-3">
+      <div className="hz-card rounded-panel p-4">
+        <p className="text-subhead font-semibold text-[#0f172a]">Polymarket isn't reachable right now.</p>
+        <p className="mt-1 text-footnote text-[#64748b]">{last ? `Last checked ${hhmm(last)}.` : 'Check your connection.'}</p>
+        <button type="button" onClick={onRetry} className="hz-chip mt-3 rounded-control px-4 py-2 text-body font-semibold">Try again</button>
+      </div>
+    </div>
+  );
+}
+
 export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; a?: Account; slug: string; tabId?: number; onDetails: () => void }) {
   const [ev, setEv] = useState<{ title: string; legs: Leg[] } | 'loading' | 'error'>('loading');
   const [pick, setPick] = useState(0);
-  const load = useCallback(() => { setEv('loading'); setPick(0); decideEvent(model, slug).then(setEv).catch(() => setEv('error')); }, [model, slug]);
+  const load = useCallback(() => { setEv('loading'); setPick(0); decideEvent(model, slug).then((e) => { gammaOk(); setEv(e); }).catch(() => setEv('error')); }, [model, slug]);
   useEffect(() => { load(); }, [load]);
   if (ev === 'loading') return <div className="px-4 pt-3"><Thinking steps={[]} fallback="Reading this market" /><div className="hz-skeleton mt-4 h-[230px] rounded-panel" /></div>;
-  if (ev === 'error') return <div className="px-4 pt-6 text-body text-[#475569]">Could not read this market. <button type="button" onClick={load} className="font-semibold text-[#0f172a] underline underline-offset-[3px]">Try again</button></div>;
+  if (ev === 'error') return <Unreachable onRetry={load} />;
   const band = model.tradable;
   const legs = ev.legs.filter((l) => l.decision && l.marketSlug && l.decision.price >= band[0] && l.decision.price <= band[1])
     .sort((x, y) => verdictRank[verdictOf(y.decision!)] - verdictRank[verdictOf(x.decision!)] || y.decision!.netEdge - x.decision!.netEdge);
@@ -436,7 +494,7 @@ export function Tonight({ model, a, tabId, url, title, onDetails }: { model: Mod
   const [st, setSt] = useState<{ picks: MarketPick[] } | 'loading' | 'error'>('loading');
   const [pick, setPick] = useState(0);
   const [about, setAbout] = useState<{ q: string; rows: ScanRow[] }>();
-  const run = useCallback(() => { setSt('loading'); setPick(0); scanMarkets(model, 'all', 24, 20).then((r) => setSt({ picks: r.picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, 12) })).catch(() => setSt('error')); }, [model]);
+  const run = useCallback(() => { setSt('loading'); setPick(0); scanMarkets(model, 'all', 24, 20).then((r) => { gammaOk(); return r; }).then((r) => setSt({ picks: r.picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, 12) })).catch(() => setSt('error')); }, [model]);
   useEffect(() => { run(); }, [run]);
   useEffect(() => {
     const s = url && /^https?:/.test(url) && !/polymarket\.com/.test(url) ? subjectOf(title, url) : undefined;
@@ -444,7 +502,7 @@ export function Tonight({ model, a, tabId, url, title, onDetails }: { model: Mod
     if (s) searchMarkets(model, s.query, 5).then((rows) => setAbout({ q: s.query, rows })).catch(() => {});
   }, [model, url, title]);
   if (st === 'loading') return <div className="px-4 pt-3" aria-busy><Thinking steps={[]} fallback="Looking at tonight's markets" /><div className="hz-skeleton mt-4 h-[230px] rounded-panel" /></div>;
-  if (st === 'error') return <div className="px-4 pt-6 text-body text-[#475569]">Could not reach Polymarket. <button type="button" onClick={run} className="font-semibold text-[#0f172a] underline underline-offset-[3px]">Try again</button></div>;
+  if (st === 'error') return <Unreachable onRetry={run} />;
   const best = st.picks[Math.min(pick, Math.max(0, st.picks.length - 1))];
   const open = (u: string) => { if (tabId !== undefined) void chrome.tabs.update(tabId, { url: u }); else void chrome.tabs.create({ url: u }); };
   return (
@@ -507,7 +565,7 @@ export function MyDecisions({ model }: { model: Model }) {
       <h1 className="hz-display text-[32px] leading-none">My decisions</h1>
       <MeStrip />
       <p className="mt-2 text-body text-[#475569]">
-        {rows.length ? `${rows.length} decision${rows.length === 1 ? '' : 's'} so far${resolved.length ? `, ${resolved.length} resolved: ${resolved.reduce((s, x) => s + x, 0) >= 0 ? '+' : '−'}${money(Math.abs(resolved.reduce((s, x) => s + x, 0)))} per $1 each` : ''}.` : 'Every bet Horizon shows you lands here, with the result once the market ends.'}
+        {rows.length ? `${rows.length} decision${rows.length === 1 ? '' : 's'} so far${resolved.length ? `, ${resolved.length} resolved: ${resolved.reduce((s, x) => s + x, 0) >= 0 ? '+' : '−'}${money(Math.abs(resolved.reduce((s, x) => s + x, 0)))} per $1 each` : ''}.${resolved.length < 30 ? ' Few decisions yet: too early to judge.' : ''}` : 'Every bet Horizon shows you lands here, with the result once the market ends.'}
       </p>
       {rows.length ? (
         <ul className="mt-4">
@@ -674,7 +732,7 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
                   ) : <span className="shrink-0 text-body font-semibold">{p.fraction >= 0.999 ? 'Sell all' : 'Sell part'}</span>}
                 </div>
                 {p.kind === 'buy' && p.suggested !== undefined ? (
-                  <p className="mt-0.5 text-caption text-[#94a3b8]">Horizon suggests {money(p.suggested)}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
+                  <p className="mt-0.5 text-caption text-[#94a3b8]">{d && d.kelly * budget < 1 ? <>Horizon suggests {money(Math.floor(d.kelly * budget * 100) / 100)} · Polymarket minimum is $1</> : <>Horizon suggests {money(p.suggested)}</>}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
                 ) : null}
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
                 {isLater(p) && d ? <p className="mt-1 inline-flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {bestTime(d.hours)}</p> : null}

@@ -1,6 +1,7 @@
 """Time capsule: seal Horizon's probabilities before the outcomes exist, open them after.
 
-  python backend/capsule.py seal            # writes capsule/seal-<UTC>.json, prints its SHA-256
+  python backend/capsule.py seal            # writes capsule/seal-<UTC>.json, prints its SHA-256 + the Discord line
+  python backend/capsule.py seal --dry-run  # same, written to /tmp, nothing in capsule/ (rehearsal)
   python backend/capsule.py open <seal>     # scores a seal against resolutions -> capsule/open-<UTC>.json
   python backend/capsule.py summary [forward_score.json]   # -> backend/results/capsule.json for /api/capsule
 
@@ -87,20 +88,35 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def seal():
+def model_identity(model):
+    """Version hash of the coefficients actually used (same recipe as export_model.model_hash) and of the
+    shipped backend/results/model.json, so a seal names the exact model and policy it was made with."""
+    from export_model import coefs, feature_names, model_hash
+    used = {"features": feature_names(model.domains), "main": coefs(model.main), "boot": [coefs(m) for m in model.boot]}
+    shipped = json.loads((HERE / "results" / "model.json").read_text())
+    h = model_hash(used)
+    return {"model_hash": h, "model_version": shipped.get("version"), "matches_shipped": shipped.get("version", "").endswith(h),
+            "model_json_sha256": sha256(HERE / "results" / "model.json"), "policy": shipped.get("policy")}
+
+
+def seal(dry_run=False):
     now = datetime.now(timezone.utc).replace(microsecond=0)
     df = rows_from(fetch_open(now), now)
     model, selection, cutoff = fitted_model()
+    ident = model_identity(model)
+    pol = ident["policy"] or {}
     p = df["price_yes"].to_numpy()
     q, lo, hi = model.predict(p, df["hours_to_resolution"], df["domain"])
-    action, kelly, net = decide(p, q, trade_cost(df["spread"].to_numpy(), 0.0, MIN_HALF_SPREAD), lo, hi)
+    action, kelly, net = decide(p, q, trade_cost(df["spread"].to_numpy(), 0.0, MIN_HALF_SPREAD), lo, hi,
+                                hours=df["hours_to_resolution"].to_numpy(), min_edge=pol.get("min_edge", 0.0),
+                                enter_from=pol.get("enter_from_hours"))
     df = df.assign(q_yes=np.round(q, 6), q_low=np.round(lo, 6), q_high=np.round(hi, 6),
                    action=action, kelly_fraction=np.round(kelly, 4), net_edge=np.round(net, 4))
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
     out = {
         "sealed_at": now.isoformat(), "deadline": DEADLINE.isoformat(),
         "expectations_sha256": sha256(CAPSULE / "EXPECTATIONS.md"),
-        "code_commit": commit, "model_selection": selection, "train_cutoff": str(cutoff.date()),
+        "code_commit": commit, "model_selection": selection, "train_cutoff": str(cutoff.date()), **ident,
         "filter": f"open yes/no Gamma markets, accepting orders, volume >= ${MIN_VOLUME:,}, two-sided book, "
                   f"scheduled end in ({now.isoformat()}, {DEADLINE.isoformat()}), mid price in "
                   f"{TRADABLE[0]:.0%}-{TRADABLE[1]:.0%}; one row per market",
@@ -109,12 +125,19 @@ def seal():
         "by_domain": df["domain"].value_counts().to_dict(),
         "markets": df.to_dict(orient="records"),
     }
-    CAPSULE.mkdir(exist_ok=True)
-    path = CAPSULE / f"seal-{now.strftime('%Y%m%dT%H%M%SZ')}.json"
+    out_dir = Path("/tmp") if dry_run else CAPSULE
+    out_dir.mkdir(exist_ok=True)
+    path = out_dir / f"{'dryrun-' if dry_run else ''}seal-{now.strftime('%Y%m%dT%H%M%SZ')}.json"
     path.write_text(json.dumps(out, indent=1))
-    print(f"sealed {len(df)} markets ({out['n_primary']} primary) -> {path.relative_to(ROOT)}")
+    print(f"sealed {len(df)} markets ({out['n_primary']} primary) -> {path}")
+    print(f"model {ident['model_version']} hash {ident['model_hash']} matches shipped: {ident['matches_shipped']} policy {pol.get('name')}")
     print(df["domain"].value_counts().to_string())
-    print(f"SHA-256 {sha256(path)}")
+    h = sha256(path)
+    print(f"SHA-256 {h}")
+    print(f"Discord: locking in round {len(list(CAPSULE.glob('seal-*.json'))) + (1 if dry_run else 0)} of our sealed predictions, "
+          f"{len(df)} markets, model {ident['model_version']}. sha256 {h}")
+    if dry_run:
+        print("DRY RUN: nothing written to capsule/, nothing to post")
 
 
 def resolution(m):
@@ -207,5 +230,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["seal", "open", "summary"])
     ap.add_argument("path", nargs="?")
+    ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
-    {"seal": lambda: seal(), "open": lambda: open_seal(a.path), "summary": lambda: summary(a.path)}[a.cmd]()
+    {"seal": lambda: seal(a.dry_run), "open": lambda: open_seal(a.path), "summary": lambda: summary(a.path)}[a.cmd]()

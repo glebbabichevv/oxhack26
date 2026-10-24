@@ -12,6 +12,7 @@ import { migrate, type Account } from './ledger';
 import { pageDrive } from './agent';
 import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
 import { flush } from './journal';
+import { apiJSON, hhmm } from './net';
 import { stylePage } from './pageStyle';
 import { Md } from './argos/Message';
 import './horizon-mode.css';
@@ -269,7 +270,7 @@ function TimeCurve({ model, d }: { model: Model; d: Decision }) {
 
 // ---------- f. credentials ----------
 
-type Creds = { ret: number; ci: [number, number]; nTrades: number; brierModel: number; brierMarket: number; nTest: number; sha: string; sealedAt: string };
+type Creds = { cachedAt?: number; ret: number; ci: [number, number]; nTrades: number; brierModel: number; brierMarket: number; nTest: number; sha: string; sealedAt: string };
 const FALLBACK_CREDS: Creds = { ret: 0.172, ci: [0.118, 0.235], nTrades: 3653, brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
   sha: '31d2510c13ee29c0a4c9ac26aa498b7ca1cffca58d4bf553f6d5bfd5acb73326', sealedAt: '2026-10-24T15:31:30+00:00' };
 let credsCache: Creds | undefined;
@@ -278,9 +279,12 @@ function Credentials() {
   const [c, setC] = useState<Creds>(credsCache ?? FALLBACK_CREDS);
   useEffect(() => {
     if (credsCache) return;
-    const get = (p: string) => fetch(`${API}${p}`, { signal: AbortSignal.timeout(4000) }).then((r) => (r.ok ? r.json() : Promise.reject()));
-    void Promise.allSettled([get('/api/backtest'), get('/api/capsule')]).then(([bt, cap]) => {
-      const next = { ...FALLBACK_CREDS };
+    void Promise.allSettled([apiJSON<any>('/api/backtest'), apiJSON<any>('/api/capsule')]).then(([btg, capg]) => {
+      const next: Creds = { ...FALLBACK_CREDS };
+      const bt = btg.status === 'fulfilled' ? { status: 'fulfilled' as const, value: btg.value.data } : btg;
+      const cap = capg.status === 'fulfilled' ? { status: 'fulfilled' as const, value: capg.value.data } : capg;
+      const times = [btg, capg].map((g) => (g.status === 'fulfilled' ? g.value.cachedAt : undefined)).filter((x): x is number => !!x);
+      if (times.length) next.cachedAt = Math.min(...times);
       if (bt.status === 'fulfilled') {
         const b = bt.value;
         const h = b?.headline;
@@ -309,6 +313,7 @@ function Credentials() {
       <p className="mt-1 text-caption text-[#64748b]">
         Brier {c.brierModel.toFixed(4)} vs market {c.brierMarket.toFixed(4)}. Predictions sealed before the results: <a href={`${SITE_URL}/#sealed`} target="_blank" rel="noreferrer" className="font-mono text-[#0f172a] underline decoration-black/20 underline-offset-2">{c.sha.slice(0, 8)}…{c.sha.slice(-4)}</a> (Seal 1, {sealed} London).
       </p>
+      {c.cachedAt ? <p className="mt-1 text-caption text-[#94a3b8]">Offline copy · cached at {hhmm(c.cachedAt)}</p> : null}
     </footer>
   );
 }

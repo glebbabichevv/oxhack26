@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ActionChip, FramedCard, Hero, Nav, Section, Segmented } from "@/design/components/Page";
+import { CachedNote } from "@/components/CachedNote";
 import { API_URL, cents, getJSON, int, pct } from "@/lib/api";
 import type { CapsuleData } from "@/components/Capsule";
 import { TrackChart, type Track } from "@/components/TrackChart";
@@ -90,6 +91,7 @@ export default function JournalPage() {
     <>
       <Nav links={[{ label: "Evidence", href: "/" }, { label: "Decisions", href: "#decisions" }, { label: "My results", href: me ? `/me?id=${encodeURIComponent(me)}` : "/me" }, { label: "Seals", href: "#seals" }]} />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
+        <CachedNote paths={["/api/journal", "/api/track", "/api/capsule"]} className="mt-4" />
         {error ? (
           <div className="mt-6 rounded-input bg-down-tint px-4 py-3 text-[13px] text-down">Can&apos;t load the journal from {API_URL} ({error}).</div>
         ) : null}
