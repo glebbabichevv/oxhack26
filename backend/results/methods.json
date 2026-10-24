@@ -2636,7 +2636,7 @@
   "hi": 0.4548,
   "n": 469,
   "split": "val2",
-  "note": "return/maxDD 3.394; hit 0.2665; P&L std/trade 2.5004; sold before end 0.0; test opened: False",
+  "note": "return/maxDD 3.394; hit 0.2665; P&L std/trade 2.5004; sold before end 0.0; test opened: True",
   "source": "C-Ayaz"
  },
  {
@@ -2647,7 +2647,7 @@
   "hi": 0.5254,
   "n": 516,
   "split": "val2",
-  "note": "return/maxDD 8.821; hit 0.2674; P&L std/trade 2.5457; sold before end 0.0; test opened: False",
+  "note": "return/maxDD 8.821; hit 0.2674; P&L std/trade 2.5457; sold before end 0.0; test opened: True",
   "source": "C-Ayaz"
  },
  {
@@ -2658,7 +2658,7 @@
   "hi": 0.5617,
   "n": 515,
   "split": "val2",
-  "note": "return/maxDD 10.141; hit 0.2893; P&L std/trade 2.7424; sold before end 0.0; test opened: False",
+  "note": "return/maxDD 10.141; hit 0.2893; P&L std/trade 2.7424; sold before end 0.0; test opened: True",
   "source": "C-Ayaz"
  },
  {
@@ -2669,7 +2669,7 @@
   "hi": -0.0584,
   "n": 516,
   "split": "val2",
-  "note": "return/maxDD -0.875; hit 0.1395; P&L std/trade 0.9908; sold before end 0.9516; test opened: False",
+  "note": "return/maxDD -0.875; hit 0.1395; P&L std/trade 0.9908; sold before end 0.9516; test opened: True",
   "source": "C-Ayaz"
  },
  {
@@ -2680,7 +2680,7 @@
   "hi": 0.4872,
   "n": 663,
   "split": "val2",
-  "note": "return/maxDD 9.576; hit 0.2881; P&L std/trade 2.6887; sold before end 0.0; test opened: False",
+  "note": "return/maxDD 9.576; hit 0.2881; P&L std/trade 2.6887; sold before end 0.0; test opened: True",
   "source": "C-Ayaz"
  },
  {
@@ -2691,7 +2691,84 @@
   "hi": 0.4709,
   "n": 663,
   "split": "val2",
-  "note": "return/maxDD 9.287; hit 0.2971; P&L std/trade 2.625; sold before end 0.0437; test opened: False",
+  "note": "return/maxDD 9.287; hit 0.2971; P&L std/trade 2.625; sold before end 0.0437; test opened: True",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "COH",
+  "value": 0.431,
+  "lo": 0.2413,
+  "hi": 0.6179,
+  "n": 397,
+  "split": "val2",
+  "note": "return/maxDD 11.188; hit 0.3476; P&L std/trade 2.5966; sold before end 0.0; test opened: True",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "COH+DYNAMIC",
+  "value": 0.4095,
+  "lo": 0.2345,
+  "hi": 0.5807,
+  "n": 397,
+  "split": "val2",
+  "note": "return/maxDD 12.618; hit 0.3426; P&L std/trade 2.5316; sold before end 0.0882; test opened: True",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "COH (test)",
+  "value": 0.3119,
+  "lo": 0.2276,
+  "hi": 0.3982,
+  "n": 1899,
+  "split": "test",
+  "note": "return/maxDD 20.69; maxDD 0.2319; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "COH+DYNAMIC (test)",
+  "value": 0.3093,
+  "lo": 0.2274,
+  "hi": 0.3943,
+  "n": 1899,
+  "split": "test",
+  "note": "return/maxDD 23.352; maxDD 0.2037; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "V3 (test)",
+  "value": 0.1713,
+  "lo": 0.1181,
+  "hi": 0.2318,
+  "n": 3840,
+  "split": "test",
+  "note": "return/maxDD 10.016; maxDD 0.4467; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "DYNAMIC (test)",
+  "value": 0.17,
+  "lo": 0.1181,
+  "hi": 0.2308,
+  "n": 3840,
+  "split": "test",
+  "note": "return/maxDD 10.383; maxDD 0.4276; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
+  "source": "C-Ayaz"
+ },
+ {
+  "block": "exit",
+  "name": "FIX(48,12) (test)",
+  "value": -0.1832,
+  "lo": -0.2025,
+  "hi": -0.1628,
+  "n": 3081,
+  "split": "test",
+  "note": "return/maxDD -0.995; maxDD 3.2182; opened once because COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive",
   "source": "C-Ayaz"
  },
  {

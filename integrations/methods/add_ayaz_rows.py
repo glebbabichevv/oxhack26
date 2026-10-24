@@ -68,7 +68,7 @@ def main():
         rows.append(row("test", LABELS.get(c, c), v.get("per_dollar"), lo, hi, v.get("n_trades"), "test",
                         f"¢/$ after fees; return {v['return']} {v['return_ci']} bankrolls; maxDD {v['max_drawdown']}; "
                         f"Brier {v['brier']}; opened once after the freeze"))
-    for k in ["HOLD(72)", "HOLD(48)", "HOLD(24)", ex["fixed_pair_chosen_on_val1"], "V3", "DYNAMIC"]:
+    for k in ["HOLD(72)", "HOLD(48)", "HOLD(24)", ex["fixed_pair_chosen_on_val1"], "V3", "DYNAMIC", "COH", "COH+DYNAMIC"]:
         v = ex["val2"].get(k)
         if v:
             lo, hi = ci(v)
@@ -76,6 +76,13 @@ def main():
                             f"return/maxDD {v.get('ret_per_dd')}; hit {v.get('hit_rate')}; P&L std/trade "
                             f"{v.get('pnl_std_per_trade')}; sold before end {v.get('share_sold_before_end')}; "
                             f"test opened: {ex['test_opened']}"))
+    for k in ("COH", "COH+DYNAMIC", "V3", "DYNAMIC", ex["fixed_pair_chosen_on_val1"]):
+        v = (ex.get("test") or {}).get(k)
+        if v:
+            lo, hi = ci(v)
+            rows.append(row("exit", f"{k} (test)", v.get("per_dollar"), lo, hi, v.get("n_trades"), "test",
+                            f"return/maxDD {v.get('ret_per_dd')}; maxDD {v.get('max_drawdown')}; opened once because "
+                            f"COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive"))
     for policy in ("V3", "COH"):
         for block, col in (("domain", "domain"), ("volume", "volume_tier"), ("price_bucket", "price_bucket")):
             for g in desc[policy][block]:
