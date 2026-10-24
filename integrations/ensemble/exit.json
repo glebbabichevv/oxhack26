@@ -141,6 +141,34 @@
    "hit_rate": 0.2648,
    "pnl_std_per_trade": 2.5267,
    "share_sold_before_end": 0.062
+  },
+  "COH": {
+   "n_trades": 459,
+   "per_dollar": 0.1479,
+   "per_dollar_ci": [
+    -0.0108,
+    0.3102
+   ],
+   "return": 0.5389,
+   "max_drawdown": 0.2419,
+   "ret_per_dd": 2.228,
+   "hit_rate": 0.2745,
+   "pnl_std_per_trade": 2.2883,
+   "share_sold_before_end": 0.0
+  },
+  "COH+DYNAMIC": {
+   "n_trades": 459,
+   "per_dollar": 0.1945,
+   "per_dollar_ci": [
+    0.0391,
+    0.3479
+   ],
+   "return": 0.7089,
+   "max_drawdown": 0.1533,
+   "ret_per_dd": 4.625,
+   "hit_rate": 0.281,
+   "pnl_std_per_trade": 2.3235,
+   "share_sold_before_end": 0.098
   }
  },
  "val2": {
@@ -227,11 +255,154 @@
    "hit_rate": 0.2971,
    "pnl_std_per_trade": 2.625,
    "share_sold_before_end": 0.0437
+  },
+  "COH": {
+   "n_trades": 397,
+   "per_dollar": 0.431,
+   "per_dollar_ci": [
+    0.2413,
+    0.6179
+   ],
+   "return": 1.2538,
+   "max_drawdown": 0.1121,
+   "ret_per_dd": 11.188,
+   "hit_rate": 0.3476,
+   "pnl_std_per_trade": 2.5966,
+   "share_sold_before_end": 0.0
+  },
+  "COH+DYNAMIC": {
+   "n_trades": 397,
+   "per_dollar": 0.4095,
+   "per_dollar_ci": [
+    0.2345,
+    0.5807
+   ],
+   "return": 1.1915,
+   "max_drawdown": 0.0944,
+   "ret_per_dd": 12.618,
+   "hit_rate": 0.3426,
+   "pnl_std_per_trade": 2.5316,
+   "share_sold_before_end": 0.0882
   }
  },
  "beats_v3_on_val2_ret_per_dd": {
   "FIX(48,12)": false,
-  "DYNAMIC": false
+  "DYNAMIC": false,
+  "COH+DYNAMIC vs COH": true
  },
- "test_opened": false
+ "test_opened": true,
+ "test": {
+  "HOLD(72)": {
+   "n_trades": 2742,
+   "per_dollar": 0.0943,
+   "per_dollar_ci": [
+    0.0324,
+    0.1578
+   ],
+   "return": 1.2585,
+   "max_drawdown": 0.4252,
+   "ret_per_dd": 2.96,
+   "hit_rate": 0.2031,
+   "pnl_std_per_trade": 2.421,
+   "share_sold_before_end": 0.0
+  },
+  "HOLD(48)": {
+   "n_trades": 3081,
+   "per_dollar": 0.1588,
+   "per_dollar_ci": [
+    0.1,
+    0.2194
+   ],
+   "return": 2.7767,
+   "max_drawdown": 0.3026,
+   "ret_per_dd": 9.176,
+   "hit_rate": 0.2145,
+   "pnl_std_per_trade": 2.5743,
+   "share_sold_before_end": 0.0
+  },
+  "HOLD(24)": {
+   "n_trades": 3328,
+   "per_dollar": 0.178,
+   "per_dollar_ci": [
+    0.1206,
+    0.2368
+   ],
+   "return": 4.1135,
+   "max_drawdown": 0.4447,
+   "ret_per_dd": 9.251,
+   "hit_rate": 0.223,
+   "pnl_std_per_trade": 2.6524,
+   "share_sold_before_end": 0.0
+  },
+  "FIX(48,12)": {
+   "n_trades": 3081,
+   "per_dollar": -0.1832,
+   "per_dollar_ci": [
+    -0.2025,
+    -0.1628
+   ],
+   "return": -3.202,
+   "max_drawdown": 3.2182,
+   "ret_per_dd": -0.995,
+   "hit_rate": 0.0844,
+   "pnl_std_per_trade": 0.7723,
+   "share_sold_before_end": 0.9675
+  },
+  "V3": {
+   "n_trades": 3840,
+   "per_dollar": 0.1713,
+   "per_dollar_ci": [
+    0.1181,
+    0.2318
+   ],
+   "return": 4.4738,
+   "max_drawdown": 0.4467,
+   "ret_per_dd": 10.016,
+   "hit_rate": 0.2253,
+   "pnl_std_per_trade": 2.7112,
+   "share_sold_before_end": 0.0
+  },
+  "DYNAMIC": {
+   "n_trades": 3840,
+   "per_dollar": 0.17,
+   "per_dollar_ci": [
+    0.1181,
+    0.2308
+   ],
+   "return": 4.4393,
+   "max_drawdown": 0.4276,
+   "ret_per_dd": 10.383,
+   "hit_rate": 0.2318,
+   "pnl_std_per_trade": 2.6558,
+   "share_sold_before_end": 0.031
+  },
+  "COH": {
+   "n_trades": 1899,
+   "per_dollar": 0.3119,
+   "per_dollar_ci": [
+    0.2276,
+    0.3982
+   ],
+   "return": 4.7976,
+   "max_drawdown": 0.2319,
+   "ret_per_dd": 20.69,
+   "hit_rate": 0.3123,
+   "pnl_std_per_trade": 2.4314,
+   "share_sold_before_end": 0.0
+  },
+  "COH+DYNAMIC": {
+   "n_trades": 1899,
+   "per_dollar": 0.3093,
+   "per_dollar_ci": [
+    0.2274,
+    0.3943
+   ],
+   "return": 4.7574,
+   "max_drawdown": 0.2037,
+   "ret_per_dd": 23.352,
+   "hit_rate": 0.3149,
+   "pnl_std_per_trade": 2.37,
+   "share_sold_before_end": 0.0732
+  }
+ }
 }

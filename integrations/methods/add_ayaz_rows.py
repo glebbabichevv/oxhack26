@@ -68,7 +68,7 @@ def main():
         rows.append(row("test", LABELS.get(c, c), v.get("per_dollar"), lo, hi, v.get("n_trades"), "test",
                         f"¢/$ after fees; return {v['return']} {v['return_ci']} bankrolls; maxDD {v['max_drawdown']}; "
                         f"Brier {v['brier']}; opened once after the freeze"))
-    for k in ["HOLD(72)", "HOLD(48)", "HOLD(24)", ex["fixed_pair_chosen_on_val1"], "V3", "DYNAMIC"]:
+    for k in ["HOLD(72)", "HOLD(48)", "HOLD(24)", ex["fixed_pair_chosen_on_val1"], "V3", "DYNAMIC", "COH", "COH+DYNAMIC"]:
         v = ex["val2"].get(k)
         if v:
             lo, hi = ci(v)
@@ -76,6 +76,13 @@ def main():
                             f"return/maxDD {v.get('ret_per_dd')}; hit {v.get('hit_rate')}; P&L std/trade "
                             f"{v.get('pnl_std_per_trade')}; sold before end {v.get('share_sold_before_end')}; "
                             f"test opened: {ex['test_opened']}"))
+    for k in ("COH", "COH+DYNAMIC", "V3", "DYNAMIC", ex["fixed_pair_chosen_on_val1"]):
+        v = (ex.get("test") or {}).get(k)
+        if v:
+            lo, hi = ci(v)
+            rows.append(row("exit", f"{k} (test)", v.get("per_dollar"), lo, hi, v.get("n_trades"), "test",
+                            f"return/maxDD {v.get('ret_per_dd')}; maxDD {v.get('max_drawdown')}; opened once because "
+                            f"COH+DYNAMIC beat COH on VAL2 return/maxDD; other rows descriptive"))
     for policy in ("V3", "COH"):
         for block, col in (("domain", "domain"), ("volume", "volume_tier"), ("price_bucket", "price_bucket")):
             for g in desc[policy][block]:
@@ -83,6 +90,37 @@ def main():
                 rows.append(row(block, f"{policy}: {g[col]}", g["per_dollar"], lo, hi, g["n_trades"], "test",
                                 f"descriptive - not used for selection; hit {g['hit_rate']}; return {g['return']}"
                                 + ("; LIFETIME volume (no volume-at-entry in data)" if block == "volume" else "")))
+    if (ENS / "coh_robust.json").exists():
+        rb = load("coh_robust.json")
+        for r in rb["monthly"]:
+            for pol in ("V3", "COH"):
+                v = r[pol]
+                if v["per_dollar"] is None:
+                    continue
+                lo, hi = v["per_dollar_ci"] or [None, None]
+                rows.append(row("monthly_coh", f"{r['month']} {pol}", v["per_dollar"], lo, hi, v["n_trades"], "walkforward",
+                                "¢/$ after fees; M0 refitted on events ended before the month"))
+        ms = rb["monthly_summary"]
+        rows.append(row("monthly_coh", "summary", ms["COH"]["positive"], n=ms["COH"]["months"], split="walkforward",
+                        note=f"COH positive in {ms['COH']['positive']} of {ms['COH']['months']} months (V3 {ms['V3']['positive']} of "
+                             f"{ms['V3']['months']}); CI below 0 in {ms['COH']['ci_below_0']} (a 1-trade month)"))
+        pl = rb["placebo_coh"]
+        rows.append(row("placebo_coh", "COH real", pl["real_per_dollar"], n=pl["n_trades"], split="placebo",
+                        note=f"Bernoulli 'prices are right' null, {pl['draws']} draws: p-value {pl['p_value']}"))
+        rows.append(row("placebo_coh", "COH null", pl["null_p50"], pl["null_p5"], pl["null_p95"], pl["n_trades"], "placebo",
+                        f"null median [p5, p95]; mean {pl['null_mean']}"))
+        d = rb["dsr_coh"]
+        rows.append(row("dsr_coh", "COH deflated Sharpe", d["dsr"], n=d["n_trades"], split="test",
+                        note=f"per-trade SR {d['sharpe_per_trade']}, PSR {d['psr_true_sharpe_gt_0']}, {d['n_trials']} trials, "
+                             f"SR0 {d['sr0_expected_max_under_null']}"))
+        lc = rb["leg_choice"]
+        rows.append(row("leg_choice", "largest-edge leg (COH)", lc["largest_edge_leg"]["per_dollar"], n=lc["largest_edge_leg"]["n_trades"],
+                        split="test", note="descriptive - not used for selection"))
+        rows.append(row("leg_choice", "random eligible leg", lc["random_leg"]["mean"], lc["random_leg"]["p5"], lc["random_leg"]["p95"],
+                        split="test", note=f"descriptive; {lc['random_leg']['draws']} draws, mean [p5, p95]"))
+        rows.append(row("leg_choice", "all eligible legs, no event cap", lc["all_eligible_legs_no_event_cap"]["per_dollar"],
+                        n=lc["all_eligible_legs_no_event_cap"]["n_trades"], split="test",
+                        note="descriptive; the gain comes from one bet per event, not from which leg"))
     old = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else []
     keep = [r for r in old if r.get("source") != SRC]
     OUT.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,500 @@
+{
+ "protocol": "Robustness for COH (Gleb 01:10), same methods and settings as TheMarkz3's integrations/robustness/robustness.py.\n\n  python integrations/ensemble/coh_robust.py [--raw data/raw] [--draws 1000]   # -> integrations/ensemble/coh_robust.json\n\n(1) monthly_coh  walk-forward over the whole history: for each month m, M0 refitted on every event that ended\n                 before m (split_by_time at m's first day); V3 and COH trade month m's markets (entry on/after the 1st).\n(2) placebo_coh  test set, shipped model (M0 on all train): \"prices are right\" Bernoulli null, outcomes redrawn as\n                 Bernoulli(price) for COH's real trades and stakes; p = share of draws >= the real cents per $1.\n(3) dsr_coh      deflated Sharpe (Bailey & Lopez de Prado 2014) of COH's per-trade test P&L, trials = the 10 VAL2\n                 candidates of ensemble.py + V0-V3 of backend/playoff.py on validation (their per-trade Sharpes).\n(4) leg_choice   descriptive, test: COH takes the leg with the largest net edge in each event; rerun with a RANDOM\n                 eligible leg per event (200 draws) - is the gain from one-bet-per-event or from picking the leg?",
+ "monthly": [
+  {
+   "month": "2025-01",
+   "n_markets": 388,
+   "V3": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   },
+   "COH": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   }
+  },
+  {
+   "month": "2025-02",
+   "n_markets": 327,
+   "V3": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   },
+   "COH": {
+    "n_trades": 1,
+    "per_dollar": -1.0,
+    "per_dollar_ci": [
+     -1.0,
+     -1.0
+    ],
+    "return": -0.0059
+   }
+  },
+  {
+   "month": "2025-03",
+   "n_markets": 340,
+   "V3": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   },
+   "COH": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   }
+  },
+  {
+   "month": "2025-04",
+   "n_markets": 559,
+   "V3": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   },
+   "COH": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   }
+  },
+  {
+   "month": "2025-05",
+   "n_markets": 572,
+   "V3": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   },
+   "COH": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   }
+  },
+  {
+   "month": "2025-06",
+   "n_markets": 575,
+   "V3": {
+    "n_trades": 0,
+    "per_dollar": null,
+    "per_dollar_ci": null,
+    "return": 0.0
+   },
+   "COH": {
+    "n_trades": 4,
+    "per_dollar": 0.168,
+    "per_dollar_ci": [
+     -1.0,
+     0.757
+    ],
+    "return": 0.0122
+   }
+  },
+  {
+   "month": "2025-07",
+   "n_markets": 457,
+   "V3": {
+    "n_trades": 59,
+    "per_dollar": -0.043,
+    "per_dollar_ci": [
+     -0.3606,
+     0.2577
+    ],
+    "return": -0.0091
+   },
+   "COH": {
+    "n_trades": 34,
+    "per_dollar": 0.268,
+    "per_dollar_ci": [
+     -0.1928,
+     0.734
+    ],
+    "return": 0.0383
+   }
+  },
+  {
+   "month": "2025-08",
+   "n_markets": 561,
+   "V3": {
+    "n_trades": 100,
+    "per_dollar": 0.5815,
+    "per_dollar_ci": [
+     0.2287,
+     0.9277
+    ],
+    "return": 0.2584
+   },
+   "COH": {
+    "n_trades": 66,
+    "per_dollar": 0.5671,
+    "per_dollar_ci": [
+     0.1788,
+     1.0174
+    ],
+    "return": 0.2012
+   }
+  },
+  {
+   "month": "2025-09",
+   "n_markets": 662,
+   "V3": {
+    "n_trades": 272,
+    "per_dollar": 0.1547,
+    "per_dollar_ci": [
+     -0.0252,
+     0.3286
+    ],
+    "return": 0.2667
+   },
+   "COH": {
+    "n_trades": 179,
+    "per_dollar": 0.36,
+    "per_dollar_ci": [
+     0.0806,
+     0.6258
+    ],
+    "return": 0.436
+   }
+  },
+  {
+   "month": "2025-10",
+   "n_markets": 1210,
+   "V3": {
+    "n_trades": 325,
+    "per_dollar": 0.1516,
+    "per_dollar_ci": [
+     -0.0162,
+     0.3256
+    ],
+    "return": 0.303
+   },
+   "COH": {
+    "n_trades": 197,
+    "per_dollar": 0.2745,
+    "per_dollar_ci": [
+     0.0629,
+     0.4932
+    ],
+    "return": 0.4152
+   }
+  },
+  {
+   "month": "2025-11",
+   "n_markets": 1373,
+   "V3": {
+    "n_trades": 430,
+    "per_dollar": 0.0674,
+    "per_dollar_ci": [
+     -0.0981,
+     0.2213
+    ],
+    "return": 0.1835
+   },
+   "COH": {
+    "n_trades": 272,
+    "per_dollar": 0.0414,
+    "per_dollar_ci": [
+     -0.1481,
+     0.2397
+    ],
+    "return": 0.0894
+   }
+  },
+  {
+   "month": "2025-12",
+   "n_markets": 1881,
+   "V3": {
+    "n_trades": 521,
+    "per_dollar": 0.2193,
+    "per_dollar_ci": [
+     0.0677,
+     0.3808
+    ],
+    "return": 0.7279
+   },
+   "COH": {
+    "n_trades": 304,
+    "per_dollar": 0.3343,
+    "per_dollar_ci": [
+     0.1421,
+     0.5369
+    ],
+    "return": 0.7715
+   }
+  },
+  {
+   "month": "2026-01",
+   "n_markets": 2261,
+   "V3": {
+    "n_trades": 933,
+    "per_dollar": 0.1432,
+    "per_dollar_ci": [
+     0.0491,
+     0.2352
+    ],
+    "return": 1.0279
+   },
+   "COH": {
+    "n_trades": 479,
+    "per_dollar": 0.2412,
+    "per_dollar_ci": [
+     0.0997,
+     0.386
+    ],
+    "return": 1.0324
+   }
+  },
+  {
+   "month": "2026-02",
+   "n_markets": 2176,
+   "V3": {
+    "n_trades": 764,
+    "per_dollar": 0.1666,
+    "per_dollar_ci": [
+     0.0458,
+     0.2931
+    ],
+    "return": 0.9837
+   },
+   "COH": {
+    "n_trades": 390,
+    "per_dollar": 0.2548,
+    "per_dollar_ci": [
+     0.0835,
+     0.4249
+    ],
+    "return": 0.9506
+   }
+  },
+  {
+   "month": "2026-03",
+   "n_markets": 794,
+   "V3": {
+    "n_trades": 243,
+    "per_dollar": -0.0884,
+    "per_dollar_ci": [
+     -0.2632,
+     0.1075
+    ],
+    "return": -0.157
+   },
+   "COH": {
+    "n_trades": 158,
+    "per_dollar": -0.1647,
+    "per_dollar_ci": [
+     -0.3619,
+     0.0572
+    ],
+    "return": -0.2071
+   }
+  },
+  {
+   "month": "2026-04",
+   "n_markets": 2128,
+   "V3": {
+    "n_trades": 729,
+    "per_dollar": 0.3025,
+    "per_dollar_ci": [
+     0.1676,
+     0.4444
+    ],
+    "return": 1.4968
+   },
+   "COH": {
+    "n_trades": 449,
+    "per_dollar": 0.3602,
+    "per_dollar_ci": [
+     0.1785,
+     0.5357
+    ],
+    "return": 1.2908
+   }
+  },
+  {
+   "month": "2026-05",
+   "n_markets": 1844,
+   "V3": {
+    "n_trades": 578,
+    "per_dollar": 0.2469,
+    "per_dollar_ci": [
+     0.1114,
+     0.397
+    ],
+    "return": 0.9788
+   },
+   "COH": {
+    "n_trades": 345,
+    "per_dollar": 0.3832,
+    "per_dollar_ci": [
+     0.1965,
+     0.5634
+    ],
+    "return": 1.0128
+   }
+  },
+  {
+   "month": "2026-06",
+   "n_markets": 2459,
+   "V3": {
+    "n_trades": 1132,
+    "per_dollar": 0.1141,
+    "per_dollar_ci": [
+     0.0181,
+     0.2102
+    ],
+    "return": 0.861
+   },
+   "COH": {
+    "n_trades": 409,
+    "per_dollar": 0.2741,
+    "per_dollar_ci": [
+     0.0788,
+     0.5009
+    ],
+    "return": 0.934
+   }
+  },
+  {
+   "month": "2026-07",
+   "n_markets": 1785,
+   "V3": {
+    "n_trades": 729,
+    "per_dollar": 0.157,
+    "per_dollar_ci": [
+     0.0377,
+     0.2838
+    ],
+    "return": 0.6919
+   },
+   "COH": {
+    "n_trades": 257,
+    "per_dollar": 0.5324,
+    "per_dollar_ci": [
+     0.3069,
+     0.7868
+    ],
+    "return": 0.9878
+   }
+  },
+  {
+   "month": "2026-08",
+   "n_markets": 1395,
+   "V3": {
+    "n_trades": 422,
+    "per_dollar": 0.4352,
+    "per_dollar_ci": [
+     0.2381,
+     0.6209
+    ],
+    "return": 1.1326
+   },
+   "COH": {
+    "n_trades": 301,
+    "per_dollar": 0.5471,
+    "per_dollar_ci": [
+     0.3184,
+     0.7794
+    ],
+    "return": 1.0823
+   }
+  },
+  {
+   "month": "2026-09",
+   "n_markets": 1364,
+   "V3": {
+    "n_trades": 499,
+    "per_dollar": 0.2504,
+    "per_dollar_ci": [
+     0.0957,
+     0.4155
+    ],
+    "return": 0.7867
+   },
+   "COH": {
+    "n_trades": 315,
+    "per_dollar": 0.3328,
+    "per_dollar_ci": [
+     0.1411,
+     0.5444
+    ],
+    "return": 0.853
+   }
+  }
+ ],
+ "monthly_summary": {
+  "V3": {
+   "months": 17,
+   "positive": 13,
+   "ci_below_0": 0
+  },
+  "COH": {
+   "months": 17,
+   "positive": 15,
+   "ci_below_0": 1
+  }
+ },
+ "placebo_coh": {
+  "real_per_dollar": 0.3119,
+  "n_trades": 1899,
+  "draws": 1000,
+  "null_mean": -0.0806,
+  "null_p5": -0.1518,
+  "null_p50": -0.0819,
+  "null_p95": -0.0064,
+  "p_value": 0.0
+ },
+ "dsr_coh": {
+  "n_trades": 1899,
+  "sharpe_per_trade": 0.1347,
+  "skew": 2.252,
+  "kurtosis": 11.036,
+  "psr_true_sharpe_gt_0": 1.0,
+  "n_trials": 12,
+  "var_trial_sharpe": 0.001361,
+  "sr0_expected_max_under_null": 0.0614,
+  "dsr": 0.999895,
+  "trials": {
+   "playoff_V0": 0.0749340266716195,
+   "playoff_V1": 0.09703047350819086,
+   "playoff_V2": 0.09562397792417777,
+   "playoff_V3": 0.10982995267959517,
+   "val2_V3": 0.14356574342743034,
+   "val2_COH": 0.19320951812002068,
+   "val2_BETA": 0.14055543673992923,
+   "val2_ENS": 0.15531719475281347,
+   "val2_AGREE": 0.13450535170256744,
+   "val2_POOL": 0.07071590053516968,
+   "val2_isotonic": 0.11750793143003381,
+   "val2_hier": 0.0807753014893379
+  }
+ },
+ "leg_choice": {
+  "largest_edge_leg": {
+   "per_dollar": 0.3119,
+   "n_trades": 1899
+  },
+  "random_leg": {
+   "mean": 0.3354,
+   "p5": 0.2953,
+   "p95": 0.3695,
+   "draws": 200
+  },
+  "all_eligible_legs_no_event_cap": {
+   "per_dollar": 0.2428,
+   "n_trades": 3136
+  }
+ }
+}

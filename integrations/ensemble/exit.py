@@ -182,6 +182,11 @@ def run_all(sc, model, paths, which):
     v3["entry_ts"] = v3["end_ts"] - v3["horizon_hours"] * 3600
     out["V3"] = stats(hold(v3))
     out["DYNAMIC"] = stats(dynamic_exit(v3, paths, model))
+    coh, _ = E.trades_for(rows, "COH", {"M0": q0, "BETA": q0}, dlo, dhi)  # Gleb 01:05: exit on top of COH
+    coh = coh.merge(meta[["market_id", "end_ts", "res_ts"]], on="market_id")
+    coh["entry_ts"] = coh["end_ts"] - coh["horizon_hours"] * 3600
+    out["COH"] = stats(hold(coh))
+    out["COH+DYNAMIC"] = stats(dynamic_exit(coh, paths, model))
     return out
 
 
@@ -218,6 +223,8 @@ def main():
                   f"sold {v.get('share_sold_before_end')}", flush=True)
     base = r2["V3"].get("ret_per_dd") or 0
     beats = {k: (r2[k].get("ret_per_dd") or -9) > base for k in (best, "DYNAMIC")}
+    coh_base = r2["COH"].get("ret_per_dd") or 0
+    beats["COH+DYNAMIC vs COH"] = (r2["COH+DYNAMIC"].get("ret_per_dd") or -9) > coh_base
     res = {"protocol": __doc__.strip(), "fixed_pair_chosen_on_val1": best, "val1": r1, "val2": r2,
            "beats_v3_on_val2_ret_per_dd": beats, "test_opened": False}
     if a.test and any(beats.values()):
