@@ -51,7 +51,8 @@ const pct = (x: number) => `${Math.round(x * 100)}%`;
 const sideOf = (d: Decision): Side | undefined => { const a = intendedAction(d); return a === 'BUY_YES' ? 'YES' : a === 'BUY_NO' ? 'NO' : undefined; };
 const clean = (s: string) => s.replace(/\s*\(.*\)\s*$/, '').replace(/\s+/g, ' ').trim();
 /** "Price too low" when Horizon backs Yes, "too high" when it backs No, else fair. */
-const priceWord = (d: Decision) => (verdictOf(d) === 'SKIP' ? 'Price fair, skip' : intendedAction(d) === 'BUY_YES' ? 'Price too low' : 'Price too high');
+const priceWord = (d: Decision) => (d.blockedBy ? `One bet per event: ${clean(d.blockedBy)} has the larger edge`
+  : verdictOf(d) === 'SKIP' ? 'Price fair, skip' : intendedAction(d) === 'BUY_YES' ? 'Price too low' : 'Price too high');
 const stakeFor = (a: Account | undefined, d: Decision) => Math.max(1, Math.floor(a ? suggested(a, d) : 0));
 /** One plain reason per decision. */
 export const reasonOf = (d: Decision) => intendedAction(d) === 'BUY_YES'
@@ -317,8 +318,10 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   }, [model, marketSlug]);
   const start = async () => {
     setMsg(undefined);
-    const q = quote ?? (await quotes(model, [marketSlug])).get(marketSlug);
-    if (!q || !side) { setMsg({ ok: false, text: 'Could not get a live price. Try again.' }); return; }
+    const q0 = quote ?? (await quotes(model, [marketSlug])).get(marketSlug);
+    if (!q0 || !side) { setMsg({ ok: false, text: 'Could not get a live price. Try again.' }); return; }
+    // The card's decision is the event-level one (coherence, one bet per event); bet on that.
+    const q = { ...q0, decision: d };
     const c = checkBet(await getAccount(), q, side, amount);
     if (!c.ok) { setMsg({ ok: false, text: `${c.error}.` }); return; }
     setDoing([{ kind: 'buy', q, side, amount: c.amount, name: title, suggested: c.suggested }]);
@@ -367,7 +370,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
 /** The test result in one line under the card, from /api/backtest's headline (fallback: the shipped V3 numbers). */
 let trustCache: Promise<{ c: number; lo: number; hi: number; n: number; cachedAt?: number } | undefined> | undefined;
 function TrustLine() {
-  const [t, setT] = useState<{ c: number; lo: number; hi: number; n: number; cachedAt?: number }>({ c: 0.172, lo: 0.118, hi: 0.235, n: 10579 });
+  const [t, setT] = useState<{ c: number; lo: number; hi: number; n: number; cachedAt?: number }>({ c: 0.31, lo: 0.23, hi: 0.40, n: 10579 });
   useEffect(() => {
     trustCache ??= apiJSON<any>('/api/backtest').then(({ data: b, cachedAt }) => {
       const h = b?.headline;
@@ -402,14 +405,8 @@ function PositionAdvice({ pos, q, d, unsure, title, onSell, busy }: { pos: Walle
   return (
     <div className="mt-4 rounded-card bg-[rgba(15,23,42,0.04)] px-3.5 py-3">
       <p className="text-footnote text-[#475569]">You hold {shares.toLocaleString()} {side === 'YES' ? 'Yes' : 'No'} shares{pos.avgPrice ? ` (bought at ${c(pos.avgPrice)})` : ''}.</p>
-      {unsure ? null : sell ? (
-        <>
-          <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Sell: the market now pays {c(pays)}, Horizon values it at {c(worth)}.</p>
-          <button type="button" disabled={busy} onClick={() => onSell({ kind: 'sell', q, pos: synthetic, fraction: 1, name: title })}
-            className="hz-cta mt-3 h-11 w-full rounded-control text-subhead font-semibold text-white disabled:opacity-50" style={{ background: INK }}>Set up sale of {shares.toLocaleString()} shares</button>
-        </>
-      ) : <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold: Horizon values it at {c(worth)}, the market pays {c(pays)}.</p>}
-      <p className="mt-1.5 text-caption text-[#94a3b8]">Rule under test: we are still checking whether selling early beats holding to the end.</p>
+      {/* Dynamic exit failed on validation (selling early did not beat holding V3), so the advice is always hold. */}
+      <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold to resolution: selling early did not beat holding in our test.</p>
     </div>
   );
 }
@@ -433,7 +430,7 @@ function Row({ title, d, onClick, active }: { title: string; d: Decision; onClic
   return (
     <button type="button" onClick={onClick} className={`hz-row-link hz-rule -mx-2 flex w-[calc(100%+16px)] items-center gap-3 rounded-control px-2 py-3 text-left ${active ? 'bg-[rgba(15,23,42,0.03)]' : ''}`}>
       <span className="min-w-0 flex-1 line-clamp-2 text-body font-medium">{clean(title)}</span>
-      <span className="shrink-0 text-footnote font-semibold" style={{ color: good ? UP : MUTED }}>{v === 'WAIT' ? 'Later' : good ? priceWord(d) : 'Skip'}</span>
+      <span className="shrink-0 text-footnote font-semibold" style={{ color: good ? UP : MUTED }}>{d.blockedBy ? 'One per event' : v === 'WAIT' ? 'Later' : good ? priceWord(d) : 'Skip'}</span>
     </button>
   );
 }

@@ -78,7 +78,10 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
       bid, ask, closed: false, endDate: mk.endDate, domain, fee, ...ctx, decision: decide(m, price, hours, domain, ask - bid, fee) });
   }
   picks.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
-  return { picks: picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, top), scanned: seen.size };
+  // One bet per event: the best leg of each event only.
+  const events = new Set<string>();
+  const one = picks.filter((p) => verdictOf(p.decision) !== 'SKIP').filter((p) => (events.has(p.eventSlug) ? false : (events.add(p.eventSlug), true)));
+  return { picks: one.slice(0, top), scanned: seen.size };
 }
 
 async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
