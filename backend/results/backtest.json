@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-24T19:24:56+00:00",
+ "generated_at": "2026-10-24T19:40:56+00:00",
  "model_version": "2026-10-24-390c312",
  "cutoff": "2026-05-18",
  "n_train_markets": 23838,
@@ -1784,7 +1784,7 @@
   "hit_rate": 0.2242,
   "max_drawdown": 0.3806,
   "peak_open_stake": 0.694,
-  "note": "Policy V3, Polymarket taker fees, open stake <= 1 starting bankroll, test trades entered on/after the cutoff. Rule chosen on validation, test opened once."
+  "note": "Policy V3, Polymarket taker fees, open stake <= 1 starting bankroll, test trades entered on/after the cutoff. The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only."
  },
  "capped_exposure": {
   "n_trades": 3653,
@@ -2628,10 +2628,60 @@
   "name": "V3",
   "min_edge": 0.01,
   "enter_from_hours": 24,
-  "note": "rule chosen on validation, test opened once (integrations/playoff)"
+  "note": "rule chosen on validation only; test results for all variants shown side by side (integrations/playoff)"
+ },
+ "robustness": {
+  "note": "Headline policy and caps re-run on subsets of its own trades.",
+  "price_le_1h": {
+   "label": "price print <= 1 h before the target",
+   "n_trades": 3611,
+   "per_dollar": 0.1728,
+   "per_dollar_ci": [
+    0.113,
+    0.2346
+   ],
+   "return": 3.9699,
+   "return_ci": [
+    2.58,
+    5.34
+   ],
+   "max_drawdown": 0.3806
+  },
+  "closed_ge_12h": {
+   "label": "market closed >= 12 h after the price",
+   "n_trades": 3591,
+   "per_dollar": 0.1688,
+   "per_dollar_ci": [
+    0.1106,
+    0.2276
+   ],
+   "return": 3.8605,
+   "return_ci": [
+    2.56,
+    5.21
+   ],
+   "max_drawdown": 0.3584
+  },
+  "both": {
+   "label": "both",
+   "n_trades": 3549,
+   "per_dollar": 0.1693,
+   "per_dollar_ci": [
+    0.1134,
+    0.2285
+   ],
+   "return": 3.8224,
+   "return_ci": [
+    2.56,
+    5.14
+   ],
+   "max_drawdown": 0.3584
+  },
+  "share_fresh": 0.9885,
+  "share_alive": 0.983
  },
  "policy_comparison": {
-  "note": "rule chosen on validation, test opened once",
+  "note": "The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only.",
   "rows": [
    {
     "variant": "V0",
@@ -3087,10 +3137,11 @@
   "Split by time: train on events that ended before the cutoff; test on markets of the remaining events that resolved after it (legs resolved earlier are dropped). Legs of one event never straddle the split.",
   "Cost per contract = max(spread / 2, 0.01) + Polymarket taker fee (rate x p(1-p), each market's own fee schedule from Gamma; fees on) + flat fee 0.0; historical spreads are unknown, so the 1\u00a2 floor applies.",
   "Stakes are fractions of the starting bankroll and positions overlap: peak_open_stake is the most staked at once; capped_exposure re-runs the same trades with total open stake capped at 1 bankroll.",
-  "Policy V3: one trade per market, at the earliest horizon within 24 h of the scheduled end whose net edge is at least 1\u00a2, held to resolution. Chosen on validation among V0-V3 (integrations/playoff); test opened once.",
+  "Policy V3: one trade per market, at the earliest horizon within 24 h of the scheduled end whose net edge is at least 1\u00a2, held to resolution. Chosen on validation only among V0-V3 (integrations/playoff); test results for all four are reported side by side.",
   "Embargo: a test trade counts only if it was entered on/after the cutoff.",
   "Only prices in 3%\u201397% are modelled or traded; edge must survive the model's 10\u201390% bootstrap interval (resampled by event).",
   "Stake = 0.25 Kelly on the conservative q, capped at 5% of the starting bankroll; P&L is additive (no compounding) because positions overlap.",
-  "Prices are Polymarket price history at each horizon; fills at that price are assumed."
+  "Entry price = the last print at or before the target time in Polymarket's hourly price history (prior prints only, at most 6 h old; 98.9% of headline trades use a print at most 1 h old, see robustness); fills at that price are assumed.",
+  "Costs = max(the market's quoted half-spread, 1\u00a2) + Polymarket's taker fee. Historical spreads are not available, so the 1\u00a2 floor stands in for them: a stated limitation."
  ]
 }
