@@ -559,21 +559,27 @@
   "geopolitics": 0.0
  },
  "policy": {
-  "name": "V3",
+  "name": "COH",
   "min_edge": 0.01,
-  "enter_from_hours": 24
+  "enter_from_hours": 24,
+  "coherent": true,
+  "book_ok": [
+   0.95,
+   1.25
+  ],
+  "one_per_event": true
  },
  "headline": {
-  "per_dollar": 0.1723,
+  "per_dollar": 0.3125,
   "per_dollar_ci": [
-   0.1184,
-   0.2346
+   0.222,
+   0.4047
   ],
-  "return": 4.0081,
+  "return": 4.382,
   "return_ci": [
-   2.78,
-   5.44
+   3.12,
+   5.68
   ],
-  "n_trades": 3653
+  "n_trades": 1827
  }
 }

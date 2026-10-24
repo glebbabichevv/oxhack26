@@ -71,6 +71,33 @@ def _ts(s):
 
 
 def _row(m, now, model):
+    """One market on its own (no event policy)."""
+    rows = _rows([m], now, model)
+    return rows[0] if rows else None
+
+
+def _rows(markets, now, model):
+    """Markets -> /api/live rows with the event policy: coherent q across a neg-risk event's legs, one bet per event."""
+    preps = [x for x in (_prep(m, now, model) for m in markets) if x]
+    legs = [x["leg"] for x in preps]
+    scales = horizon_mcp.coherence_scales(legs, model)
+    ds = [decide(l["price"], l["hours"], l["domain"], l["spread"], model, l["rate"], l["exp"], q_scale=sc)
+          for l, sc in zip(legs, scales)]
+    horizon_mcp.one_bet_per_event(ds, [l["group"] for l in legs], [l["label"] for l in legs], model)
+    out = []
+    for x, d in zip(preps, ds):
+        l, price = x["leg"], x["leg"]["price"]
+        out.append({**x["row"],
+                    "q_yes": round(d["q"], 4), "q_low": round(d["lo"], 4), "q_high": round(d["hi"], 4),
+                    "edge": round(d["q"] - price, 4), "net_edge": round(d["net_edge"], 4), "cost": round(d["cost"], 4),
+                    "action": d["action"], "kelly_fraction": round(d["kelly"], 4), "reason": d["reason"],
+                    "fee": round(l["rate"] * (price * (1 - price)) ** l["exp"], 4),
+                    "wait": d["wait"], "would_be": d["would_be"], "check_back_in_hours": d["check_back_in_hours"],
+                    "coherent": l["neg_risk"] and scales[len(out)] != 1.0})
+    return out
+
+
+def _prep(m, now, model):
     try:
         if [o.lower() for o in json.loads(m.get("outcomes") or "[]")] != ["yes", "no"]:
             return None
@@ -91,17 +118,15 @@ def _row(m, now, model):
         tags += [t.get("slug") for t in ev.get("tags") or [] if t.get("slug")]
     domain = domain_of(tags)
     rate, exp = horizon_mcp.fee_of(m, domain, model)
-    d = decide(price, hours, domain, spread, model, rate, exp)
     event = (m.get("events") or [{}])[0]
-    return {"market_id": m.get("conditionId"), "question": m.get("question"), "domain": domain,
-            "price_yes": price, "hours_to_resolution": hours,
-            "q_yes": round(d["q"], 4), "q_low": round(d["lo"], 4), "q_high": round(d["hi"], 4),
-            "edge": round(d["q"] - price, 4), "net_edge": round(d["net_edge"], 4), "cost": round(d["cost"], 4),
-            "action": d["action"], "kelly_fraction": round(d["kelly"], 4), "reason": d["reason"],
-            "url": f"https://polymarket.com/event/{event.get('slug') or m.get('slug')}",
-            "volume_usd": round(float(m.get("volumeNum") or 0), 2), "spread": spread,
-            "fee": round(rate * (price * (1 - price)) ** exp, 4),
-            "wait": d["wait"], "would_be": d["would_be"], "check_back_in_hours": d["check_back_in_hours"]}
+    slug = event.get("slug") or m.get("slug")
+    return {"row": {"market_id": m.get("conditionId"), "question": m.get("question"), "domain": domain,
+                    "price_yes": price, "hours_to_resolution": hours,
+                    "url": f"https://polymarket.com/event/{slug}",
+                    "volume_usd": round(float(m.get("volumeNum") or 0), 2), "spread": spread},
+            "leg": {"group": slug, "neg_risk": bool(m.get("negRisk") or event.get("negRisk")), "price": price,
+                    "hours": hours, "domain": domain, "spread": spread, "rate": rate, "exp": exp,
+                    "label": m.get("groupItemTitle") or m.get("question")}}
 
 
 def snapshot(model=None):
@@ -109,7 +134,7 @@ def snapshot(model=None):
     model = model or horizon_mcp.MODEL
     now = datetime.now(timezone.utc)
     markets = fetch_open(now)
-    rows = [r for r in (_row(m, now, model) for m in markets) if r]
+    rows = _rows(markets, now, model)
     if not rows:
         raise RuntimeError("Gamma returned no open yes/no markets with a two-sided book")
     lo, hi = model["tradable"]

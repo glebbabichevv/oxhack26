@@ -121,7 +121,57 @@ def fee_of(mk, domain, m=None):
 WAIT_REASON = "Wait: best time is within 24h of the end"
 
 
-def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponent=1.0, policy=None):
+def raw_q(price, hours, domain, m=None):
+    """The model's point q before any policy (price itself outside the tradable band)."""
+    m = m or MODEL
+    if not (m["tradable"][0] <= price <= m["tradable"][1]):
+        return price
+    return _prob(m["main"], _features(price, hours, domain, m))
+
+
+def coherence_scales(legs, m=None, policy=None):
+    """legs: dicts with group (event key), neg_risk, price, hours, domain -> q scale per leg.
+    In a neg-risk event whose legs (same group, same end) look like a complete book (>= 2 legs, prices summing to
+    book_ok), the legs' q are scaled to sum to 1 (model.coherent); every other leg gets 1."""
+    m = m or MODEL
+    pol = (m.get("policy") or {}) if policy is None else (policy or {})
+    scales = [1.0] * len(legs)
+    if not pol.get("coherent"):
+        return scales
+    lo_ok, hi_ok = pol.get("book_ok", [0.95, 1.25])
+    groups = {}
+    for i, l in enumerate(legs):
+        if l.get("neg_risk") and l.get("group"):
+            groups.setdefault((l["group"], round(l["hours"])), []).append(i)
+    for ix in groups.values():
+        if len(ix) < 2 or not lo_ok <= sum(legs[i]["price"] for i in ix) <= hi_ok:
+            continue
+        qs = [min(max(raw_q(legs[i]["price"], legs[i]["hours"], legs[i]["domain"], m), 1e-4), 1 - 1e-4) for i in ix]
+        total = sum(qs)
+        for i in ix:
+            scales[i] = 1 / total
+    return scales
+
+
+def one_bet_per_event(decisions, groups, labels, m=None, policy=None):
+    """Keep only the largest net edge BUY per event; the others become NO_TRADE (policy one_per_event)."""
+    m = m or MODEL
+    pol = (m.get("policy") or {}) if policy is None else (policy or {})
+    if not pol.get("one_per_event"):
+        return decisions
+    best = {}
+    for i, d in enumerate(decisions):
+        if d["action"] != "NO_TRADE" and groups[i]:
+            if groups[i] not in best or d["net_edge"] > decisions[best[groups[i]]]["net_edge"]:
+                best[groups[i]] = i
+    for i, d in enumerate(decisions):
+        if d["action"] != "NO_TRADE" and groups[i] and best[groups[i]] != i:
+            d.update(action="NO_TRADE", kelly=0.0, one_per_event_blocked=True,
+                     reason=f"One bet per event: {labels[best[groups[i]]]} has the larger edge")
+    return decisions
+
+
+def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponent=1.0, policy=None, q_scale=1.0):
     """price = order-book mid, spread = ask - bid (None if unknown), hours = to the scheduled end.
     Taker fee per share = fee_rate * (p(1-p))**fee_exponent (fee_of(market)); fee_rate None = the domain's rate.
     policy: None = the model file's `policy` (V3: min net edge, enter only within enter_from_hours of the end);
@@ -143,6 +193,10 @@ def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponen
     qs = [_prob(f, x) for f in m["boot"]]
     lo = _percentile(qs, m["interval_percentiles"][0])
     hi = _percentile(qs, m["interval_percentiles"][1])
+    if q_scale != 1.0:  # event coherence: scale q, keep the band's offsets (model.run_policy)
+        qc = min(max(q * q_scale, 1e-4), 1 - 1e-4)
+        lo, hi = min(max(qc - (q - lo), 0.0), 1.0), min(max(qc + (hi - q), 0.0), 1.0)
+        q = qc
 
     buy_yes = lo - (price + cost)
     buy_no = (price - cost) - hi
@@ -178,7 +232,7 @@ def _best_window_note():
         return "Out-of-time results are in /api/backtest."
     ci = h.get("per_dollar_ci") or [None, None]
     return (f"Horizon only enters within {pol.get('enter_from_hours', 24)}h of the scheduled end and only with a net edge of at "
-            f"least {pol.get('min_edge', 0.01) * 100:.0f}¢ (rule chosen on validation only; test results for all variants shown side by side). Out of time "
+            f"least {pol.get('min_edge', 0.01) * 100:.0f}¢ (10 variants compared on validation; the test was opened once for V3 and COH side by side). Out of time "
             f"({n_test:,} markets after {MODEL['train_cutoff']}) that earned {h['per_dollar'] * 100:+.1f}¢ per $1 staked after "
             f"fees (90% CI {ci[0] * 100:+.1f}¢ to {ci[1] * 100:+.1f}¢) over {h['n_trades']:,} trades. An average over many "
             "markets, not a forecast for this one; the edge is solid mainly in sports.")
@@ -205,7 +259,48 @@ def _slug_from(text):
 
 
 def _leg(mk, event, now):
-    """Horizon's view of one market of an event: a decision dict, or {'skip': why}."""
+    """Horizon's view of one market alone (no event policy): a decision dict, or {'skip': why}."""
+    return _legs([(mk, event)], now)[0]
+
+
+def _legs(pairs, now):
+    """[(market, event)] -> Horizon's view of each, with the event policy (coherence + one bet per event) applied."""
+    preps = [_prep(mk, ev, now) for mk, ev in pairs]
+    ok = [i for i, p in enumerate(preps) if "skip" not in p]
+    legs = [preps[i]["leg"] for i in ok]
+    scales = coherence_scales(legs)
+    ds = [decide(l["price"], l["hours"], l["domain"], l["spread"], fee_rate=l["rate"], fee_exponent=l["exp"], q_scale=sc)
+          for l, sc in zip(legs, scales)]
+    one_bet_per_event(ds, [l["group"] for l in legs], [l["label"] for l in legs])
+    out = list(preps)
+    for i, l, d in zip(ok, legs, ds):
+        out[i] = _view(preps[i], d)
+    return out
+
+
+def _view(p, d):
+    return {
+        "question": p["question"],
+        "event": p["event"],
+        "url": f"https://polymarket.com/event/{p['event']}",
+        "domain": d["domain"],
+        "market_price_yes": round(d["price"], 4),
+        "bid": p["bid"], "ask": p["ask"],
+        "horizon_q_yes": round(d["q"], 4),
+        "q_interval_10_90": [round(d["lo"], 4), round(d["hi"], 4)],
+        "action": d["action"],
+        "net_edge_after_spread": round(d["net_edge"], 4),
+        "cost_per_share": round(d["cost"], 4),
+        "quarter_kelly_stake_of_bankroll": round(d["kelly"], 4),
+        "wait": d["wait"], "would_be": d["would_be"], "check_back_in_hours": d["check_back_in_hours"],
+        "coherent": p["leg"]["neg_risk"],
+        "hours_to_end": round(p["leg"]["hours"], 1),
+        "reason": d["reason"],
+    }
+
+
+def _prep(mk, event, now):
+    """Validate one market and gather what decide() needs, or {'skip': why}."""
     question = mk.get("question") or event.get("title")
     try:
         outcomes = [o.lower() for o in json.loads(mk.get("outcomes") or "[]")]
@@ -232,24 +327,11 @@ def _leg(mk, event, now):
     tags = [t.get("slug") for t in (mk.get("tags") or []) + (event.get("tags") or []) if t.get("slug")]
     domain = domain_of(tags)
     rate, exp = fee_of(mk, domain)
-    d = decide((bid + ask) / 2, hours, domain, ask - bid, fee_rate=rate, fee_exponent=exp)
-    return {
-        "question": question,
-        "event": event.get("slug"),
-        "url": f"https://polymarket.com/event/{event.get('slug')}",
-        "domain": d["domain"],
-        "market_price_yes": round(d["price"], 4),
-        "bid": bid, "ask": ask,
-        "horizon_q_yes": round(d["q"], 4),
-        "q_interval_10_90": [round(d["lo"], 4), round(d["hi"], 4)],
-        "action": d["action"],
-        "net_edge_after_spread": round(d["net_edge"], 4),
-        "cost_per_share": round(d["cost"], 4),
-        "quarter_kelly_stake_of_bankroll": round(d["kelly"], 4),
-        "wait": d["wait"], "would_be": d["would_be"], "check_back_in_hours": d["check_back_in_hours"],
-        "hours_to_end": round(hours, 1),
-        "reason": d["reason"],
-    }
+    neg = bool(mk.get("negRisk") or event.get("negRisk"))
+    return {"question": question, "event": event.get("slug"), "bid": bid, "ask": ask,
+            "leg": {"group": event.get("slug"), "neg_risk": neg, "price": (bid + ask) / 2, "hours": hours,
+                    "domain": domain, "spread": ask - bid, "rate": rate, "exp": exp,
+                    "label": mk.get("groupItemTitle") or question}}
 
 
 def horizon_check(slug):
@@ -259,7 +341,7 @@ def horizon_check(slug):
     if not events:
         return {"error": f"No Polymarket event with slug '{slug}'. Pass the slug from the URL polymarket.com/event/<slug>."}
     event = events[0]
-    legs = [_leg(mk, event, now) for mk in event.get("markets") or []]
+    legs = _legs([(mk, event) for mk in event.get("markets") or []], now)  # siblings: coherence + one bet per event
     priced = [l for l in legs if "skip" not in l]
     priced.sort(key=lambda l: (l["action"] == "NO_TRADE", -l["net_edge_after_spread"]))
     skipped = {}
@@ -278,8 +360,9 @@ def horizon_check(slug):
         "best_window": _best_window_note(),
         "method": ("Horizon recalibrates the order-book mid with a 4-coefficient logistic model fitted on 23,838 resolved "
                    "Polymarket markets; it trades only if the model's 10–90% bootstrap interval clears price ± cost "
-                   "(cost = max(spread/2, 1¢) + Polymarket's taker fee for that market), sizes by quarter-Kelly capped at 5%, and skips prices outside 3–97%. Policy V3: only a net edge of at least 1¢, "
-                   "and only within 24h of the scheduled end (earlier = WAIT)."),
+                   "(cost = max(spread/2, 1¢) + Polymarket's taker fee for that market), sizes by quarter-Kelly capped at 5%, and skips prices outside 3–97%. Policy COH: only a net edge of at least 1¢, "
+                   "only within 24h of the scheduled end (earlier = WAIT), q made coherent across a neg-risk event's legs, "
+                   "and one bet per event (the largest net edge)."),
     }
 
 
@@ -308,14 +391,15 @@ def horizon_scan(tag="sports", within_hours=24.0, top=5):
     with ThreadPoolExecutor(max_workers=11) as pool:  # Gamma's offset cap is 2100: the 2,100 most-traded markets
         for b in pool.map(page, range(0, 2100, 100)):
             markets.extend(b)
-    seen, legs = set(), []
+    seen, pairs = set(), []
     for mk in markets:
         if mk.get("id") in seen:
             continue
         seen.add(mk.get("id"))
         event = (mk.get("events") or [{}])[0]
-        event = {**event, "slug": event.get("slug") or mk.get("slug")}
-        l = _leg(mk, event, now)
+        pairs.append((mk, {**event, "slug": event.get("slug") or mk.get("slug")}))
+    legs = []
+    for l in _legs(pairs, now):  # legs of one event in the scan are made coherent and get one bet between them
         if "skip" not in l and l["hours_to_end"] <= within_hours and 0.03 <= l["market_price_yes"] <= 0.97:
             legs.append(l)
     legs.sort(key=lambda l: -l["net_edge_after_spread"])
