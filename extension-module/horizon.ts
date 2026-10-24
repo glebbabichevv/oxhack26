@@ -31,6 +31,8 @@ export type Decision = {
   q: number; lo: number; hi: number; action: Action; kelly: number; netEdge: number; reason: string;
   /** true when the edge is there but the rule says enter later; wouldBe = the action then. */
   wait: boolean; wouldBe: Action | null; checkBackInHours: number | null;
+  /** One bet per event: set when another outcome of the same event has the larger edge. */
+  blockedBy?: string;
 };
 
 const clip = (x: number, a: number, b: number) => Math.min(Math.max(x, a), b);
@@ -89,6 +91,20 @@ export function decide(m: Model, price: number, hours: number, domain: string, s
   const qs = m.boot.map((f) => prob(f, x));
   const lo = percentile(qs, m.interval_percentiles[0]);
   const hi = percentile(qs, m.interval_percentiles[1]);
+  return decideWithQ(m, price, q, lo, hi, hours, domain, spread, fee, policy);
+}
+
+/** The decision rule for a given probability and band (used by decide and by event coherence). */
+export function decideWithQ(m: Model, price: number, q: number, lo: number, hi: number, hours: number, domain: string, spread: number,
+  fee: Fee = { rate: domainFeeRate(m, domain), exponent: 1 }, policy: Policy | false = m.policy ?? {}): Decision {
+  const pol: Policy = policy || {};
+  const feePerShare = fee.rate * Math.pow(price * (1 - price), fee.exponent);
+  const cost = (Number.isFinite(spread) ? Math.max(spread / 2, m.min_half_spread) : m.min_half_spread) + feePerShare;
+  const inBand = price >= m.tradable[0] && price <= m.tradable[1];
+  if (!inBand) {
+    return { price, hours, domain, cost, q: price, lo: price, hi: price, action: "NO_TRADE", kelly: 0, netEdge: 0, wait: false, wouldBe: null, checkBackInHours: null,
+      reason: `Market at ${(price * 100).toFixed(1)}%: too close to certain, a ${Math.round(cost * 100)}¢ cost exceeds any edge` };
+  }
 
   const buyYes = lo - (price + cost);
   const buyNo = (price - cost) - hi;
@@ -116,7 +132,41 @@ export function decide(m: Model, price: number, hours: number, domain: string, s
 
 // ---------- Gamma ----------
 
-export type Leg = { question: string; label: string; marketSlug?: string; bid?: number; ask?: number; decision?: Decision; skip?: string };
+export type Leg = { question: string; label: string; marketSlug?: string; bid?: number; ask?: number; decision?: Decision; skip?: string; fee?: Fee };
+
+/**
+ * COH: on a negRisk event (outcomes are mutually exclusive), when >= 2 open priced legs have mid
+ * prices summing to [0.95, 1.25], Horizon's probabilities are scaled to sum to 1 (each band keeps
+ * its offsets from the model's q), and every leg is re-decided with the same V3 rule. Then ONE BET
+ * PER EVENT: only the leg with the largest net edge keeps its call (now or after its wait).
+ */
+export function cohere(m: Model, legs: Leg[], negRisk: boolean): Leg[] {
+  const priced = legs.filter((l) => l.decision && l.bid !== undefined && l.ask !== undefined);
+  let out = legs;
+  const mids = priced.reduce((s, l) => s + l.decision!.price, 0);
+  if (negRisk && priced.length >= 2 && mids >= 0.95 && mids <= 1.25) {
+    const sumQ = priced.reduce((s, l) => s + l.decision!.q, 0);
+    out = legs.map((l) => {
+      if (!priced.includes(l) || !(sumQ > 0)) return l;
+      const d0 = l.decision!;
+      const q = clip(d0.q / sumQ, 1e-4, 1 - 1e-4);
+      const lo = clip(q - (d0.q - d0.lo), 1e-4, 1 - 1e-4), hi = clip(q + (d0.hi - d0.q), 1e-4, 1 - 1e-4);
+      return { ...l, decision: decideWithQ(m, d0.price, q, lo, hi, d0.hours, d0.domain, (l.ask as number) - (l.bid as number), l.fee) };
+    });
+  }
+  return onePerEvent(out);
+}
+
+/** Keep the call only on the leg with the largest net edge (trades and waits alike). */
+export function onePerEvent(legs: Leg[]): Leg[] {
+  const wants = (d?: Decision) => !!d && (d.action !== "NO_TRADE" || (d.wait && !!d.wouldBe));
+  const best = legs.filter((l) => wants(l.decision)).sort((a, b) => b.decision!.netEdge - a.decision!.netEdge)[0];
+  if (!best) return legs;
+  return legs.map((l) => (l === best || !wants(l.decision) ? l : {
+    ...l, decision: { ...l.decision!, action: "NO_TRADE", kelly: 0, wait: false, wouldBe: null, checkBackInHours: null, blockedBy: best.label,
+      reason: `One bet per event: ${best.label} has the larger edge` },
+  }));
+}
 
 const GAMMA = "https://gamma-api.polymarket.com";
 
@@ -141,9 +191,20 @@ export async function decideEvent(m: Model, slug: string, now = new Date()): Pro
     if (!(hours > 0)) return { question, label, skip: "past its end date" };
     const tags = [...(mk.tags ?? []).map((t: { slug: string }) => t.slug), ...eventTags];
     const domain = domainOf(m, tags);
-    return { question, label, marketSlug: mk.slug as string, bid, ask, decision: decide(m, (bid + ask) / 2, hours, domain, ask - bid, feeOf(m, mk, domain)) };
+    const fee = feeOf(m, mk, domain);
+    return { question, label, marketSlug: mk.slug as string, bid, ask, fee, decision: decide(m, (bid + ask) / 2, hours, domain, ask - bid, fee) };
   });
-  return { title: event.title, legs, tags: eventTags, endDate: event.endDate };
+  return { title: event.title, legs: cohere(m, legs, !!(event.negRisk ?? event.enableNegRisk)), tags: eventTags, endDate: event.endDate };
+}
+
+/** One bet per event in ranked lists: after sorting best-first, keep only the first row of each event (in place). */
+export function dedupeEvents<T extends { slug: string }>(rows: T[]) {
+  const seen = new Set<string>();
+  for (let i = 0; i < rows.length; i++) {
+    if (seen.has(rows[i].slug)) rows.splice(i--, 1);
+    else seen.add(rows[i].slug);
+  }
+  return rows;
 }
 
 /** "Edge per trade is largest at 12h" from the backtest, for the card's "when" line. */
@@ -188,6 +249,7 @@ export async function scanTag(m: Model, tag: string, withinHours = 24, top = 5, 
       decision: decide(m, price, hours, domain, ask - bid, feeOf(m, mk, domain)) });
   }
   rows.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
+  dedupeEvents(rows);
   const trades = rows.filter((r) => r.decision.action !== "NO_TRADE");
   return { rows: (trades.length ? trades : rows).slice(0, top), scanned: seen.size, priced: rows.length, trades: trades.length };
 }
@@ -244,5 +306,6 @@ export async function searchMarkets(m: Model, query: string, top = 6, now = new 
     }
   }
   rows.sort((a, b) => b.decision.netEdge - a.decision.netEdge || b.volume - a.volume);
+  dedupeEvents(rows);
   return rows.slice(0, top);
 }

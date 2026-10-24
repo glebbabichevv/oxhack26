@@ -122,7 +122,9 @@ $$q = \sigma\!\left(\beta_0 + \beta_1\,\operatorname{logit} p + \beta_2 \log\tfr
 
 Its range $[q_{10}, q_{90}]$ comes from 40 refits on resampled events. With cost $c$ = half the spread (at least 1¢) plus Polymarket's fee, it backs **Yes** only if $q_{10} > p + c$ and **No** only if $q_{90} < p - c$, and stakes a quarter of the Kelly fraction:
 
-$$f = \min\!\left(\tfrac14 \cdot \frac{q_{10} - (p + c)}{1 - (p + c)},\; 5\%\right)$$`;
+$$f = \min\!\left(\tfrac14 \cdot \frac{q_{10} - (p + c)}{1 - (p + c)},\; 5\%\right)$$
+
+Across the outcomes of one event, Horizon's probabilities are scaled to sum to 100%, and it backs at most one outcome per event.`;
 
 function Details({ model, slug, a, onBack }: { model?: Model; slug?: string; a?: Account; onBack: () => void }) {
   const [ev, setEv] = useState<{ title: string; legs: Leg[] }>();
@@ -148,7 +150,7 @@ function Details({ model, slug, a, onBack }: { model?: Model; slug?: string; a?:
                 <div className="font-semibold text-[#0f172a]">{cleanLabel(l.label)}</div>
                 {out ? <div className="text-[#64748b]">Market {pct(d.price)}: outside {pct(band[0])}–{pct(band[1])}, not traded.</div> : (
                   <div className="text-[#475569]">
-                    Market {pct(d.price)} · Horizon {pct(d.q)} (range {pct(d.lo)}–{pct(d.hi)}) · {d.wait ? `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · wait: enter within 24h of the end` : d.action === 'NO_TRADE' ? 'no trade' : `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · suggested ${(d.kelly * 100).toFixed(1)}% = $${(d.kelly * bankroll).toFixed(2)}`}
+                    Market {pct(d.price)} · Horizon {pct(d.q)} (range {pct(d.lo)}–{pct(d.hi)}) · {d.blockedBy ? `one bet per event: ${cleanLabel(d.blockedBy)} has the larger edge` : d.wait ? `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · wait: enter within 24h of the end` : d.action === 'NO_TRADE' ? 'no trade' : `advantage ${(d.netEdge * 100).toFixed(1)}¢ after ${(d.cost * 100).toFixed(1)}¢ costs · suggested ${(d.kelly * 100).toFixed(1)}% = $${(d.kelly * bankroll).toFixed(2)}`}
                     {d.action !== 'NO_TRADE' ? <Scale d={d} /> : null}
                   </div>
                 )}
@@ -271,7 +273,7 @@ function TimeCurve({ model, d }: { model: Model; d: Decision }) {
 // ---------- f. credentials ----------
 
 type Creds = { cachedAt?: number; ret: number; ci: [number, number]; nTrades: number; brierModel: number; brierMarket: number; nTest: number; sha: string; sealedAt: string };
-const FALLBACK_CREDS: Creds = { ret: 0.172, ci: [0.118, 0.235], nTrades: 3653, brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
+const FALLBACK_CREDS: Creds = { ret: 0.31, ci: [0.23, 0.40], nTrades: 1899, brierModel: 0.1297, brierMarket: 0.1305, nTest: 10579,
   sha: '31d2510c13ee29c0a4c9ac26aa498b7ca1cffca58d4bf553f6d5bfd5acb73326', sealedAt: '2026-10-24T15:31:30+00:00' };
 let credsCache: Creds | undefined;
 
