@@ -46,7 +46,7 @@ def main():
         if len(page) < 100 or offset >= 2000:
             break
 
-    rows = []
+    rows, hist_fail = [], 0
     for m in markets.values():
         bid, ask, end = m.get("bestBid"), m.get("bestAsk"), parse_ts(m.get("endDate"))
         if not is_yes_no(m) or not m.get("acceptingOrders") or bid is None or ask is None or not end:
@@ -65,11 +65,14 @@ def main():
             fetched_at=now.isoformat(timespec="seconds"),
             fees_enabled=str(m.get("feesEnabled")) == "True", event_slug=event.get("slug") or m.get("slug"),
         ))
-        recent_history(m, now)
+        try:
+            recent_history(m, now)
+        except Exception:
+            hist_fail += 1  # no file written: live_table treats a missing file as zero features
 
     df = pd.DataFrame(rows).sort_values("volume_usd", ascending=False)
     df.to_csv(a.out, index=False)
-    print(f"wrote {len(df)} open markets to {a.out}")
+    print(f"wrote {len(df)} open markets to {a.out} ({hist_fail} history fetches failed)")
     print(df.domain.value_counts().to_string())
 
 
