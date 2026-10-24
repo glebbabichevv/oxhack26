@@ -42,11 +42,19 @@ Pipeline:
 4. **Live (Roles A + C):** currently open markets → q, edge, recommended action ("buy YES / buy NO / **no trade — costs eat the edge**"), Kelly size, and *when* the edge is expected to be largest.
 5. **Screen (Role B):** live decision cards + calibration chart by horizon + backtest equity curve with/without costs + an honest "where it fails" panel.
 
-Pitch line: *"A 70¢ contract a month out is really ~75¢ — that's published. We asked whether you can actually make money on it, and when."* Cite the paper; never claim we discovered the bias.
+Pitch line (**updated 14:10, confirmed by Role A model + Role C data check**): *"Published research says prediction-market prices are miscalibrated depending on how far they are from resolution. On 3,122 Polymarket markets we found the bias runs the classic favourite-longshot way — a month out, 90¢ favourites win only ~73% and 10¢ longshots ~18% — and that after costs it is only tradable in politics, not sports. We show where, when, and how much."* Cite the paper; never claim we discovered the bias.
 
 Honesty rules (quant judges will probe these): binary markets only; drop cancelled / MKT resolutions; split by **time**, never random; include costs; report where there is **no** edge as clearly as where there is.
 
 Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabelled "Other" markets into domains (the paper notes ~42% are unclassified) — real use of the Gemini prize.
+
+### First results (Role A, 13:44 Sat) — on our data, numbers in `backend/results/*.json`
+Out-of-time test: train 2167 markets resolved before 2026-05-17, test 955 after. Prices 3–97% only.
+- **Direction check: our data shows the opposite of the 70¢→75¢ line.** Calibration slope < 1 at every horizon (market *over*confident): 30 days out, 5–15¢ contracts resolved YES 17.6% of the time, 85–95¢ ones only 73%. Strongest in **politics** (slope 0.53 at 30d → 0.79 at 12h, CI excludes 1); **sports is well calibrated** (≈1.0). Time effect is real: bias fades toward resolution.
+- **Calibration metrics: no lift.** Model chosen on validation (simple, no domains) — test Brier 0.1296 vs market 0.1282. It shrinks sports prices that are already right.
+- **Money: positive, but concentrated and volatile.** 639 trades, +1.65 starting-bankroll units with costs (additive, ¼ Kelly), 90% CI by event bootstrap [+0.43, +3.04]; still +0.59 without the top 5 events. Politics +1.68, sports −0.26. Hit rate 22% (longshot YES bets), max drawdown 0.99 units. Naive favourite −0.19.
+- **Not done on purpose:** restricting to politics after seeing the test set (in train, politics and sports slopes were equal — that would be test snooping).
+- Role C independently found the same sign on the full sample (`integrations/calibration_check.py`, PR #1 comment: slope 0.73 at 30d → 0.82 at 12h). Pitch line updated above. Don't pitch blanket "fade favourites / buy longshots": out of time it loses money in sports.
 
 ## Stack (locked)
 - **Backend + model: Python 3, FastAPI, pandas, scikit-learn** in `backend/`. Run: `uvicorn app:app --reload` from `backend/`.
@@ -60,6 +68,7 @@ Stretch (only after the 16:30 gate works): Gemini classifies Polymarket's unlabe
 `data/live.csv` — open markets now: `market_id, question, domain, price_yes, hours_to_resolution, volume_usd, spread, url`
 Keep committed CSVs under ~50 MB; raw API dumps go in `data/raw/` (gitignored).
 Polymarket gotcha: for closed markets `prices-history` with `interval=max` can come back empty or 12h-coarse — request explicit `startTs`/`endTs` in ~15-day chunks. 12h granularity is fine for our horizons.
+**Horizon anchor (Role A, 13:50):** measure `horizon_hours` back from the market's **scheduled `endDate`**, not `closedTime` — live markets only know `endDate`, and markets that close early (e.g. a team knocked out) would leak the outcome. Drop a (market, horizon) row if the market was already closed at that time. `resolved_at` = `closedTime`. Gamma `category` is usually null — take domain from the event's tags/title.
 
 ## Roles — who you are
 At the start of every session, ask the human which role they have (if not obvious from the branch name), then act only as that role.
@@ -93,6 +102,8 @@ Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. 
 ```
 `action` ∈ `BUY_YES | BUY_NO | NO_TRADE`.
 
+**v1.1 additions (13:44, additive — nothing removed):** `/api/live` items also have `net_edge` (edge after cost and model uncertainty), `volume_usd`; list = top 30 trades by net edge + 15 biggest in-band NO_TRADE. `/api/calibration` horizons have `n`, `logloss_market`, `logloss_model`; bins have `model` (mean model q). Domains: `all, politics, sports, crypto, culture, economics, geopolitics, tech` (lowercase). `/api/backtest` also has `n_train_markets`, `n_test_markets`, `model_selection`, `overall`, `by_horizon[]`, `failures[]` (`kind` ∈ losing_domain | no_lift | thin_data, `text`), `worst_trades[]`, `assumptions[]`; `return` and `max_drawdown` are in units of the starting bankroll (additive P&L).
+
 `GET /api/calibration?domain=all` → reliability curves per horizon
 ```json
 {"horizons":[{"horizon_hours":720,"bins":[{"price_mid":0.7,"observed":0.75,"n":312}],"brier_market":0.19,"brier_model":0.18}]}
@@ -122,6 +133,7 @@ Base URL: `http://localhost:8000` locally (public URL TBA). All responses JSON. 
 5. **Sync with the team often.** Open a small PR into `main` as soon as something works (aim for every ~45–60 min); Role A merges quickly. Before each new task: `git pull origin main` (merge it into your branch) so you see everyone's latest work.
 6. To look at a teammate's unmerged work: `git fetch` then `git log origin/<their-branch>` / `git diff main...origin/<their-branch>`. Read it, never edit it.
 7. Changing the API or data contract? Update it in this file first, in its own small PR, and tell the team.
+7b. **Agents talk through inboxes — see `team/README.md`.** At the start of every task read `team/inbox/<your role>.md` and handle unchecked messages first. When you spot a problem in another role's work (contract mismatch, leakage, fake numbers, broken screen), append a blunt, specific one-liner to *their* inbox and push it straight to `main`. Every PR is reviewed by an agent of a different role (`/review`) before merge.
 8. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
 9. Feature freeze ~02:00 Sunday. After that: bugs, backup video, Devpost, pitch only. Submission by 11:30 Sunday.
 

@@ -1,4 +1,4 @@
-"""Resolved binary Polymarket markets -> data/horizons.csv (one row per market x horizon).
+"""Resolved binary Polymarket markets -> data/horizons_full.csv (one row per market x horizon).
 
 Run from the repo root:  python integrations/fetch_horizons.py --since 2024-01-01 --min-volume 50000
 
@@ -113,7 +113,8 @@ def rows_for(m):
             resolved_at=closed.isoformat(), volume_usd=round(float(m.get("volumeNum") or 0), 2),
             spread="",  # historical spreads are not available from the API
             end_date=end.isoformat(), price_ts=datetime.fromtimestamp(prior[-1]["t"], timezone.utc).isoformat(),
-            neg_risk=bool(m.get("negRisk")), event_slug=((m.get("events") or [{}])[0].get("slug") or ""),
+            neg_risk=bool(m.get("negRisk")), event_id=((m.get("events") or [{}])[0].get("id") or ""),
+            event_slug=((m.get("events") or [{}])[0].get("slug") or ""),
             tags="|".join(dict.fromkeys(tags)),
         ))
     return rows
@@ -125,7 +126,7 @@ def main():
     ap.add_argument("--until", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     ap.add_argument("--min-volume", type=float, default=50000)
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--out", default=str(DATA / "horizons.csv"))
+    ap.add_argument("--out", default=str(DATA / "horizons_full.csv"))
     a = ap.parse_args()
     HIST.mkdir(parents=True, exist_ok=True)
 

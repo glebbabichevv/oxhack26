@@ -1,4 +1,4 @@
-"""Open binary Polymarket markets -> data/live.csv.
+"""Open binary Polymarket markets -> data/live_full.csv.
 
 Run from the repo root:  python integrations/fetch_live.py
 
@@ -18,7 +18,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--min-volume", type=float, default=50000)
     ap.add_argument("--max-days", type=float, default=45)
-    ap.add_argument("--out", default=str(DATA / "live.csv"))
+    ap.add_argument("--out", default=str(DATA / "live_full.csv"))
     a = ap.parse_args()
 
     now = datetime.now(timezone.utc)

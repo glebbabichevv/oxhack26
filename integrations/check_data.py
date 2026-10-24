@@ -1,6 +1,6 @@
-"""Sanity checks on data/horizons.csv and data/live.csv. Exits non-zero if a hard check fails.
+"""Sanity checks on data/horizons_full.csv and data/live_full.csv (or the files given). Exits non-zero if a hard check fails.
 
-Run from the repo root:  python integrations/check_data.py
+Run from the repo root:  python integrations/check_data.py [horizons.csv] [live.csv]
 """
 import sys
 
@@ -8,10 +8,12 @@ import pandas as pd
 
 from common import DATA
 
-h = pd.read_csv(DATA / "horizons.csv")
+HORIZONS = sys.argv[1] if len(sys.argv) > 1 else DATA / "horizons_full.csv"
+LIVE = sys.argv[2] if len(sys.argv) > 2 else DATA / "live_full.csv"
+h = pd.read_csv(HORIZONS)
 for col in ("resolved_at", "end_date", "price_ts"):
     h[col] = pd.to_datetime(h[col], format="ISO8601", utc=True)
-live = pd.read_csv(DATA / "live.csv")
+live = pd.read_csv(LIVE)
 fails = []
 
 

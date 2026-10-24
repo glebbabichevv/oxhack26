@@ -31,7 +31,7 @@ DOMAIN_TAGS = [
                   "trump-presidency", "primaries", "world-elections", "uk", "france", "germany"}),
     ("geopolitics", {"geopolitics", "world", "middle-east", "ukraine", "russia", "israel", "iran",
                      "china", "gaza", "military-strikes", "war", "nato", "ceasefire"}),
-    ("science_tech", {"tech", "ai", "science", "space", "openai", "elon-musk", "climate",
+    ("tech", {"tech", "ai", "science", "space", "openai", "elon-musk", "climate",
                       "weather", "pandemics", "health"}),
     ("culture", {"pop-culture", "celebrities", "culture", "entertainment", "movies", "music",
                  "awards", "oscars", "grammys", "tv", "youtube", "twitter", "tweets-markets",

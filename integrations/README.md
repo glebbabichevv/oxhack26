@@ -1,24 +1,31 @@
 # Sponsor integrations & demo data — Role C. See CLAUDE.md.
 
-Polymarket data pipeline for Horizon. No API key needed. Run everything from the repo root:
-
-```bash
-python integrations/fetch_horizons.py --since 2024-01-01 --min-volume 50000   # ~15-25 min first time, cached after
-python integrations/fetch_live.py                                              # ~5 s, rerun before the demo
-python integrations/check_data.py                                              # sanity checks + summary tables
+## Data pipeline (Polymarket)
+```
+pip install requests pandas
+python integrations/polymarket.py horizons   # -> data/horizons.csv (~15 min, cached in data/raw/)
+python integrations/polymarket.py live       # -> data/live.csv: 500 most liquid open binary markets resolving within 30 days
+python integrations/sanity.py                # counts per horizon/domain, leakage + resolution checks
 ```
 
-## Outputs (Data contract in CLAUDE.md, plus extra columns at the end)
-- `data/horizons.csv` — one row per (resolved market, horizon ∈ 720/168/72/24/12 h).
-  Extra columns: `end_date`, `price_ts` (time of the price used), `neg_risk` (leg of a multi-outcome event), `event_slug`, `tags`.
-- `data/live.csv` — open yes/no markets resolving within 45 days, volume ≥ $50k.
-  `price_yes` = order-book midpoint, `spread` = best ask − best bid. Extra: `best_bid`, `best_ask`, `end_date`, `liquidity_usd`, `neg_risk`, `fetched_at`.
+How `horizons.csv` is built:
+- Top closed events by volume (Gamma `/events`), keep binary Yes/No markets with volume ≥ $10k.
+- Outcome must be a clean 1/0 (`outcomePrices` = `[1,0]` or `[0,1]`); 50/50, cancelled and unresolved markets are dropped.
+- Horizons 720/168/72/24/12 h are measured back from the scheduled `endDate`. A row is dropped if the market had already closed at that time, or if the last trade before it is more than 12 h old.
+- Price = last CLOB `prices-history` point at or before the horizon time (hourly fidelity, requested in 15-day `startTs`/`endTs` chunks), so nothing from the future leaks in.
+- Domain = first match of event tags/title against the keyword list in `DOMAINS`; otherwise `Other`.
+- Extra columns beyond the contract: `end_date`, `event_id` (markets in one event are correlated — group by it when splitting or sizing).
+- `spread` is empty for historical rows (Polymarket has no historical order book); `live.csv` has the real current spread.
 
-## Decisions the model should know about
-- **Clock = scheduled end date**, not the actual close time. A trader only knows the scheduled date; using the real close time would leak the future. Same clock in both files.
-- A (market, horizon) row exists only if the market was **still open** at `end_date − horizon`. Markets that resolved early ("X by date" that happened) have no late rows — they were not tradable then.
-- Price = last trade print at or before the target time, at most 6 h stale (hourly history).
-- Dropped: non yes/no markets, 50-50 / cancelled / unresolved outcomes, markets under $50k volume.
-- Historical spreads are not available from the API (`spread` is empty in `horizons.csv`); use live spreads (median ≈ 1¢) as the cost assumption.
-- `event_slug` groups legs of the same event (e.g. every Oscars nominee) — their outcomes are correlated, so keep an event's legs on one side of the train/test split.
-- Domains come from Polymarket tags via a priority map in `common.py` (sports > crypto > economics > politics > geopolitics > science_tech > culture > other).
+## Full dataset (Ayaz) — `data/horizons_full.csv`, `data/live_full.csv`
+A larger pull made by a separate set of scripts. `horizons.csv` / `live.csv` above stay the canonical files the model reads until Role A switches.
+```
+python integrations/fetch_horizons.py --since 2024-01-01 --min-volume 100000   # -> data/horizons_full.csv (~35 min first time, cached in data/raw/)
+python integrations/fetch_live.py                                               # -> data/live_full.csv (open markets resolving within 45 days)
+python integrations/check_data.py                                               # checks the _full files (or pass paths)
+```
+- **34,677 markets, 120,058 rows** (volume ≥ $100k, resolved 2024-01 → 2026-10) vs 3,122 markets in `horizons.csv`. Same schema plus `price_ts`, `neg_risk`, `event_slug`, `tags`; `event_id` is present for clustering.
+- Same rules: horizons measured back from the scheduled `endDate`, a row only if the market was still open then, clean 1/0 outcomes only, last price at most 6 h stale.
+- Markets are listed by end-date window through Gamma `/markets`; windows over the 2,000-offset cap are split, not truncated.
+- Domains (lowercase, matching the API): sports > crypto > economics > politics > geopolitics > tech > culture > other, from tags in `common.py`. Fed/rates markets count as **economics** here (they were politics in `horizons.csv`).
+- Rows by horizon: 12h 30.1k · 24h 30.1k · 72h 29.9k · 168h 20.5k · 720h 9.5k. Out-of-time cutoff 2026-04-01 gives ~20k train / ~14.7k test markets.

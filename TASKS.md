@@ -7,9 +7,10 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 ## Now (13:15 → 16:30 gate)
 ### Role A — model + backend (Gleb)
 - [x] [Gleb] FastAPI skeleton in `backend/` serving the 3 contract endpoints with the example JSON (so B is unblocked in 15 min) — PR `gleb/api-skeleton`
-- [ ] [Gleb] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
-- [ ] Decision rule + backtest with/without costs; replace example JSON with real numbers
-- [ ] `/api/live` from `data/live.csv`
+- [x] [Gleb] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
+- [x] [Gleb] Decision rule + backtest with/without costs; replace example JSON with real numbers
+- [x] [Gleb] `/api/live` from `data/live.csv`
+- [ ] [Gleb] Public URL for the API (Vercel deploy needs Gleb's OK) + split requirements so the bundle fits
 
 ### Role B — frontend
 - [x] [Gleb] Design preset in `DESIGN.md` + tokens/Tailwind preset/starter components in `frontend/design/` — PR `gleb/design-preset`
@@ -18,13 +19,15 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [ ] Deploy to Vercel early (public URL by 16:30)
 
 ### Role C — data pipeline
-- [ ] [Ayaz] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv`
-- [ ] [Ayaz] Open markets → `data/live.csv`
-- [ ] [Ayaz] Sanity checks: counts per horizon/domain, no cancelled/MKT resolutions, no future leakage in prices
+- [x] [TheMarkz3] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv`
+- [x] [TheMarkz3] Open markets → `data/live.csv`
+- [x] [TheMarkz3] Sanity checks: counts per horizon/domain, no cancelled/MKT resolutions, no future leakage in prices
+- [x] [Ayaz] Larger pull: `data/horizons_full.csv` (34.7k markets, 120k rows) + `data/live_full.csv`, same schema — Role A to decide whether to switch
 - [ ] If Polymarket blocks you for >30 min: switch to Manifold (`/v0/search-markets?filter=resolved` + `/v0/bets`)
 
 ### Everyone
 - [ ] `git pull`, read CLAUDE.md "What we are building" + contracts
+- [ ] Read `team/README.md`; check your inbox `team/inbox/<role>.md` before every task
 - [ ] Delta: at least 2 of us collaborate in a Delta thread (Zed track requirement); save links
 
 ## Gate 16:30
@@ -40,5 +43,6 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [ ] Devpost page: what it does, how we built it, sponsor tech used, what we brought in vs built here; cite arXiv 2602.19520
 - [ ] Collect best Delta thread links (ideation, build, testing) for the Zed track
 - [ ] Rehearse pitch 5x with a timer
+- [ ] Before the repo goes public: delete `docs/design-reference/` (old-product screenshots)
 
 ## Done
