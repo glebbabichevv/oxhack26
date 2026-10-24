@@ -56,11 +56,11 @@ export function Section({ title, lead, controls, children }: { title: string; le
   );
 }
 
-/** White card inside a soft grey frame (the landing's product-mock look). */
+/** An editorial figure: an Ink rule on top, title and meta on one line, the evidence below. No box, no shadow. */
 export function FramedCard({ title, meta, children }: { title?: string; meta?: string; children: ReactNode }) {
   return (
-    <div className="rounded-frame bg-frame p-2 shadow-frame">
-      <div className="rounded-card border border-hairline-soft bg-page p-5">
+    <div className="min-w-0">
+      <div className="border-t border-ink-strong pt-3">
         {title ? (
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
             <span className="text-[15px] font-semibold text-ink-strong">{title}</span>

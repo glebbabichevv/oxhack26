@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
-import { CountUp } from "@/components/CountUp";
-import { HorizonStrip } from "@/components/HorizonStrip";
+import { HorizonCurve } from "@/components/HorizonCurve";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
@@ -79,10 +78,10 @@ export default function Home() {
             ? `Trained on ${int(backtest.n_train_markets)} resolved Polymarket markets that ended before ${dateLong(backtest.cutoff)}; tested out of time on the ${int(backtest.n_test_markets)} that ended after.`
             : undefined}
         />
-        {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
         {calibration.all ? (
-          <HorizonStrip horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
-        ) : <Skeleton className="mt-12 h-[300px]" />}
+          <HorizonCurve horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
+        ) : <div className="mt-14 h-[400px]" />}
+        {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
 
         <div id="calibration">
           <Section
@@ -167,13 +166,13 @@ function Kpis({ b }: { b: Backtest }) {
       items={[
         {
           label: "Return after costs",
-          value: <CountUp value={bankroll(b.with_costs.return)} />,
+          value: bankroll(b.with_costs.return),
           note: b.return_ci ? `of bankroll · 90% CI ${bankroll(b.return_ci[0])} to ${bankroll(b.return_ci[1])}` : `max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`,
           tone: b.return_ci ? (b.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
-        { label: "Brier score, model", value: <CountUp value={b.overall.brier_model.toFixed(4)} />, note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
+        { label: "Brier score, model", value: b.overall.brier_model.toFixed(4), note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
         { label: "Where it pays", value: where.value, note: where.note },
-        { label: "Trades", value: <CountUp value={int(b.n_trades)} />, note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
+        { label: "Trades", value: int(b.n_trades), note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
       ]}
     />
   );

@@ -77,20 +77,18 @@ body {
   .hz-cta-wrap, .hz-cta-wrap:hover, .hz-cta-shadow { transition: none; transform: none; }
 }
 
-/* The one authored moment (HorizonStrip): the time axis draws left → right, then each horizon's bar rises in turn.
-   Visible by default; the animation only plays from an already-laid-out state. */
-@keyframes hz-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes hz-rise { from { transform: translateX(-50%) scaleY(0); } to { transform: translateX(-50%) scaleY(1); } }
-@keyframes hz-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.hz-strip .hz-axis { animation: hz-draw 1.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.hz-strip .hz-bar { transform-origin: bottom; animation: hz-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(0.35s + var(--i, 0) * 0.14s); transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
-.hz-strip [role="radio"] { animation: hz-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(0.15s + var(--i, 0) * 0.14s); }
-.hz-strip [role="radio"] .hz-bar { animation-delay: calc(0.35s + var(--i, 0) * 0.14s); }
+/* The one authored moment (HorizonCurve): the line draws left → right, then intervals, the gap and the notes appear. */
+@keyframes hz-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes hz-in { from { opacity: 0; } to { opacity: 1; } }
+.hz-curve .hz-line { stroke-dasharray: 1; animation: hz-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.2s both; }
+.hz-curve .hz-fade { animation: hz-in 0.8s ease-out 1s both; }
+.hz-curve .hz-dot { animation: hz-in 0.3s ease-out 0.9s both; transition: r 0.2s ease, fill 0.2s ease; }
+.hz-curve .hz-note { animation: hz-in 0.7s ease-out var(--d, 1.2s) both; }
 
 /* Browser surfaces in the palette. */
 * { scrollbar-width: thin; scrollbar-color: rgba(9, 9, 11, 0.18) transparent; }
 .tabular-nums, table { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hz-strip .hz-axis, .hz-strip .hz-bar, .hz-strip [role="radio"] { animation: none; }
+  .hz-curve .hz-line, .hz-curve .hz-fade, .hz-curve .hz-dot, .hz-curve .hz-note { animation: none; }
 }
