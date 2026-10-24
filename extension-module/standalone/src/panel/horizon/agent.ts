@@ -4,7 +4,7 @@
  * through checkBet (Horizon's call; at least $1, at most the budget). The plan is shown as a
  * list; the panel sets up Polymarket's ticket for the top few, one at a time; the user presses Trade.
  */
-import { decide, decideEvent, domainOf, feeOf, type Decision, type Model } from './horizon';
+import { decide, decideEvent, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
 import { caution, context,
   checkBet, getAccount, inPlay, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
   type Position, type Quote, type Side,
@@ -374,7 +374,24 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
     const s = await runTool(ctx, 'summarize_portfolio', {}) as { bets_user_placed: number; result_so_far: number };
     return s.bets_user_placed ? `${s.bets_user_placed} bets placed, ${s.result_so_far >= 0 ? 'up' : 'down'} ${money(Math.abs(s.result_so_far))} so far.` : 'No bets placed yet.';
   }
-  return 'Sorry, I did not catch that. Try "Bet on my 5 best tonight" or "Sell what lost its edge".';
+  // A question about one market ("Will Mbappé win the Ballon d'Or?"): look it up and answer with Horizon's numbers.
+  const subject = text.replace(/^\s*(will|would|what about|how about|should i (bet on|back)|is|does|can)\s+/i, '').replace(/[?!.]+\s*$/, '').trim();
+  if (subject.length >= 6) {
+    const done = stepper(ctx)('Looking it up on Polymarket');
+    const rows = await searchMarkets(ctx.model, subject, 3).catch(() => []);
+    done(rows.length ? 'ok' : 'fail');
+    const r = rows[0];
+    if (r) {
+      const d = r.decision, v = verdictOf(d);
+      const pc = (x: number) => `${Math.round(x * 100)}%`;
+      const verdict = v === 'BET' ? `the price looks too ${intendedAction(d) === 'BUY_YES' ? 'low' : 'high'}; Horizon would back ${intendedAction(d) === 'BUY_YES' ? 'Yes' : 'No'}`
+        : v === 'WAIT' ? 'there may be an edge, but Horizon waits until the last 24 hours before the end'
+        : 'the price looks about right; Horizon would skip it';
+      await runTool(ctx, 'open_market_in_tab', { slug: r.slug }).catch(() => undefined);
+      return `**${r.question}** Polymarket says ${pc(d.price)}, Horizon ${pc(d.q)}: ${verdict}. The market is open in your tab.`;
+    }
+  }
+  return 'Sorry, I did not catch that. Try "Bet on my 5 best tonight", "Sell what lost its edge" or ask about one market.';
 }
 
 // ---------- Gemini planning via our API ----------
