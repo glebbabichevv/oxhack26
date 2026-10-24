@@ -1,0 +1,263 @@
+{
+ "cutoff": "2026-05-18",
+ "n_validation_markets": 4768,
+ "n_test_markets": 10579,
+ "chosen_on_validation": "only from 24h",
+ "validation": {
+  "first edge (current)": {
+   "n_trades": 2708,
+   "pnl_bankrolls": 1.7508,
+   "return_per_dollar_staked": 0.2013,
+   "mean_return_per_trade": 0.0953,
+   "hit_rate": 0.24,
+   "trades_by_horizon": {
+    "720": 291,
+    "168": 1109,
+    "72": 874,
+    "24": 313,
+    "12": 121
+   },
+   "gain_vs_current": [
+    0.0,
+    [
+     0.0,
+     0.0
+    ]
+   ]
+  },
+  "optimal stopping": {
+   "n_trades": 2343,
+   "pnl_bankrolls": 2.1404,
+   "return_per_dollar_staked": 0.1931,
+   "mean_return_per_trade": 0.0817,
+   "hit_rate": 0.2083,
+   "trades_by_horizon": {
+    "720": 166,
+    "168": 283,
+    "72": 506,
+    "24": 256,
+    "12": 1132
+   },
+   "gain_vs_current": [
+    0.3896,
+    [
+     -0.1683,
+     0.9451
+    ]
+   ]
+  },
+  "only from 72h": {
+   "n_trades": 2343,
+   "pnl_bankrolls": 2.0409,
+   "return_per_dollar_staked": 0.2142,
+   "mean_return_per_trade": 0.1122,
+   "hit_rate": 0.2535,
+   "trades_by_horizon": {
+    "72": 1835,
+    "24": 373,
+    "12": 135
+   },
+   "gain_vs_current": [
+    0.2901,
+    [
+     -0.0368,
+     0.6127
+    ]
+   ]
+  },
+  "only from 24h": {
+   "n_trades": 1873,
+   "pnl_bankrolls": 2.5255,
+   "return_per_dollar_staked": 0.252,
+   "mean_return_per_trade": 0.2064,
+   "hit_rate": 0.2744,
+   "trades_by_horizon": {
+    "24": 1663,
+    "12": 210
+   },
+   "gain_vs_current": [
+    0.7747,
+    [
+     0.2143,
+     1.3346
+    ]
+   ]
+  },
+  "only at 12h": {
+   "n_trades": 1567,
+   "pnl_bankrolls": 2.2238,
+   "return_per_dollar_staked": 0.2237,
+   "mean_return_per_trade": 0.2157,
+   "hit_rate": 0.2821,
+   "trades_by_horizon": {
+    "12": 1567
+   },
+   "gain_vs_current": [
+    0.473,
+    [
+     -0.1836,
+     1.1218
+    ]
+   ]
+  }
+ },
+ "test": {
+  "first edge (current)": {
+   "n_trades": 6102,
+   "pnl_bankrolls": 2.0536,
+   "return_per_dollar_staked": 0.1269,
+   "mean_return_per_trade": 0.0351,
+   "hit_rate": 0.2142,
+   "trades_by_horizon": {
+    "720": 313,
+    "168": 2413,
+    "72": 2030,
+    "24": 950,
+    "12": 396
+   },
+   "gain_vs_current": [
+    0.0,
+    [
+     0.0,
+     0.0
+    ]
+   ],
+   "peak_open_stake": 1.198,
+   "capped_1_bankroll": {
+    "n_trades": 6014,
+    "pnl_bankrolls": 1.8989,
+    "gain_vs_current": [
+     0.0,
+     [
+      0.0,
+      0.0
+     ]
+    ]
+   }
+  },
+  "optimal stopping": {
+   "n_trades": 5525,
+   "pnl_bankrolls": 4.7695,
+   "return_per_dollar_staked": 0.1805,
+   "mean_return_per_trade": 0.0816,
+   "hit_rate": 0.2085,
+   "trades_by_horizon": {
+    "720": 25,
+    "168": 796,
+    "72": 1376,
+    "24": 502,
+    "12": 2826
+   },
+   "gain_vs_current": [
+    2.7159,
+    [
+     1.8242,
+     3.6195
+    ]
+   ],
+   "peak_open_stake": 0.985,
+   "capped_1_bankroll": {
+    "n_trades": 5525,
+    "pnl_bankrolls": 4.7695,
+    "gain_vs_current": [
+     2.8706,
+     [
+      1.9795,
+      3.816
+     ]
+    ]
+   }
+  },
+  "only from 72h": {
+   "n_trades": 5556,
+   "pnl_bankrolls": 2.838,
+   "return_per_dollar_staked": 0.1438,
+   "mean_return_per_trade": 0.0805,
+   "hit_rate": 0.2253,
+   "trades_by_horizon": {
+    "72": 4149,
+    "24": 1000,
+    "12": 407
+   },
+   "gain_vs_current": [
+    0.7843,
+    [
+     0.3654,
+     1.2451
+    ]
+   ],
+   "peak_open_stake": 1.09,
+   "capped_1_bankroll": {
+    "n_trades": 5500,
+    "pnl_bankrolls": 2.7123,
+    "gain_vs_current": [
+     0.8134,
+     [
+      0.3727,
+      1.2833
+     ]
+    ]
+   }
+  },
+  "only from 24h": {
+   "n_trades": 4753,
+   "pnl_bankrolls": 4.1577,
+   "return_per_dollar_staked": 0.17,
+   "mean_return_per_trade": 0.1126,
+   "hit_rate": 0.2422,
+   "trades_by_horizon": {
+    "24": 4232,
+    "12": 521
+   },
+   "gain_vs_current": [
+    2.1041,
+    [
+     1.2145,
+     3.0235
+    ]
+   ],
+   "peak_open_stake": 0.793,
+   "capped_1_bankroll": {
+    "n_trades": 4753,
+    "pnl_bankrolls": 4.1577,
+    "gain_vs_current": [
+     2.2589,
+     [
+      1.3487,
+      3.1868
+     ]
+    ]
+   }
+  },
+  "only at 12h": {
+   "n_trades": 4297,
+   "pnl_bankrolls": 5.4088,
+   "return_per_dollar_staked": 0.1956,
+   "mean_return_per_trade": 0.1484,
+   "hit_rate": 0.2527,
+   "trades_by_horizon": {
+    "12": 4297
+   },
+   "gain_vs_current": [
+    3.3552,
+    [
+     2.2867,
+     4.5401
+    ]
+   ],
+   "peak_open_stake": 0.724,
+   "capped_1_bankroll": {
+    "n_trades": 4297,
+    "pnl_bankrolls": 5.4088,
+    "gain_vs_current": [
+     3.51,
+     [
+      2.4295,
+      4.6896
+     ]
+    ]
+   }
+  }
+ },
+ "method": "The decision rule in backend/model.py trades at the first horizon with an edge. But the payout per $1 depends on the\nentry price, and the price moves while you wait. This answers \"enter now or wait\" with backward induction:"
+}
