@@ -1,7 +1,8 @@
 # Design preset
 
 Our minimalist white style (from our previous work). Frontend owner: paste the real values here.
-The frontend-design skill and gstack /design-* commands should follow this file.
+Impeccable and gstack read this file from the repo root - keep it here.
+Every UI skill (Impeccable by default) and gstack /design-* must follow this file.
 
 - Background / surface colors: TBA
 - Text colors: TBA

@@ -16,5 +16,5 @@ claude                     # project skills in .claude/skills load automatically
 ```
 
 ## Credits
-Skills in `.claude/skills/` come from [anthropics/skills](https://github.com/anthropics/skills) (Apache 2.0, licence file in each folder).
+Skills in `.claude/skills/` come from anthropics/skills, pbakaus/impeccable, nextlevelbuilder/ui-ux-pro-max-skill, Leonxlnx/taste-skill, nutlope/hallmark and emilkowalski/skill; style library from rohitg00/awesome-claude-design. Each keeps its own licence file. Full list and usage: `docs/SKILLS.md`.
 Workflow commands from [gstack](https://github.com/garrytan/gstack) (MIT), installed per machine.

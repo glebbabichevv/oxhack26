@@ -12,6 +12,7 @@ if ! command -v bun >/dev/null; then
   export PATH="$HOME/.bun/bin:$PATH"
 fi
 command -v claude >/dev/null || echo "WARNING: Claude Code CLI not found. Install it, then re-run."
+command -v python3 >/dev/null || echo "WARNING: python3 not found - the ui-ux-pro-max skill needs it (others work without)."
 
 echo "==> Installing gstack into ~/.claude/skills/gstack"
 if [ -d "$HOME/.claude/skills/gstack/.git" ]; then
