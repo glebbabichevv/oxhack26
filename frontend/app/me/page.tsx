@@ -128,7 +128,7 @@ export default function MePage() {
           <p className="mt-[18px] max-w-[620px] text-[17px] leading-[1.6] text-ink-muted">
             {!id && ready ? "Open this page from the Horizon extension (My results) so it knows your install, or add a public wallet address below."
               : placed && placed.n_resolved
-                ? `${perDollar(placed.per_dollar)} per $1 after fees · ${pct(placed.hit_rate ?? 0)} of ${int(placed.n_resolved)} resolved bets won · ${int(placed.n_open)} still open. Placed bets are self-reported in the extension.`
+                ? `${perDollar(placed.per_dollar)} per $1 after fees · ${pct(placed.hit_rate ?? 0)} of ${int(placed.n_resolved)} resolved bets won · ${int(placed.n_open)} still open. Placed bets are self-reported in the extension.${placed.n_resolved < 30 ? " Few decisions yet: too early to judge." : ""}`
                 : placed ? `${int(placed.n)} placed bets, all still open. Markets resolve overnight. Placed bets are self-reported in the extension.` : ""}
           </p>
         </header>
