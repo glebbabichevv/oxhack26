@@ -19,16 +19,25 @@ class Broker:
 
     def buy(self, m, side, usd, worst_price, note):
         r = trading.place_bet(m, side, usd, limit_price=worst_price, confirm=True, note=note)
+        order_id = status = None
         if r["status"] == "paper_filled":
             shares, cost = r["shares"], r["cost_usd"]
         else:  # live FAK order: makingAmount = USDC paid, takingAmount = shares received
             order = r.get("order") or {}
+            order_id, status = order.get("orderID"), order.get("status")
+            raw = str(order)[:300]
             if not order.get("success", False):
-                raise RuntimeError(f"order rejected: {order.get('errorMsg') or order}")
-            shares, cost = float(order.get("takingAmount") or 0), float(order.get("makingAmount") or 0)
+                raise RuntimeError(f"order rejected: {order.get('errorMsg') or 'no message'} (reply: {raw})")
+            try:
+                shares, cost = float(order.get("takingAmount") or 0), float(order.get("makingAmount") or 0)
+            except (TypeError, ValueError):
+                raise RuntimeError(f"unreadable order reply: {raw}")
+            if shares <= 0 or cost <= 0:
+                raise RuntimeError(f"order not filled (status {status}): {raw}")
         if shares <= 0:
             raise RuntimeError("order filled nothing")
-        return {"shares": shares, "cost": round(cost, 4), "avg_price": round(cost / shares, 4)}
+        return {"shares": shares, "cost": round(cost, 4), "avg_price": round(cost / shares, 4),
+                "order_id": order_id, "status": status}
 
     def mark(self, m, side):
         return trading.exit_mark(m, side), trading.resolution(m, side)

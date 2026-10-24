@@ -57,7 +57,7 @@ def test_orders_and_pnl(client):
     client.post("/api/plans", json=BODY, headers=PIN)
     assert client.get("/api/orders").json()[0]["kind"] == "start"
     pnl = client.get("/api/pnl").json()
-    assert pnl["real"] == [] and pnl["backtest_budget"] == 1000
+    assert pnl["real"] == [] and pnl["backtest_budget"] == 200  # min(budget total, MAX_TOTAL_EXPOSURE_USD default 200)
     assert len(pnl["backtest"]) > 0 and isinstance(pnl["backtest"][0]["value"], float)
 
 
@@ -116,3 +116,36 @@ def test_writes_refused_when_not_the_trader_host(client, monkeypatch):
 def test_pin_unset_is_503(client, monkeypatch):
     monkeypatch.delenv("DASHBOARD_PIN")
     assert client.post("/api/plans", json=BODY, headers=PIN).status_code == 503
+
+
+def test_wrong_pin_lockout_blocks_create_and_resume_but_never_pause_or_stop(client):
+    pid = client.post("/api/plans", json=BODY, headers=PIN).json()["id"]
+    for _ in range(3):
+        assert client.post(f"/api/plans/{pid}/pause", headers={"X-Dashboard-Pin": "0000"}).status_code == 401
+    assert client.post("/api/plans", json=BODY, headers=PIN).status_code == 429
+    assert client.post(f"/api/plans/{pid}/pause", headers=PIN).status_code == 200
+    assert client.post(f"/api/plans/{pid}/resume", headers=PIN).status_code == 429
+    assert client.post(f"/api/plans/{pid}/stop", headers=PIN).status_code == 200
+    assert client.post(f"/api/plans/{pid}/stop", headers={"X-Dashboard-Pin": "0000"}).status_code == 401
+
+
+def test_plans_payload_has_total_cap(client, monkeypatch):
+    assert client.get("/api/plans").json()["max_total_exposure"] == 200
+    monkeypatch.setenv("MAX_TOTAL_EXPOSURE_USD", "50")
+    assert client.get("/api/plans").json()["max_total_exposure"] == 50
+
+
+def test_pnl_scales_backtest_to_the_cap_or_budget(client, monkeypatch):
+    import invest_router
+    monkeypatch.setattr(invest_router, "_backtest_equity", lambda: [{"t": "2026-06-01", "value": 1.5}])
+    client.post("/api/plans", json={**BODY, "budget": 50, "daily_loss_stop": 10}, headers=PIN)
+    pnl = client.get("/api/pnl").json()
+    assert pnl["backtest_budget"] == 50 and pnl["backtest"] == [{"t": "2026-06-01", "value": 25.0}]
+
+
+def test_backtest_equity_survives_missing_keys(client, monkeypatch, tmp_path):
+    import invest_router
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "backtest.json").write_text("{}")
+    monkeypatch.setattr(invest_router, "HERE", tmp_path)
+    assert invest_router._backtest_equity() == []

@@ -61,17 +61,23 @@ def _broker_meta():
         return "paper", float(os.environ.get("POLYMARKET_MAX_BET_USD") or 10)
 
 
+def _total_cap():
+    return float(os.environ.get("MAX_TOTAL_EXPOSURE_USD") or 200)
+
+
 def require_trader_host():
     if os.environ.get("TRADER_ENABLED") != "1":
         raise HTTPException(503, "This server does not run the trader; use the trading host")
 
 
-def require_pin(pin):
+def require_pin(pin, lockable=True):
+    """Wrong PINs always give 401 and count; only create/resume are refused (429) while locked out,
+    so a person can always Pause or Stop with the right PIN."""
     expected = os.environ.get("DASHBOARD_PIN")
     if not expected:
         raise HTTPException(503, "DASHBOARD_PIN is not set on the server")
     with _fails_lock:
-        if time.time() < _fails["until"]:
+        if lockable and time.time() < _fails["until"]:
             raise HTTPException(429, "Too many wrong PINs; try again in 5 minutes")
         if not hmac.compare_digest((pin or "").encode(), expected.encode()):
             _fails["n"] += 1
@@ -99,7 +105,7 @@ class PlanIn(BaseModel):
 @router.get("/api/plans")
 def list_plans():
     mode, ceiling = _broker_meta()
-    return {"mode": mode, "interval_min": 10, "max_bet_ceiling": ceiling,
+    return {"mode": mode, "interval_min": 10, "max_bet_ceiling": ceiling, "max_total_exposure": _total_cap(),
             "plans": [summary(p) for p in sorted(store.plans(), key=lambda p: p["created_at"], reverse=True)]}
 
 
@@ -123,9 +129,9 @@ def create_plan(body: PlanIn, x_dashboard_pin: str | None = Header(default=None)
 @router.post("/api/plans/{plan_id}/{action}")
 def control_plan(plan_id: str, action: str, x_dashboard_pin: str | None = Header(default=None)):
     require_trader_host()
-    require_pin(x_dashboard_pin)
     if action not in ("pause", "resume", "stop"):
         raise HTTPException(404, "Unknown action")
+    require_pin(x_dashboard_pin, lockable=action == "resume")
     logged = {}
 
     def change(plan):
@@ -158,20 +164,26 @@ def orders(plan: str | None = None, limit: int = 50):
 
 
 def _backtest_equity():
+    """Equity in starting-bankroll units from 1.0: the capped-exposure run when present, else with_costs."""
     for folder in (HERE / "results", HERE / "examples"):
         path = folder / "backtest.json"
         if path.exists():
-            return json.loads(path.read_text())["with_costs"]["equity"]
+            try:
+                data = json.loads(path.read_text())
+                return (data.get("capped_exposure") or {}).get("equity") or data["with_costs"]["equity"]
+            except (KeyError, TypeError, ValueError):
+                return []
     return []
 
 
 @router.get("/api/pnl")
 def pnl():
-    budget = sum(p["budget"] for p in store.plans()) or 1000.0
+    total = sum(p["budget"] for p in store.plans()) or 1000.0
+    # The server never has more than the total cap in open bets, so the test is scaled to that at most.
+    scale = min(total, _total_cap())
     real = [{"t": e["t"], "value": round(e["value"] - e["invested"], 2)} for e in store.equity()]
-    # Backtest equity is in starting-bankroll units from 1.0; show it as $ profit on the same budget.
-    backtest = [{"t": e["t"], "value": round((e["value"] - 1) * budget, 2)} for e in _backtest_equity()]
-    return {"real": real, "backtest": backtest, "backtest_budget": budget}
+    backtest = [{"t": e["t"], "value": round((e["value"] - 1) * scale, 2)} for e in _backtest_equity()]
+    return {"real": real, "backtest": backtest, "backtest_budget": scale}
 
 
 def _on_trader_done(task):

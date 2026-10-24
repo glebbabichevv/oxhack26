@@ -47,7 +47,11 @@ def size_bet(item, plan, value, ceiling):
 def pause_reason(plan, value, updated_at, now):
     if plan["errors"] >= MAX_ERRORS:
         return "polymarket_errors"
-    if updated_at is None or now - datetime.fromisoformat(updated_at.replace("Z", "+00:00")) > timedelta(hours=STALE_HOURS):
+    try:  # unparseable or timezone-less data cannot be trusted as fresh
+        age = now - datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+    except (AttributeError, TypeError, ValueError):
+        return "stale_data"
+    if age > timedelta(hours=STALE_HOURS):
         return "stale_data"
     if plan["day"]["start_value"] - value > plan["daily_loss_stop"]:
         return "daily_loss"

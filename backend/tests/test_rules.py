@@ -95,3 +95,12 @@ def test_exit_mark_is_what_selling_fetches():
     assert exit_mark(m, "YES") == 0.40
     assert round(exit_mark(m, "NO"), 2) == 0.57
     assert exit_mark(dict(best_bid=None, best_ask=None), "YES") is None
+
+
+def test_pause_reason_fails_closed_on_bad_timestamps():
+    from datetime import datetime, timezone
+    from invest.rules import pause_reason
+    plan = {"errors": 0, "day": {"start_value": 1000}, "daily_loss_stop": 100}
+    now = datetime(2026, 10, 24, 18, 0, tzinfo=timezone.utc)
+    for bad in ("garbage", "", "2026-10-24T17:55:00", None, 12345):  # unparseable, naive, wrong type
+        assert pause_reason(plan, 1000, bad, now) == "stale_data"
