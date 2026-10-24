@@ -4,19 +4,19 @@
  "vol_scale": 1.15,
  "blend_weights": {
   "const": -0.092,
-  "exchange": 0.117,
+  "exchange": 0.116,
   "market": 0.669
  },
- "n_train_rows": 9671,
- "n_test_rows": 2011,
- "n_test_markets": 1110,
+ "n_train_rows": 9670,
+ "n_test_rows": 2007,
+ "n_test_markets": 1106,
  "overall": {
-  "brier_market": 0.1401,
-  "brier_exchange": 0.1472,
-  "brier_blend": 0.141,
-  "logloss_market": 0.4413,
-  "logloss_exchange": 0.4708,
-  "logloss_blend": 0.445
+  "brier_market": 0.1399,
+  "brier_exchange": 0.1471,
+  "brier_blend": 0.1408,
+  "logloss_market": 0.4408,
+  "logloss_exchange": 0.4706,
+  "logloss_blend": 0.4446
  },
  "by_kind": [
   {
@@ -31,7 +31,7 @@
    "n": 1,
    "brier_market": 0.1303,
    "brier_exchange": 0.0,
-   "brier_blend": 0.0477
+   "brier_blend": 0.0478
   },
   {
    "kind": "between",
@@ -42,17 +42,17 @@
   },
   {
    "kind": "dip",
-   "n": 224,
-   "brier_market": 0.1088,
-   "brier_exchange": 0.1292,
-   "brier_blend": 0.11
+   "n": 222,
+   "brier_market": 0.1061,
+   "brier_exchange": 0.1272,
+   "brier_blend": 0.1076
   },
   {
    "kind": "reach",
-   "n": 182,
-   "brier_market": 0.1345,
-   "brier_exchange": 0.1612,
-   "brier_blend": 0.136
+   "n": 180,
+   "brier_market": 0.1356,
+   "brier_exchange": 0.1624,
+   "brier_blend": 0.1367
   }
  ],
  "by_horizon": [
@@ -72,10 +72,10 @@
   },
   {
    "horizon_hours": 72,
-   "n": 875,
-   "brier_market": 0.1324,
-   "brier_exchange": 0.1422,
-   "brier_blend": 0.1351
+   "n": 874,
+   "brier_market": 0.1317,
+   "brier_exchange": 0.1417,
+   "brier_blend": 0.1345
   },
   {
    "horizon_hours": 168,
@@ -86,34 +86,35 @@
   },
   {
    "horizon_hours": 720,
-   "n": 81,
-   "brier_market": 0.1776,
-   "brier_exchange": 0.1926,
-   "brier_blend": 0.1741
+   "n": 78,
+   "brier_market": 0.1827,
+   "brier_exchange": 0.198,
+   "brier_blend": 0.1778
   }
  ],
  "trades": [
   {
    "label": "exchange only",
-   "n_trades": 928,
+   "n_trades": 926,
    "n_events": 335,
-   "mean_return_per_dollar": -0.1602,
+   "mean_return_per_dollar": -0.1654,
    "ci90": [
-    -0.2868,
-    -0.03
+    -0.2929,
+    -0.0361
    ],
-   "hit_rate": 0.3006
+   "hit_rate": 0.3002
   },
   {
    "label": "blend (exchange + market)",
-   "n_trades": 1050,
+   "n_trades": 1046,
    "n_events": 346,
-   "mean_return_per_dollar": 0.0348,
+   "mean_return_per_dollar": 0.0325,
    "ci90": [
-    -0.1242,
-    0.2052
+    -0.1279,
+    0.2013
    ],
-   "hit_rate": 0.1838
+   "hit_rate": 0.1836
   }
- ]
+ ],
+ "share_test_rows_fee_enabled": 1.0
 }

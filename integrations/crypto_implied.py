@@ -37,6 +37,8 @@ from scipy.stats import norm
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
+sys.path.insert(0, str(ROOT / "backend"))
+import model as M  # noqa: E402  (split + fee schedule, same as the backtest)
 OUT = Path(__file__).resolve().parent / "crypto"
 SYMBOLS = {"bitcoin": "BTCUSDT", "btc": "BTCUSDT", "ethereum": "ETHUSDT", "eth": "ETHUSDT",
            "solana": "SOLUSDT", "sol": "SOLUSDT", "xrp": "XRPUSDT"}
@@ -163,7 +165,10 @@ def build_rows(kl):
     # a touch market whose barrier is already on the wrong side is mis-parsed or already decided
     bad = ((d.kind == "reach") & (d.k1 <= d.S)) | ((d.kind == "dip") & (d.k1 >= d.S))
     d = d[~bad].copy()
-    d["test"] = end.loc[d.index] >= pd.Timestamp(CUTOFF, tz="UTC")
+    # Same split as backend/model.py: whole events, test legs must resolve after the cutoff (pre-cutoff legs dropped).
+    train, test, _ = M.split_by_time(M.load_horizons(ROOT / "data" / "horizons.csv"), CUTOFF)
+    d = d[d.market_id.isin(set(train.market_id) | set(test.market_id))].copy()
+    d["test"] = d.market_id.isin(set(test.market_id))
     return d
 
 
@@ -202,11 +207,13 @@ def blend(w, pe, pm):
     return 1 / (1 + np.exp(-(w[0] + w[1] * logit(pe) + w[2] * logit(pm))))
 
 
-def trade(d, q, label):
-    """One trade per market at its earliest horizon with positive net edge, held to resolution."""
+def trade(d, q, label, flat_fee=False):
+    """One trade per market at its earliest horizon with positive net edge, held to resolution.
+    Fee = each market's own Gamma fee schedule (backend fee_per_share); flat_fee=True charges every market 0.07*p(1-p)."""
     d = d.assign(q=q)
     spread = d.spread.fillna(0.02)
-    d["cost_yes"] = np.maximum(spread / 2, 0.01) + FEE_RATE * d.price_yes * (1 - d.price_yes)
+    fee = FEE_RATE * d.price_yes * (1 - d.price_yes) if flat_fee else M.fee_per_share(d)
+    d["cost_yes"] = np.maximum(spread / 2, 0.01) + fee
     d["edge_yes"] = d.q - (d.price_yes + d.cost_yes)
     d["edge_no"] = (1 - d.q) - (1 - d.price_yes + d.cost_yes)
     d = d.sort_values("horizon_hours", ascending=False)
@@ -262,6 +269,7 @@ def evaluate():
             res[key].append({col: v if col == "kind" else int(v), "n": int(len(m)),
                              "brier_market": round(brier(pm[m], yy), 4), "brier_exchange": round(brier(pe_te[m], yy), 4),
                              "brier_blend": round(brier(pb_te[m], yy), 4)})
+    res["share_test_rows_fee_enabled"] = round(float(te.fees_enabled.astype(str).str.lower().eq("true").mean()), 3)
     res["trades"] = [trade(te, pe_te, "exchange only"), trade(te, pb_te, "blend (exchange + market)")]
     for k in ("overall",):
         res[k] = {a: round(b, 4) for a, b in res[k].items()}
