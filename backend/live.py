@@ -1,7 +1,7 @@
 """Live decisions for /api/live, computed on request from Polymarket's Gamma API with results/model.json.
 
 Same market filter as integrations/fetch_live.py (open yes/no, accepting orders, two-sided book,
-volume >= $50k, scheduled end within 45 days), same math as model.live_report via horizon_mcp.decide
+volume >= $100k (training floor), events not yet started, scheduled end within 45 days), same math as model.live_report via horizon_mcp.decide
 (pure Python, no pandas at runtime), same selection: top 30 trades by net edge (policy V3: net edge >= 1¢,
 within 24 h of the end), 15 WAIT rows (edge now, enter later; soonest first), 10 biggest in-band NO_TRADE. Cached in-process for CACHE_TTL seconds. If Gamma fails, serves results/live.json and says so.
 
@@ -23,7 +23,7 @@ from horizon_mcp import GAMMA, decide, domain_of, model_version
 HERE = Path(__file__).parent
 SNAPSHOT = HERE / "results" / "live.json"
 CACHE_TTL = 300  # seconds
-MIN_VOLUME = 50_000
+MIN_VOLUME = 100_000  # the training floor: every one of the 34,677 markets had >= $100k lifetime volume
 MAX_DAYS = 45
 N_TRADES, N_WAIT, N_NO_TRADE = 30, 15, 10
 PAGE, MAX_OFFSET = 100, 2000  # Gamma caps offset around 2,000
@@ -79,6 +79,10 @@ def _row(m, now, model):
         return None
     end = _ts(m.get("endDate"))
     if not m.get("acceptingOrders") or not end or not 0 < bid < ask < 1:
+        return None
+    ev0 = (m.get("events") or [{}])[0]
+    start = _ts((m.get("gameStartTime") or "").replace(" ", "T").replace("+00", "+00:00") or None) or _ts(ev0.get("startTime"))
+    if start and start <= now < end:  # event under way: the price already reflects it; never advise
         return None
     hours = round((end - now).total_seconds() / 3600, 1)
     price, spread = round((bid + ask) / 2, 4), round(ask - bid, 4)
