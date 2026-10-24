@@ -23,7 +23,8 @@ Golden rule: if you don't know, say "we didn't measure that", then say what we w
 | concentration | top 10 events = 1.03 of the 3.05 bankrolls; without them +2.02 |
 | by domain | sports **+185%** [+111%, +263%] (4,475 trades), science/tech +42% [+16%, +72%]; all others' CIs include 0 |
 | naive "always back the favourite" | **−741%** (2% flat stakes, 8,372 trades, 73% hit rate, same markets) |
-| return per $1 trade by entry horizon (costs) | 30d +4.6% · 7d +4.6% · 3d +7.3% · 1d +14.3% · 12h +16.3% |
+| return per $1 trade by entry horizon (costs) | 30d +4.6% · 7d +4.6% · 3d +7.3% · 1d +14.3% · 12h +16.3%; dropping markets whose event was already over: 1d +15.0%, 12h +14.3% → say "≈14–15% 12–24h out" |
+| with Polymarket taker fees (exact per-market schedule, PR #11) | **+205%**, CI [+109%, +306%], 6,102 trades, max DD 29%, +12.7% per $ staked; sports +132% |
 | cost | max(live spread / 2, 1¢) per contract, fee 0 |
 | stake | ¼ Kelly on the conservative q, capped at 5% of starting bankroll |
 | forward test | snapshot 15:43 Sat, 163 open markets ending within 48 h, 75 trades; see `integrations/forward/score.json` |
@@ -43,6 +44,8 @@ what you'd expect. Significance is in the money test, not the Brier: the 90% CI 
 
 **Q: Why does the bias exist?** We measure it, we don't explain it. Plausible stories: demand for cheap lottery-ticket
 contracts, thin order books near resolution. Don't go further than that.
+
+**Q: "Trading is 100× better per day near resolution"?** Don't claim it. The horizons trade different market sets, ~25% hit rate, no liquidity data. Say: short trades tie up capital ~30× less time, and return per trade is ≈14–15% 12–24h out vs ≈4–5% a week or more out.
 
 **Q: Isn't this just the favourite-longshot bias?** Largely yes; it's a known pattern from horse racing. What we add is
 the *when*: the market is about fair a month out and gets overconfident as resolution nears, and the return per trade
@@ -87,6 +90,10 @@ Without them it's still +2.02. The CI is computed by resampling events, and it e
 for resolved markets it's the 1¢ floor. Live markets show a median spread around 1¢ (≥ $50k volume).
 *Weak spot, say it before they do:* fills are assumed at the historical last-trade price plus the cost. Real fills at the
 ask could be worse. Next step: on-chain fills for true historical spreads.
+
+**Q: Did you include Polymarket's fees?** The screen's backtest doesn't: it uses a 1¢ half-spread floor. Polymarket charges takers rate × p(1−p) per share on most markets (93% of our test rows; rate 3–7% depending on the market, makers pay nothing). With each market's exact fee schedule from the API: 6,102 trades, **+205% of bankroll, CI [+109%, +306%]**, max drawdown 29%, +12.7% per dollar staked. The edge survives. Caveat: the API only has today's schedule. *(If A reruns the model with fees, these become the screen numbers.)*
+
+**Q: Exposure? Stakes are fractions of the starting bankroll but positions overlap.** True: at the peak, open stakes add up to ~1.9 bankrolls (Ayaz's audit). Leverage-free number: **+12.4% per dollar actually staked** (+12.7% with fees). Capping open stakes at one bankroll gives ~+1.0 bankrolls with fees.
 
 **Q: Capacity?** Not measured. Volume filter is ≥ $50k per market; stakes capped at 5%. We'd need order-book depth.
 

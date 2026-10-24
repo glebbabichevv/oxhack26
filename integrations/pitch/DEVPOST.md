@@ -33,6 +33,8 @@ after it. All markets of one event stay on the same side of the split.
   [+184%, +440%] from an event-level bootstrap. Max drawdown 42%. Hit rate 24%.
 - The edge grows as resolution nears: mean return per trade +4.6% a month out, +14.3% a day out. Only sports is solid
   on its own (+185%, CI +111% to +263%); every other market type's interval includes zero.
+- With Polymarket's taker fees (each market's exact schedule): 6,102 trades, +205% of bankroll, CI [+109%, +306%],
+  +12.7% per dollar staked. [Replace the line above with this one if A reruns the model with fees.]
 - Baseline "always back the favourite" on the same markets: −741%.
 
 ## How we built it
@@ -80,5 +82,5 @@ Brought in: the published finding (arXiv 2602.19520), public Polymarket APIs, op
 design preset. Built at OxHack: the data pipeline, the dataset, the model, the backtest, the API and the app.
 
 ## Gallery images
-- `integrations/pitch/when_to_trade.png`: mean return per trade after costs by entry horizon (30d +4.6% → 12h +16.3%).
+- `integrations/pitch/when_to_trade.png`: mean return per trade after costs by entry horizon (≈4–5% a week or a month out → ≈14–15% 12–24 hours out).
   Regenerate with `python integrations/pitch/make_charts.py` whenever backend/results change.

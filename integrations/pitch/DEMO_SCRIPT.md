@@ -1,6 +1,6 @@
 # Demo script — 90 seconds (Role C, TheMarkz3)
 
-Walked against the live screen (https://horizon-jet-mu.vercel.app, 15:55 Sat) and `backend/results/*.json` (A's 14:46 rerun).
+Walked against the live screen (15:55 Sat; site now https://horizon-two-gilt.vercel.app, API https://horizon-api-iota.vercel.app — old *-jet-mu URLs are frozen, never show them) and `backend/results/*.json` (A's 14:46 rerun).
 Rule: say only numbers that are on the screen or in `backend/results/` / `integrations/forward/score.json`. If results change, update this file.
 Live cards change hourly. Pick the hero card on the morning of the demo (see "Hero card" below).
 Length: ~225 spoken words ≈ 93 s at 145 wpm; ~200 (≈ 83 s) without the (cut first) line. Rehearse with a timer.
@@ -30,7 +30,7 @@ played. [N] have resolved since: [n] trades, [hit] won, [P&L]." *(Say the real n
 ## 1:10–1:30 — money, and *when* · screen: equity chart + "When to act" bars
 "On the held-out test: 7,106 trades, plus 304% of the starting bankroll after costs, interval 184 to 440.
 Always backing the favourite loses 741."
-(Point at "When to act".) "And the time part: a month out, plus 4.6% a trade. A day out, plus 14."
+(Point at "When to act".) "And the time part: a week or a month out, about 4 to 5% a trade. 12 to 24 hours out, about 14 to 15%, and the money is tied up 30 times less time."
 (cut first) "Our first small sample said 'politics, a month out'. It didn't replicate on 11 times more data, so we threw it out."
 "Horizon tells you when a market is wrong enough to trade, and when it isn't."
 
@@ -46,6 +46,9 @@ Good: a card that is *also* in the forward-test snapshot, so you can say "this o
 - Hit rate 24%: a longshot strategy, many small losses, a few big wins.
 - Costs = max(live spread / 2, 1¢), no fee. Historical spreads aren't in the API, so 1¢ is a floor, not a measurement.
 - "Longshots underpriced" holds for roughly 10–35¢ from a week out. Under 10¢ a day out, contracts win ~3%: about fair.
+- Never say "100× per day" (A, 16:41: different market sets, no liquidity, ~25% hit rate). Say "short trades tie up capital ~30× less time".
+- Per-horizon numbers after dropping markets whose event was already over: 12h +14.3%, 1d +15.0% (A, 16:41) → say "≈14–15% 12–24h out, ≈7% at 3d, ≈4–5% at 7–30d".
+- **Fees:** Polymarket charges takers a fee on most markets; the screen's +304% has none. With the exact per-market fee schedule it's +205%, CI [+109%, +306%], 6,102 trades (PR #11). If asked, say that number. If A reruns with fees before the demo, the screen and this script switch to it.
 - 30 days out the *calibration* is about fair, yet the per-trade return is +4.6% (841 trades). It's a small, noisy edge
   there; don't claim more.
 
