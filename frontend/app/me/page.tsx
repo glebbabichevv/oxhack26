@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ActionChip, FramedCard, KpiRow, Nav, Section } from "@/design/components/Page";
 import { ASH, INK, SEAM, axisTick, gridProps, tooltipProps, xAxisProps } from "@/design/components/chartTheme";
+import { CachedNote } from "@/components/CachedNote";
 import { API_URL, cents, getJSON, int, pct } from "@/lib/api";
 
 // My results (GET /api/me): am I making or losing money with Horizon?
@@ -122,6 +123,7 @@ export default function MePage() {
     <>
       <Nav links={[{ label: "Evidence", href: "/" }, { label: "Journal", href: id ? `/journal?me=${encodeURIComponent(id)}` : "/journal" }, { label: "My bets", href: "#bets" }, { label: "Wallet", href: "#wallet" }]} />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
+        <CachedNote paths={["/api/me"]} className="mt-4" />
         {error ? <div className="mt-6 rounded-input bg-down-tint px-4 py-3 text-[13px] text-down">{error.startsWith("A wallet") ? error : `Can't load your results from ${API_URL} (${error}).`}</div> : null}
         <header className="pt-[72px]">
           <h1 className="font-serif text-[40px] leading-[1.06] tracking-[-0.02em] text-ink md:text-[56px]">{ready && !id && !wallet ? "My results." : headline}</h1>

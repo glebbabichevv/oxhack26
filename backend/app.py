@@ -108,3 +108,6 @@ from track import router as track_router; app.include_router(track_router)  # no
 
 # My results: journal P&L for an install + optional read-only Polymarket wallet positions (me.py).
 from me import router as me_router; app.include_router(me_router)  # noqa: E402
+
+# How we chose: evidence rows from integrations/methods/summary.json (methods_router.py).
+from methods_router import router as methods_router; app.include_router(methods_router)  # noqa: E402

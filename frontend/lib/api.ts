@@ -83,11 +83,42 @@ export type Backtest = {
   by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };
 
-export async function getJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`);
-  if (!res.ok) throw new Error(`${path}: ${res.status}`);
-  return res.json() as Promise<T>;
+// ---- offline fallback (venue Wi-Fi): every good response is kept in localStorage; on failure the
+// last copy is returned and its time is recorded, so the page can say "cached at HH:MM". ----
+
+const CACHE = "hz-cache:";
+const cachedPaths = new Map<string, number>();
+const listeners = new Set<() => void>();
+
+function readCache<T>(path: string): { t: number; data: T } | undefined {
+  try { const raw = localStorage.getItem(CACHE + path); return raw ? JSON.parse(raw) : undefined; } catch { return undefined; }
 }
+
+export async function getJSON<T>(path: string): Promise<T> {
+  try {
+    const res = await fetch(`${API_URL}${path}`);
+    if (!res.ok) throw new Error(`${path}: ${res.status}`);
+    const data = (await res.json()) as T;
+    try { localStorage.setItem(CACHE + path, JSON.stringify({ t: Date.now(), data })); } catch { /* storage full or blocked */ }
+    if (cachedPaths.delete(path)) listeners.forEach((f) => f());
+    return data;
+  } catch (e) {
+    const hit = readCache<T>(path);
+    if (!hit) throw e;
+    cachedPaths.set(path, hit.t);
+    listeners.forEach((f) => f());
+    return hit.data;
+  }
+}
+
+/** Earliest cache time among paths served from the offline copy (prefix match), or undefined if all live. */
+export function cachedAt(prefixes: string[]): number | undefined {
+  let t: number | undefined;
+  cachedPaths.forEach((v, k) => { if (prefixes.some((p) => k.startsWith(p)) && (t === undefined || v < t)) t = v; });
+  return t;
+}
+export function onCacheChange(f: () => void) { listeners.add(f); return () => { listeners.delete(f); }; }
+export const hhmm = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
 // ---- formatting (DESIGN.md → The Tabular Rule: every number carries its unit) ----
 
