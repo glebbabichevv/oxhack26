@@ -5,7 +5,7 @@ import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionC
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
-  API_URL, cents, dateLong, getJSON, horizonLabel, horizonPhrase, horizonShort, int, pct, times,
+  API_URL, cents, dateLong, getJSON, horizonLabel, horizonPhrase, horizonShort, int, pct, bankroll,
   type Backtest, type Calibration, type LiveMarket,
 } from "@/lib/api";
 
@@ -138,8 +138,8 @@ function Kpis({ b }: { b: Backtest }) {
       items={[
         {
           label: "Return after costs",
-          value: times(b.with_costs.return),
-          note: b.return_ci ? `90% CI ${b.return_ci[0].toFixed(2)}–${b.return_ci[1].toFixed(2)}` : `max drawdown ${b.with_costs.max_drawdown.toFixed(2)}×`,
+          value: bankroll(b.with_costs.return),
+          note: b.return_ci ? `of bankroll · 90% CI ${bankroll(b.return_ci[0])} to ${bankroll(b.return_ci[1])}` : `max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`,
           tone: b.return_ci ? (b.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
         { label: "Brier, model / market", value: `${b.overall.brier_model.toFixed(4)} / ${b.overall.brier_market.toFixed(4)}`, note: modelBetter ? "model better" : "no lift", tone: modelBetter ? "up" : "down" },
@@ -189,10 +189,10 @@ function BacktestSection({ b }: { b: Backtest }) {
   const best = Math.max(...b.by_horizon.map((h) => Math.abs(h.with_costs.mean_return_per_trade)), 0.0001);
   return (
     <Section
-      title={`${times(b.with_costs.return)} after costs, ${times(b.without_costs.return)} before`}
-      lead={`Out-of-time test on ${int(b.n_test_markets)} markets, one trade per market at ¼ Kelly, P&L in units of the starting bankroll. Always backing the favourite would have made ${times(b.naive_favourite.return)}.`}
+      title={`${bankroll(b.with_costs.return)} after costs, ${bankroll(b.without_costs.return)} before`}
+      lead={`Out-of-time test on ${int(b.n_test_markets)} markets, one trade per market at ¼ Kelly, P&L as a share of the starting bankroll, summed (no compounding). Always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
     >
-      <FramedCard title="Equity, test period" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${b.with_costs.max_drawdown.toFixed(2)}×`}>
+      <FramedCard title="Equity, test period" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
         <EquityChart withCosts={b.with_costs.equity} withoutCosts={b.without_costs.equity} />
         <div className="mt-5 border-t border-hairline-soft pt-3">
           <div className="mb-2 text-[13px] font-semibold text-ink-strong">When to act: mean return per trade after costs</div>
@@ -243,7 +243,7 @@ function Failures({ b }: { b: Backtest }) {
             <div key={i} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t border-hairline-soft py-2 text-[13px] first:border-t-0">
               <span className="min-w-0 truncate">{t.question}<span className="text-ink-faint"> · {horizonShort(t.horizon_hours)} out</span></span>
               <span className="tabular-nums text-ink-muted">{cents(t.price_yes)} → {pct(t.q_yes)}, <ActionChip action={t.action} /></span>
-              <span className="w-[64px] text-right font-semibold tabular-nums text-down">{t.ret >= 0 ? "+" : "−"}{Math.abs(t.ret).toFixed(2)}×</span>
+              <span className="w-[96px] text-right font-semibold tabular-nums text-down">{t.ret >= 0 ? "+" : "−"}{Math.round(Math.abs(t.ret) * 100)}% of stake</span>
             </div>
           ))}
         </div>

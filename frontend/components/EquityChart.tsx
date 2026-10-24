@@ -21,7 +21,7 @@ function merge(withCosts: EquityPoint[], withoutCosts: EquityPoint[]): Row[] {
 }
 
 const month = (t: string) => new Date(t).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-const units = (v: number) => `${v >= 1 ? "+" : "−"}${Math.abs(v - 1).toFixed(2)}×`;
+const units = (v: number) => `${v >= 1 ? "+" : "−"}${Math.round(Math.abs(v - 1) * 100)}%`; // equity starts at 1 = starting bankroll
 
 export function EquityChart({ withCosts, withoutCosts }: { withCosts: EquityPoint[]; withoutCosts: EquityPoint[] }) {
   const data = merge(withCosts, withoutCosts);
