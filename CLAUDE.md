@@ -4,9 +4,9 @@ Every Claude Code session on this team reads this file. Keep it short and curren
 Update it whenever a decision changes; it is how our three agents stay in sync.
 
 ## Event
-- OxHack '26, Mathematical Institute, Oxford. Sat 24 Oct 09:00 → Sun 25 Oct ~16:30.
-- Clocks go back 1 hour on Sunday night (02:00 → 01:00).
-- Submission deadline: TBA (fill in after opening ceremony).
+- OxHack '26, Mathematical Institute, Oxford. **Hacking: Sat 12:00 → Sun 12:00 (hard stop).** Clocks go back at 02:00 Sunday, so we get 25 real hours.
+- **Devpost submission must be done by Sun 12:00.** Devpost workshop Sun 09:00–10:00 (C1). Judging Sun 13:00–15:45, closing 16:00.
+- Schedule: lunch Sat 13:00, Citadel bubble tea 14:00, HRT talk (Matt Godbolt, compilers) 15:00–16:00 L1, dinner 18:00, HRT midnight pizza 00:00, breakfast Sun 08:00.
 - **Platinum sponsor challenge — HRT (Hudson River Trading): "Best use of Data for Predictions & Decision Making".** Prize: £1,000 per team member of the winning team (per track vs overall: TBA).
 - **Silver sponsor challenge — Zed: "Built with Delta".** Show how we worked together in Delta (teammates + agents, from ideation through building to testing); share Delta threads as evidence. Extra points for solving real problems.
 - Only HRT and Zed have challenges; the other sponsors (Citadel, Jane Street, Oxford Asset Management, Entangl) are recruiting only.
@@ -46,7 +46,7 @@ At the start of every session, ask the human which role they have (if not obviou
 - Folder: `frontend/`. Branches: `front/<feature>`. First command in a session: `/freeze frontend/`.
 - Owns: the one main demo screen, styled strictly by `DESIGN.md`, calling the API exactly as the contract says.
 - gstack flow: `/design-shotgun` → pick one → `/design-html`; `/design-review` in the evening. Impeccable applies to every screen automatically.
-- Until the backend exists, use the contract's example responses — but replace them with real calls before the 14:00 gate.
+- Until the backend exists, use the contract's example responses — but replace them with real calls before the 16:30 gate.
 
 ### Role C — Integrations, demo data, then pitch
 - Folder: `integrations/`. Branches: `int/<feature>`. First command in a session: `/freeze integrations/`.
@@ -57,13 +57,14 @@ At the start of every session, ask the human which role they have (if not obviou
 ## API contract (Role A maintains this)
 TBA after `/plan-eng-review` — list each endpoint: method, path, request body, example response.
 
-## Order of work after the task is announced
-1. Opening → fill Event section above (theme, tracks, deadline).
-2. All together, one laptop: `/office-hours` → `/plan-ceo-review` → `/plan-eng-review` (or `/autoplan`). Write "What we are building" and the API contract here. Everyone `git pull`.
-3. Parallel build in own folders. Gate ~14:00 Sat: skeleton works end-to-end on a public URL (`/qa`).
-4. **Pivot checkpoint, Sat ~18:00–20:00:** all together, `/plan-ceo-review` on the working product. Where did the "wow" actually happen? Keep the focus or shift it there, update "What we are building". No pivots after 20:00.
-5. Evening: polish + wow moment, `/design-review`. ~03:00 Sun: `/review`, then feature freeze.
-6. Sunday morning: final `/qa` on the exact demo script, backup video, Devpost, pitch rehearsal.
+## Order of work (real schedule)
+1. **12:00–13:00 — idea.** All together, one laptop: `/office-hours` → `/plan-ceo-review` → `/plan-eng-review` (or `/autoplan`). Write "What we are building" + API contract here. Everyone `git pull`. Eat lunch while building, not instead of planning.
+2. **13:00–16:30 — skeleton.** Parallel build in own folders. **Gate 16:30:** one scenario works end-to-end on a public URL with real data (`/qa`). Optional: one person at the HRT talk 15:00–16:00 — it is the challenge sponsor, worth a question to their engineers afterwards.
+3. **18:00–20:00 — pivot checkpoint** (over dinner): `/plan-ceo-review` on the working product. Where did the "wow" happen? Keep or shift focus. **No pivots after 20:00.**
+4. **20:00–02:00 — model quality + wow moment + polish.** Honest evaluation on held-out data, baseline, calibrated probabilities, the decision screen. `/design-review` around midnight.
+5. **~02:00 (before clocks go back) — `/review`, then feature freeze.** Then sleep in shifts.
+6. **Sun 07:00–10:00 — bugs only, backup demo video, final `/qa` on the exact demo script.** Devpost workshop 09:00.
+7. **Sun 10:00–11:30 — Devpost written and submitted by 11:30** (30 min buffer before the 12:00 hard stop). Pitch rehearsal 5x.
 
 ## Rules for agents and humans
 1. Work only inside your own role's folder unless the task in `TASKS.md` says otherwise. Never edit another role's folder — ask instead.
@@ -71,7 +72,7 @@ TBA after `/plan-eng-review` — list each endpoint: method, path, request body,
 3. One branch per person/feature → pull request → someone else glances at it → merge. (Judges score "best practices".)
 4. Small commits, often. Never commit secrets. `git pull` at least every hour.
 5. Only build what appears in the demo. If it is not in the 90-second demo script, it does not get built.
-6. Feature freeze ~03:00 Sunday. After that: bugs, backup video, Devpost, pitch only.
+6. Feature freeze ~02:00 Sunday. After that: bugs, backup video, Devpost, pitch only. Submission by 11:30 Sunday.
 
 ## Hackathon mindset (applies to every task)
 - The demo is the product. Optimise for what judges see in the 90-second demo, not for code quality.
