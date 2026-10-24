@@ -1,60 +1,60 @@
-/* Horizon design tokens ("The Ledger"). Source of truth: /DESIGN.md.
+/* Horizon design tokens ("Glass over the Horizon"). Source of truth: /DESIGN.md.
    Tailwind v4: in app/globals.css put
      @import "tailwindcss";
      @import "../design/tokens.css";
-   Fonts via next/font/google with variables --font-poppins, --font-jakarta, --font-playfair
-   (see frontend/design/README.md). */
+   Fonts via next/font/google with variables --font-poppins, --font-jakarta, --font-playfair,
+   --font-cormorant (see frontend/design/README.md).
+   Backdrop image: copy assets/backdrop-turner.jpg to public/backdrop.jpg. */
 
 :root {
-  --page: #f4f4f5;
-  --cell: #ffffff;
-  --seam: rgba(9, 9, 11, 0.08);
-  --seam-strong: rgba(9, 9, 11, 0.12);
+  --backdrop-base: #dedee3;
   --ink: #0a0a0a;
-  --ink-strong: #18181b;
+  --ink-strong: #111113;
   --ink-muted: #676e7e;
   --ink-faint: rgba(9, 9, 11, 0.42);
+  --ink-second: rgba(10, 10, 10, 0.42);
+  --hairline: rgba(9, 9, 11, 0.07);
   --graphite: #3f3f46;
   --ash: #a1a1aa;
   --up: #16a34a;
   --up-tint: rgba(22, 163, 74, 0.1);
   --down: #e11d48;
   --down-tint: rgba(225, 29, 72, 0.1);
-  --hover-wash: rgba(9, 9, 11, 0.035);
+  --ink-tint: rgba(9, 9, 11, 0.05);
+  --night: #0a0a0a;
 }
 
 @theme inline {
-  --color-page: var(--page);
-  --color-cell: var(--cell);
-  --color-seam: var(--seam);
-  --color-seam-strong: var(--seam-strong);
+  --color-backdrop-base: var(--backdrop-base);
   --color-ink: var(--ink);
   --color-ink-strong: var(--ink-strong);
   --color-ink-muted: var(--ink-muted);
   --color-ink-faint: var(--ink-faint);
+  --color-ink-second: var(--ink-second);
+  --color-ink-tint: var(--ink-tint);
+  --color-hairline: var(--hairline);
   --color-graphite: var(--graphite);
   --color-ash: var(--ash);
   --color-up: var(--up);
   --color-up-tint: var(--up-tint);
   --color-down: var(--down);
   --color-down-tint: var(--down-tint);
-  --color-hover-wash: var(--hover-wash);
+  --color-night: var(--night);
 
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
   --font-display: var(--font-poppins), system-ui, sans-serif;
-  --font-wordmark: var(--font-playfair), Georgia, serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
+  --font-quiet: var(--font-cormorant), Georgia, serif;
 
-  --radius-bar: 2px;
+  --radius-control: 11px;
   --radius-tooltip: 12px;
+  --radius-mock: 16px;
+  --radius-card: 22px;
 
-  --shadow-menu: 0 8px 32px rgba(15, 23, 42, 0.1);
-  --shadow-tooltip: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 8px 28px rgba(0, 0, 0, 0.1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-html { background: var(--page); }
-
 body {
-  background: var(--page);
   color: var(--ink);
   font-family: var(--font-jakarta), system-ui, sans-serif;
   font-size: 14px;
@@ -62,17 +62,68 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: rgba(24, 24, 27, 0.12); }
+::selection { background: rgba(17, 17, 19, 0.12); }
+:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: 2px; }
 
-:focus-visible {
-  outline: 2px solid var(--ink-strong);
-  outline-offset: 2px;
+/* ── Backdrop: base tone, muted drifting painting, scrim. Use <Backdrop/> from components/Glass.tsx. ── */
+.hz-backdrop-base { position: fixed; inset: 0; z-index: -10; background: var(--backdrop-base); pointer-events: none; }
+.hz-backdrop-img {
+  position: fixed; inset: 0; z-index: -10; overflow: hidden; pointer-events: none;
+}
+.hz-backdrop-img img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%;
+  filter: grayscale(0.5) contrast(1.08) brightness(1.04);
+  animation: hz-drift 60s ease-in-out infinite alternate;
+}
+.hz-backdrop-scrim {
+  position: fixed; inset: 0; z-index: -10; pointer-events: none;
+  background: linear-gradient(to bottom,
+    rgba(244, 244, 247, 0.5) 0%, rgba(244, 244, 247, 0.56) 6%, rgba(244, 244, 247, 0.86) 15%,
+    rgba(244, 244, 247, 0.74) 28%, rgba(244, 244, 247, 0.61) 52%, rgba(244, 244, 247, 0.58) 100%);
+}
+@keyframes hz-drift { from { transform: scale(1.16) translate3d(-1.5%, -1%, 0); } to { transform: scale(1.16) translate3d(1.5%, 1%, 0); } }
+
+/* ── Glass materials ── */
+.hz-glass-card {
+  position: relative;
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.16) 35%,
+      rgba(255, 255, 255, 0.04) 52%, rgba(255, 255, 255, 0.3) 100%),
+    rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.25),
+    inset 1px 0 0 rgba(255, 255, 255, 0.4), inset -1px 0 0 rgba(255, 255, 255, 0.4),
+    0 2px 10px rgba(15, 23, 42, 0.07), 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+.hz-glass-hover { transition: transform 260ms var(--ease-spring, cubic-bezier(0.34, 1.4, 0.64, 1)), box-shadow 260ms cubic-bezier(0.34, 1.4, 0.64, 1); }
+.hz-glass-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.25),
+    inset 1px 0 0 rgba(255, 255, 255, 0.4), inset -1px 0 0 rgba(255, 255, 255, 0.4),
+    0 4px 14px rgba(15, 23, 42, 0.09), 0 16px 40px rgba(15, 23, 42, 0.09);
+}
+.hz-glass-bar {
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(26px) saturate(200%);
+  -webkit-backdrop-filter: blur(26px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 -1px 0 rgba(255, 255, 255, 0.22),
+    inset 1px 0 0 rgba(255, 255, 255, 0.3), inset -1px 0 0 rgba(255, 255, 255, 0.3),
+    0 2px 16px rgba(0, 0, 0, 0.06);
+}
+/* Hero CTA: grey glass pill with inner highlight. */
+.hz-cta {
+  background: linear-gradient(180deg, #6b6b70 0%, #4a4a4f 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 10px 28px rgba(15, 23, 42, 0.22);
 }
 
-/* The Ledger grid: cells butted together, the page colour shows through as 1px seams. */
-.ledger { display: grid; gap: 1px; background: var(--seam); border: 1px solid var(--seam); }
-.ledger > * { background: var(--cell); min-width: 0; }
-
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+  .hz-backdrop-img img { animation: none; transform: scale(1.16); }
+  .hz-glass-hover, .hz-glass-hover:hover { transition: none; transform: none; }
 }

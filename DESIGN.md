@@ -2,27 +2,35 @@
 name: Horizon
 description: Is the prediction-market time bias tradable? A calibration and decision dashboard.
 colors:
-  page: "#f4f4f5"
-  cell: "#ffffff"
-  seam: "rgba(9,9,11,0.08)"
+  backdrop-base: "#dedee3"
+  scrim: "rgba(244,244,247,0.60)"
+  page-plain: "#ffffff"
   ink: "#0a0a0a"
-  ink-strong: "#18181b"
+  ink-strong: "#111113"
   ink-muted: "#676e7e"
   ink-faint: "rgba(9,9,11,0.42)"
+  ink-second-line: "rgba(10,10,10,0.42)"
+  hairline: "rgba(9,9,11,0.07)"
   graphite: "#3f3f46"
   ash: "#a1a1aa"
   up: "#16a34a"
   up-tint: "rgba(22,163,74,0.10)"
   down: "#e11d48"
   down-tint: "rgba(225,29,72,0.10)"
-  hover-wash: "rgba(9,9,11,0.035)"
+  night: "#0a0a0a"
 typography:
-  wordmark:
+  serif-display:
     fontFamily: "Playfair Display, Georgia, serif"
-    fontSize: "22px"
-    fontWeight: 500
-    letterSpacing: "-0.01em"
-  display:
+    fontSize: "64px"
+    fontWeight: 400
+    lineHeight: 1.05
+    letterSpacing: "-0.02em"
+  serif-quiet:
+    fontFamily: "Cormorant Garamond, Georgia, serif"
+    fontSize: "30px"
+    fontWeight: 300
+    lineHeight: 1.15
+  number:
     fontFamily: "Poppins, system-ui, sans-serif"
     fontSize: "40px"
     fontWeight: 600
@@ -46,45 +54,65 @@ typography:
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.45
+  lead:
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 400
+    lineHeight: 1.6
   label:
     fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "13px"
     fontWeight: 600
-    lineHeight: 1.3
     fontFeature: "tnum"
   tick:
     fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "11px"
     fontWeight: 400
 rounded:
-  none: "0px"
   bar: "2px"
+  control: "11px"
   tooltip: "12px"
+  mock: "16px"
+  card: "22px"
   pill: "9999px"
 spacing:
-  seam: "1px"
   xs: "6px"
   sm: "12px"
-  md: "20px"
+  md: "16px"
   lg: "24px"
   xl: "40px"
+  section: "120px"
 components:
-  cell:
-    backgroundColor: "{colors.cell}"
-    rounded: "{rounded.none}"
+  glass-card:
+    backgroundColor: "rgba(255,255,255,0.32)"
+    rounded: "{rounded.card}"
     padding: "24px"
   button-primary:
     backgroundColor: "{colors.ink-strong}"
-    textColor: "{colors.cell}"
+    textColor: "{colors.page-plain}"
     rounded: "{rounded.pill}"
-    padding: "10px 20px"
-    height: "44px"
-  button-outline:
-    backgroundColor: "{colors.cell}"
+    padding: "8px 16px"
+    height: "32px"
+  button-cta:
+    backgroundColor: "#5b5b5f"
+    textColor: "{colors.page-plain}"
+    rounded: "{rounded.pill}"
+    padding: "14px 32px"
+    height: "54px"
+  button-glass:
+    backgroundColor: "rgba(255,255,255,0.68)"
     textColor: "{colors.ink-strong}"
     rounded: "{rounded.pill}"
-    padding: "8px 18px"
-    height: "40px"
+    padding: "8px 16px"
+    height: "36px"
+  segmented-track:
+    backgroundColor: "rgba(9,9,11,0.05)"
+    rounded: "{rounded.pill}"
+    padding: "3px"
+  segmented-active:
+    backgroundColor: "{colors.page-plain}"
+    textColor: "{colors.ink-strong}"
+    rounded: "{rounded.pill}"
   trend-pill-up:
     backgroundColor: "{colors.up-tint}"
     textColor: "{colors.up}"
@@ -97,18 +125,8 @@ components:
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     padding: "4px 10px"
-  action-buy-yes:
-    backgroundColor: "{colors.up-tint}"
-    textColor: "{colors.up}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-  action-buy-no:
-    backgroundColor: "{colors.down-tint}"
-    textColor: "{colors.down}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
   action-no-trade:
-    backgroundColor: "{colors.page}"
+    backgroundColor: "rgba(9,9,11,0.05)"
     textColor: "{colors.ink-muted}"
     rounded: "{rounded.pill}"
     padding: "4px 10px"
@@ -121,116 +139,121 @@ components:
 
 # Design System: Horizon
 
-Reference screenshots: `docs/design-reference/` (start with `dashboard-light.png`). Code tokens: `frontend/design/`.
+**Look at the references first:** `docs/design-reference/dashboard/dashboard-top.png` is the screen to match. Landing and extension shots in the same folder show buttons, nav, type and the dark section. Code tokens and components: `frontend/design/`.
 
 ## Overview
 
-**Creative North Star: "The Ledger"**
+**Creative North Star: "Glass over the Horizon"**
 
-A trading desk's ledger, not an app. One sheet of white cells ruled by hairlines, sitting on a pale zinc page. Numbers are set large in a geometric face and carry the screen; everything else is quiet, grey and small. Colour appears only when it means something: green for up and buy-YES, rose for down and buy-NO. Charts are monochrome graphite with one dark and one grey series.
+Frosted glass panels floating over an old painting of the sea. The painting is held back (half-desaturated, under a pale scrim) so it only shows as soft movement behind the glass; the panels carry the data. Numbers are set big in a round geometric face, everything else is quiet grey in a friendly sans, and the few headlines that need gravitas are set in a classical serif with a greyed second line.
 
-The density is that of a well-made admin dashboard: KPI strip on top, two charts side by side, tables and lists below, all welded into one grid with 1px seams. Nothing floats, nothing glows. The only decorative touch is the serif wordmark in the header.
+It is calm, expensive-looking and monochrome. Colour only enters for meaning: green up/buy-YES, rose down/buy-NO. Charts are graphite: gradient bars and two stepped lines, one near-black and one grey.
 
 **Key Characteristics:**
-- Hairline grid: cells butted together with `gap-px` over a seam colour, no gaps, no card shadows, square corners.
-- Big Poppins numbers (34–40px, semibold, tabular), Plus Jakarta Sans for every word.
-- Monochrome charts: graphite gradient bars, stepped lines in near-black and ash.
-- Green/rose only for direction and action; pills for every small status.
-- Outline pill buttons; one dark pill for the main action.
+- Separate glass cards (22px radius, white rim, soft shadow) on a fixed, slowly drifting, muted painting backdrop.
+- Poppins semibold numbers (34–40px) and panel titles; Plus Jakarta Sans for all text.
+- Serif display (Playfair Display) for page-level headlines, second line in grey; Cormorant Garamond for quiet serif moments.
+- Everything small is a pill: buttons, tabs, trend chips, action chips, tags.
+- Glass header bar that condenses into a floating pill on scroll.
 
 ## Colors
 
-Zinc greys on white, with exactly two semantic hues.
+Zinc and white glass over a muted painting, plus two signal hues.
 
 ### Primary
-- **Ledger Ink** (#18181b): main text on headings, the primary series in every chart (model curve, with-costs equity), the dark pill button.
+- **Ink** (#111113): primary buttons, the model series in every chart, numbers. Text is #0a0a0a.
 
 ### Neutral
-- **Zinc Page** (#f4f4f5): page background and the colour that shows through the 1px seams.
-- **Cell White** (#ffffff): every panel/cell surface.
-- **Seam** (rgba(9,9,11,0.08)): grid seams, table row dividers, horizontal chart gridlines.
-- **Slate Muted** (#676e7e): labels, panel subtitles, secondary text. Use at 70% opacity for hints ("vs last week", "n = 312").
-- **Tick Grey** (rgba(9,9,11,0.42)): axis ticks only.
-- **Graphite** (#3f3f46) → **Ash** (#a1a1aa): the bar gradient (top → bottom). Ash alone is the secondary chart series (market price, without-costs equity, baseline).
+- **Backdrop Base** (#dedee3): solid colour under the painting; what shows if the image fails.
+- **Scrim** (rgba(244,244,247,0.50 → 0.86 → 0.58), vertical gradient): veil over the painting, heaviest behind the masthead text.
+- **Glass White** (rgba(255,255,255,0.32) + diagonal highlight): card surface. See Elevation.
+- **Slate Muted** (#676e7e): labels, subtitles, secondary text; at 70% for hints.
+- **Second-Line Grey** (rgba(10,10,10,0.42)): the greyed second line of a serif headline.
+- **Hairline** (rgba(9,9,11,0.07)): dividers inside glass cards, chart gridlines.
+- **Graphite → Ash** (#3f3f46 → #a1a1aa): bar gradient; Ash alone is the market / baseline / without-costs series.
+- **Night** (#0a0a0a): optional dark band (e.g. the "how we measured it" section) with dark glass cards.
 
 ### Semantic
-- **Signal Green** (#16a34a, tint rgba(22,163,74,0.10)): positive delta, profit, BUY_YES.
-- **Signal Rose** (#e11d48, tint rgba(225,29,72,0.10)): negative delta, loss, drawdown, BUY_NO.
+- **Signal Green** (#16a34a, tint 10%): up, profit, BUY YES.
+- **Signal Rose** (#e11d48, tint 10%): down, loss, drawdown, BUY NO.
 
 ### Named Rules
-**The Two Hues Rule.** Green and rose are the only colours on the screen. They mean direction or action, never decoration, never a heading, never a background bigger than a pill.
-**The NO_TRADE Is A Result Rule.** NO_TRADE is shown in neutral grey at the same size as a trade, not hidden or faded. "Costs eat the edge" is a finding.
+**The Two Hues Rule.** Green and rose are the only hues in the interface. They mark direction or action, never decoration. The painting supplies all other colour, and it is held at half saturation.
+**The NO_TRADE Is A Result Rule.** NO TRADE uses the same chip size in neutral grey. Never hidden or faded.
 
 ## Typography
 
-**Display Font:** Poppins (Google Fonts, OFL), fallback system-ui
-**Body Font:** Plus Jakarta Sans (Google Fonts, OFL), fallback system-ui
-**Wordmark:** Playfair Display (Google Fonts, OFL), header wordmark only
+**Numbers & titles:** Poppins 500/600 (Google Fonts, OFL)
+**Text:** Plus Jakarta Sans 400/600 (Google Fonts, OFL)
+**Serif display:** Playfair Display 400 (Google Fonts, OFL); quiet serif: Cormorant Garamond 300 (Google Fonts, OFL)
 
-**Character:** a round geometric display face for numbers and titles against a friendly humanist sans for reading. The contrast is size and weight, not colour.
+**Character:** round geometric numbers against a warm humanist sans; a classical serif only where the page makes a statement.
 
 ### Hierarchy
-- **Display** (Poppins 600, 34px mobile / 40px desktop, line-height 1, tracking -0.025em, tabular): KPI values (Brier, return, trades, hit rate).
-- **Headline** (Poppins 600, 26–30px, tracking -0.025em): page masthead ("Is the time bias tradable?").
-- **Title** (Poppins 600, 19px, tracking -0.02em): panel titles ("Calibration by horizon", "Backtest").
-- **Body** (Plus Jakarta Sans 400, 14px, line-height 1.45, Slate Muted): panel subtitles, KPI labels, reason text. Max 70ch.
-- **Label** (Plus Jakarta Sans 600, 13px, tabular): deltas, pills, table numbers.
-- **Tick** (Plus Jakarta Sans 400, 11px, Tick Grey): chart axes.
+- **Serif display** (Playfair 400, 48–64px, lh 1.05, -0.02em): page headline, two lines, second line in Second-Line Grey ("Is the time bias tradable? / Only in politics, and only a month out.").
+- **Number** (Poppins 600, 34px mobile / 40px desktop, lh 1, -0.025em, tabular): KPI values.
+- **Headline** (Poppins 600, 26–30px): masthead on the dashboard.
+- **Title** (Poppins 600, 19px, -0.02em): glass card titles.
+- **Lead** (Jakarta 400, 17px, lh 1.6, Slate Muted): one-paragraph intro under a headline, max 60ch.
+- **Body** (Jakarta 400, 14px, lh 1.45): subtitles, labels, reasons.
+- **Label** (Jakarta 600, 13px, tabular): deltas, chips, numbers in tables.
+- **Tick** (Jakarta 400, 11px, Tick Grey rgba(9,9,11,0.42)): chart axes.
 
 ### Named Rules
-**The Tabular Rule.** Every number uses tabular figures and carries its unit (`72%`, `4.2¢`, `30d`, `+1.65×`).
+**The Tabular Rule.** Every number is tabular and carries its unit (`72%`, `4.2¢`, `30d`, `+1.65×`).
 
 ## Layout
 
-- Page: Zinc Page background, container max-width 1600px, side padding 16px (mobile) / 24px (sm+).
-- Header: 56px tall, full-bleed white bar with a bottom seam. Left: wordmark + `/` + section name in Slate Muted ("Horizon / Live"). Right: muted text links and one outline pill.
-- Masthead: headline + one muted line, 40px top padding, outline pill aligned right.
-- The Ledger grid: `grid gap-px bg-[seam]` with white cells. Row 1: 4 KPI cells. Row 2: 2 chart cells (1/2 + 1/2). Row 3: 3 cells (list / summary / list) at ~5/3/6 columns. Collapses to 1 column below 768px, 2 columns for KPIs.
-- Cell padding 20px (mobile) / 24px. Panel head: title, pill beside it, subtitle 6px below. Charts are 240px tall.
-- Tables inside cells: header row in Slate Muted 14px, rows 64px with seam dividers, numbers right-aligned.
+- Backdrop: three fixed layers: Backdrop Base, the painting (`object-cover`, `filter: grayscale(0.5) contrast(1.08) brightness(1.04)`, drifting slowly via a CSS transform animation), and the Scrim gradient.
+- Header: 56px glass bar, full-bleed at the top; after 12px of scroll it insets to a floating `rounded-2xl` pill (max-w-5xl, 12px from the edges) over 300ms. Left: wordmark "Horizon" + "/" + section in Slate Muted. Right: muted text links + a glass pill button.
+- Masthead: headline + one muted line, glass pill button aligned right; 40px above the cards.
+- Cards: separate glass cards with 16px gaps. Row 1: 4 KPI cards. Row 2: 2 chart cards. Row 3: 3 cards (~5/3/6 columns). Single column under 768px, KPIs 2-up.
+- Card padding 20px mobile / 24px. Charts 240px tall. Max content width 1600px, side padding 16/24px.
+- Landing-style sections (if any): 120px vertical rhythm, text column left (max 640px), product mock right.
 
 ## Elevation & Depth
 
-Flat. Depth comes from the seam grid and tonal contrast (white on zinc), never from card shadows. The only lifted surfaces are transient: tooltips and menus.
+Depth is glass: translucent white surfaces with a bright rim and a soft, low shadow, lifted off a moving backdrop. The backdrop is what makes the glass read; on a flat background the cards become plain white boxes, so never drop it.
 
-### Shadow Vocabulary
-- **Tooltip** (`box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 28px rgba(0,0,0,0.10)`; background rgba(255,255,255,0.72) with `backdrop-filter: blur(26px) saturate(200%)`; 1px border rgba(255,255,255,0.6)): chart tooltips.
-- **Menu** (`box-shadow: 0 8px 32px rgba(15,23,42,0.10)`): dropdowns, popovers.
+### Shadow & material vocabulary
+- **Glass card**: `background: linear-gradient(125deg, rgba(255,255,255,.60) 0%, rgba(255,255,255,.16) 35%, rgba(255,255,255,.04) 52%, rgba(255,255,255,.30) 100%), rgba(255,255,255,.32); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255,255,255,.70); box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(255,255,255,.25), inset 1px 0 0 rgba(255,255,255,.40), inset -1px 0 0 rgba(255,255,255,.40), 0 2px 10px rgba(15,23,42,.07), 0 8px 24px rgba(15,23,42,.05)`.
+- **Glass card hover** (clickable cards only): `translateY(-2px)` and shadow `0 4px 14px rgba(15,23,42,.09), 0 16px 40px rgba(15,23,42,.09)` over 260ms `cubic-bezier(0.34,1.4,0.64,1)`.
+- **Glass bar** (header, pill buttons): `rgba(255,255,255,.68)`, `blur(26px) saturate(200%)`, border `rgba(255,255,255,.54)`, `0 2px 16px rgba(0,0,0,.06)`. Condensed header adds `0 8px 32px rgba(15,23,42,.10)`.
+- **Tooltip**: `rgba(255,255,255,.72)`, `blur(26px) saturate(200%)`, border `rgba(255,255,255,.6)`, `inset 0 1px 0 rgba(255,255,255,.85), 0 8px 28px rgba(0,0,0,.10)`, radius 12.
+- **Product mock card** (landing-style): white, radius 16, `0 20px 60px rgba(15,23,42,.08)` inside a faint 8px outer frame.
 
 ### Named Rules
-**The Flat Sheet Rule.** Cells never get a shadow or their own radius. Hover is a wash (`rgba(9,9,11,0.035)` or `bg-white/40` on links), not a lift.
+**The Backdrop Rule.** Glass only exists over the backdrop. No glass on plain white, no glass inside glass.
 
 ## Shapes
 
-- Grid and cells: square (0px). Only the outer edge of the grid may take a radius if the page needs it; inner cells never do.
-- Pills: fully rounded (9999px) for buttons, trend pills, action chips, domain tags.
-- Bars: 2px top corners. Tooltips: 12px.
-- Icons: 12px inline SVG arrows, stroke 1.6–1.9, round caps (↑ ↓ ↗ ↘); no emoji or unicode arrows as icons.
+- Glass cards 22px; condensed header 16px; product mocks 16px; inputs/controls 11px; tooltips 12px; bars 2px top corners.
+- Pills (9999px) for every button, tab, chip and tag.
+- Icons: thin line icons (lucide-style, 1.6–1.9 stroke, round caps), 12–16px. No emoji, no unicode arrows as icons.
 
 ## Components
 
-- **KPI cell:** label (Body, Slate Muted) → value (Display) 12px below → delta row 12px below: arrow + `28.4%` in Label coloured up/down + muted suffix ("vs market"). If nothing to compare, a muted hint instead, never an empty delta.
-- **Panel head:** Title + optional trend pill on one line, subtitle in Body below.
-- **Trend pill:** rounded-full, 10% tint background, Label text in the same hue, 12px ↗ icon.
-- **Action pill (Horizon):** BUY YES (green tint), BUY NO (rose tint), NO TRADE (zinc page bg, muted text). Same size for all three.
-- **Decision row/card (live markets):** question (Body 14px, ink, 2 lines max) + domain pill + `30d to resolution` (muted). Right side: market price vs model q as two Display-small numbers (26px) with the q interval as a thin ash band on a 0–100 track and a dark tick for q; net edge in ¢ coloured by sign; action pill; ¼-Kelly size; reason in muted Body.
-- **Bar chart:** vertical bars with `linearGradient` #3f3f46 → #a1a1aa, radius [2,2,0,0], category gap 22%, x-axis ticks only, no y-axis, no gridlines.
-- **Line chart:** `type="stepAfter"` (or monotone for calibration curves), 2px, no dots, active dot r=3 with 2px white ring. Primary series Ledger Ink, secondary Ash. Horizontal gridlines in Seam only, y-axis hidden. Calibration chart: dashed seam diagonal for perfect calibration, market as Ash, model as Ink.
-- **Tooltip:** see Elevation; label in muted ink, value in ink.
-- **Buttons:** primary = dark pill (Ledger Ink, white text, 44px); secondary = outline pill (white, 1px seam-strength border `rgba(9,9,11,0.12)`, 40px). Text links: 14px semibold ink at 75%, arrow nudges 4px right on hover.
-- **Empty state:** centered muted Body in the chart area ("Not enough markets at this horizon to plot."). Never fake numbers.
+- **KPI card:** label (Body, Slate Muted) → Number 12px below → delta row 12px below: ↑ arrow + `28.4%` (Label, green/rose) + muted suffix "vs market". No comparison → muted hint, never an empty delta.
+- **Card head:** Title + trend pill on one line; subtitle (Body, Slate Muted) 6px below.
+- **Trend pill:** pill, 10% tint, Label in the same hue, 12px ↗ icon.
+- **Action chip:** BUY YES (green tint), BUY NO (rose tint), NO TRADE (5% ink tint, muted text). Same size.
+- **Decision card (live markets):** question (Body, ink, 2 lines max) + domain tag + "30d to resolution" (muted). Market price vs model q as two 26px Poppins numbers; q interval as an Ash band on a thin 0–100 track with an Ink tick for q; net edge in ¢ coloured by sign; action chip; ¼-Kelly size; reason (muted Body).
+- **Segmented tabs** (horizons 30d / 7d / 3d / 1d / 12h, domains): pill track `rgba(9,9,11,0.05)`, 3px inset, active item white pill with `0 1px 3px rgba(0,0,0,0.08)`, Label text; inactive Slate Muted.
+- **Buttons:** primary = Ink pill, white text, 32–40px (nav "Add to Chrome" style); hero CTA = 54px grey glass pill with inner highlight and soft drop shadow, white text + →; secondary = glass pill ("Manage billing" style).
+- **Charts:** bars with `linearGradient` #3f3f46 → #a1a1aa, radius [2,2,0,0], gap 22%, no y-axis, x ticks only. Lines 2px, `stepAfter` for equity and `monotone` for calibration, no dots, active dot r=3 with white ring; Ink = model / with costs, Ash = market / without costs; horizontal Hairline grid only. Calibration: dashed Hairline diagonal.
+- **Tables in cards:** header row Slate Muted 14px, 56–64px rows, Hairline dividers, numbers right-aligned tabular.
+- **Empty state:** centred muted Body in the chart area. Never fake numbers.
 
 ## Do's and Don'ts
 
 **Do**
-- Weld panels into one hairline grid.
-- Let the numbers be the biggest thing on screen.
-- Show the market (Ash) next to the model (Ink) everywhere a model number appears.
+- Keep the painting backdrop behind every glass surface; keep it muted.
+- Make the numbers the biggest thing in each card.
+- Put market (Ash) next to model (Ink) wherever a model number appears.
 - Keep every NO TRADE visible.
 
 **Don't**
-- No card shadows, floating cards, gaps between panels or nested cards.
-- No colours beyond green/rose; no gradients except the bar fill; no glass on panels.
-- No eyebrow/kicker labels above headings, no 01/02/03 section numbers.
-- No emoji, no unicode glyphs as icons.
-- No names, logos or imagery from earlier products: this is **Horizon**.
+- No glass on a flat background, no nested glass, no glass for decoration on the landing hero text.
+- No hues beyond green/rose; no gradient text; no neon or glow.
+- No eyebrow/kicker labels above headings, no 01/02/03 numbers on the data screen.
+- No names, logos, copy or imagery from earlier products: wordmark is **Horizon**, the painting is our own public-domain choice.
