@@ -42,7 +42,7 @@ Pipeline:
 4. **Live (Roles A + C):** currently open markets → q, edge, recommended action ("buy YES / buy NO / **no trade — costs eat the edge**"), Kelly size, and *when* the edge is expected to be largest.
 5. **Screen (Role B):** live decision cards + calibration chart by horizon + backtest equity curve with/without costs + an honest "where it fails" panel.
 
-Pitch line: *"A 70¢ contract a month out is really ~75¢ — that's published. We asked whether you can actually make money on it, and when."* Cite the paper; never claim we discovered the bias.
+Pitch line (**updated 14:10, confirmed by Role A model + Role C data check**): *"Published research says prediction-market prices are miscalibrated depending on how far they are from resolution. On 3,122 Polymarket markets we found the bias runs the classic favourite-longshot way — a month out, 90¢ favourites win only ~73% and 10¢ longshots ~18% — and that after costs it is only tradable in politics, not sports. We show where, when, and how much."* Cite the paper; never claim we discovered the bias.
 
 Honesty rules (quant judges will probe these): binary markets only; drop cancelled / MKT resolutions; split by **time**, never random; include costs; report where there is **no** edge as clearly as where there is.
 
@@ -54,7 +54,7 @@ Out-of-time test: train 2167 markets resolved before 2026-05-17, test 955 after.
 - **Calibration metrics: no lift.** Model chosen on validation (simple, no domains) — test Brier 0.1296 vs market 0.1282. It shrinks sports prices that are already right.
 - **Money: positive, but concentrated and volatile.** 639 trades, +1.65 starting-bankroll units with costs (additive, ¼ Kelly), 90% CI by event bootstrap [+0.43, +3.04]; still +0.59 without the top 5 events. Politics +1.68, sports −0.26. Hit rate 22% (longshot YES bets), max drawdown 0.99 units. Naive favourite −0.19.
 - **Not done on purpose:** restricting to politics after seeing the test set (in train, politics and sports slopes were equal — that would be test snooping).
-- Pitch line needs a team decision: cite the paper's finding, then *"on 3,122 Polymarket markets we found the bias runs the other way in politics, and only there is it tradable after costs."*
+- Role C independently found the same sign on the full sample (`integrations/calibration_check.py`, PR #1 comment: slope 0.73 at 30d → 0.82 at 12h). Pitch line updated above. Don't pitch blanket "fade favourites / buy longshots": out of time it loses money in sports.
 
 ## Stack (locked)
 - **Backend + model: Python 3, FastAPI, pandas, scikit-learn** in `backend/`. Run: `uvicorn app:app --reload` from `backend/`.
