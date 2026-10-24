@@ -11,6 +11,7 @@ import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
+import { apiJSON, gammaLastOk, gammaOk, hhmm } from './net';
 import { fetchMe, getWallet, heldOnEvent, type WalletPos, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
 import { intendedAction, verdictOf, verdictRank } from './policy';
 import { API } from './agent';
@@ -18,7 +19,7 @@ import { API } from './agent';
 /** "Why wait" numbers from the backtest (return per $1 by horizon, after costs); none if offline. */
 let whyCache: Promise<string | undefined> | undefined;
 function whyWait(): Promise<string | undefined> {
-  whyCache ??= fetch(`${API}/api/backtest`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).then((b) => {
+  whyCache ??= apiJSON<any>('/api/backtest').then(({ data: b }) => {
     const by = new Map<number, number>((b?.by_horizon ?? []).map((h: any) => [h.horizon_hours, h.with_costs?.mean_return_per_trade]));
     const late = [by.get(24), by.get(12)].filter((x): x is number => typeof x === 'number');
     if (!late.length) return undefined;
@@ -364,13 +365,13 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
 }
 
 /** The test result in one line under the card, from /api/backtest's headline (fallback: the shipped V3 numbers). */
-let trustCache: Promise<{ c: number; lo: number; hi: number; n: number } | undefined> | undefined;
+let trustCache: Promise<{ c: number; lo: number; hi: number; n: number; cachedAt?: number } | undefined> | undefined;
 function TrustLine() {
-  const [t, setT] = useState({ c: 0.172, lo: 0.118, hi: 0.235, n: 10579 });
+  const [t, setT] = useState<{ c: number; lo: number; hi: number; n: number; cachedAt?: number }>({ c: 0.172, lo: 0.118, hi: 0.235, n: 10579 });
   useEffect(() => {
-    trustCache ??= fetch(`${API}/api/backtest`, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).then((b) => {
+    trustCache ??= apiJSON<any>('/api/backtest').then(({ data: b, cachedAt }) => {
       const h = b?.headline;
-      return typeof h?.per_dollar === 'number' ? { c: h.per_dollar, lo: h.per_dollar_ci?.[0] ?? h.per_dollar, hi: h.per_dollar_ci?.[1] ?? h.per_dollar, n: b.n_test_markets ?? 10579 } : undefined;
+      return typeof h?.per_dollar === 'number' ? { c: h.per_dollar, lo: h.per_dollar_ci?.[0] ?? h.per_dollar, hi: h.per_dollar_ci?.[1] ?? h.per_dollar, n: b.n_test_markets ?? 10579, cachedAt } : undefined;
     }).catch(() => undefined);
     void trustCache.then((x) => { if (x) setT(x); });
   }, []);
@@ -379,6 +380,7 @@ function TrustLine() {
     <p className="mt-6 border-t border-[rgba(15,23,42,0.06)] pt-3 text-caption leading-relaxed text-[#94a3b8]">
       On {t.n.toLocaleString()} past markets it never saw, this rule made <b className="font-semibold text-[#475569]">{c(t.c)} per $1</b> after fees (likely {c(t.lo)} to {c(t.hi)}), mostly on sports. Most single bets lose; it adds up over many.{' '}
       <a href="https://web-production-c7376.up.railway.app" target="_blank" rel="noreferrer" className="text-[#64748b] underline decoration-[rgba(15,23,42,0.15)] underline-offset-2">How we know</a>
+      {t.cachedAt ? <span className="block">Offline copy · cached at {hhmm(t.cachedAt)}</span> : null}
     </p>
   );
 }
@@ -438,13 +440,28 @@ function Row({ title, d, onClick, active }: { title: string; d: Decision; onClic
 
 // ---------- Bet tab: this market, or tonight's best ----------
 
+/** Never a blank card: when Polymarket's prices can't be fetched, say so and when they last were. */
+function Unreachable({ onRetry }: { onRetry: () => void }) {
+  const [last, setLast] = useState<number>();
+  useEffect(() => { void gammaLastOk().then(setLast); }, []);
+  return (
+    <div className="px-4 pt-3">
+      <div className="hz-card rounded-panel p-4">
+        <p className="text-subhead font-semibold text-[#0f172a]">Polymarket isn't reachable right now.</p>
+        <p className="mt-1 text-footnote text-[#64748b]">{last ? `Last checked ${hhmm(last)}.` : 'Check your connection.'}</p>
+        <button type="button" onClick={onRetry} className="hz-chip mt-3 rounded-control px-4 py-2 text-body font-semibold">Try again</button>
+      </div>
+    </div>
+  );
+}
+
 export function MarketBet({ model, a, slug, tabId, onDetails }: { model: Model; a?: Account; slug: string; tabId?: number; onDetails: () => void }) {
   const [ev, setEv] = useState<{ title: string; legs: Leg[] } | 'loading' | 'error'>('loading');
   const [pick, setPick] = useState(0);
-  const load = useCallback(() => { setEv('loading'); setPick(0); decideEvent(model, slug).then(setEv).catch(() => setEv('error')); }, [model, slug]);
+  const load = useCallback(() => { setEv('loading'); setPick(0); decideEvent(model, slug).then((e) => { gammaOk(); setEv(e); }).catch(() => setEv('error')); }, [model, slug]);
   useEffect(() => { load(); }, [load]);
   if (ev === 'loading') return <div className="px-4 pt-3"><Thinking steps={[]} fallback="Reading this market" /><div className="hz-skeleton mt-4 h-[230px] rounded-panel" /></div>;
-  if (ev === 'error') return <div className="px-4 pt-6 text-body text-[#475569]">Could not read this market. <button type="button" onClick={load} className="font-semibold text-[#0f172a] underline underline-offset-[3px]">Try again</button></div>;
+  if (ev === 'error') return <Unreachable onRetry={load} />;
   const band = model.tradable;
   const legs = ev.legs.filter((l) => l.decision && l.marketSlug && l.decision.price >= band[0] && l.decision.price <= band[1])
     .sort((x, y) => verdictRank[verdictOf(y.decision!)] - verdictRank[verdictOf(x.decision!)] || y.decision!.netEdge - x.decision!.netEdge);
@@ -477,7 +494,7 @@ export function Tonight({ model, a, tabId, url, title, onDetails }: { model: Mod
   const [st, setSt] = useState<{ picks: MarketPick[] } | 'loading' | 'error'>('loading');
   const [pick, setPick] = useState(0);
   const [about, setAbout] = useState<{ q: string; rows: ScanRow[] }>();
-  const run = useCallback(() => { setSt('loading'); setPick(0); scanMarkets(model, 'all', 24, 20).then((r) => setSt({ picks: r.picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, 12) })).catch(() => setSt('error')); }, [model]);
+  const run = useCallback(() => { setSt('loading'); setPick(0); scanMarkets(model, 'all', 24, 20).then((r) => { gammaOk(); return r; }).then((r) => setSt({ picks: r.picks.filter((p) => verdictOf(p.decision) !== 'SKIP').slice(0, 12) })).catch(() => setSt('error')); }, [model]);
   useEffect(() => { run(); }, [run]);
   useEffect(() => {
     const s = url && /^https?:/.test(url) && !/polymarket\.com/.test(url) ? subjectOf(title, url) : undefined;
@@ -485,7 +502,7 @@ export function Tonight({ model, a, tabId, url, title, onDetails }: { model: Mod
     if (s) searchMarkets(model, s.query, 5).then((rows) => setAbout({ q: s.query, rows })).catch(() => {});
   }, [model, url, title]);
   if (st === 'loading') return <div className="px-4 pt-3" aria-busy><Thinking steps={[]} fallback="Looking at tonight's markets" /><div className="hz-skeleton mt-4 h-[230px] rounded-panel" /></div>;
-  if (st === 'error') return <div className="px-4 pt-6 text-body text-[#475569]">Could not reach Polymarket. <button type="button" onClick={run} className="font-semibold text-[#0f172a] underline underline-offset-[3px]">Try again</button></div>;
+  if (st === 'error') return <Unreachable onRetry={run} />;
   const best = st.picks[Math.min(pick, Math.max(0, st.picks.length - 1))];
   const open = (u: string) => { if (tabId !== undefined) void chrome.tabs.update(tabId, { url: u }); else void chrome.tabs.create({ url: u }); };
   return (
