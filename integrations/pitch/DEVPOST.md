@@ -29,13 +29,14 @@ after it. All markets of one event stay on the same side of the split.
 - Prices get overconfident as resolution nears: a month out the test set is about fair; from a week out, favourites
   win less than priced and 10–35¢ contracts win more (a day out, 15¢ contracts win 20%).
 - The model beats the market price: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940.
-- Backtest after a 1¢ cost: 7,106 trades, +304% of the starting bankroll (¼ Kelly, summed, no compounding), 90% CI
-  [+184%, +440%] from an event-level bootstrap. Max drawdown 42%. Hit rate 24%.
-- The edge grows as resolution nears: mean return per trade +4.6% a month out, +14.3% a day out. Only sports is solid
-  on its own (+185%, CI +111% to +263%); every other market type's interval includes zero.
-- With Polymarket's taker fees (each market's exact schedule): 6,102 trades, +205% of bankroll, CI [+109%, +306%],
-  +12.7% per dollar staked. [Replace the line above with this one if A reruns the model with fees.]
-- Baseline "always back the favourite" on the same markets: −741%.
+- Backtest after the spread **and Polymarket's own taker fees** (each market's fee schedule), never more than one
+  bankroll staked at once: 6,013 trades, **+190% of the starting bankroll** (¼ Kelly, summed, no compounding), 90% CI
+  [+94%, +285%] from an event-level bootstrap. +11.9% per dollar staked. Max drawdown 31%. Hit rate 21%.
+- **When:** after costs, a trade a month out loses 19%; a week out +2.3%; a day out +12.6%; 12 hours out +14.8%.
+  The edge is a last-week effect.
+- **Where:** only sports is solid on its own (+132%, CI +77% to +192%); every other market type's interval includes
+  zero, and crypto loses (−4%).
+- Baseline "always back the favourite" on the same markets: −908%.
 
 ## How we built it
 - **Data:** Python against Polymarket's Gamma and CLOB APIs. Each horizon is measured from the *scheduled* end date
@@ -43,7 +44,7 @@ after it. All markets of one event stay on the same side of the split.
   market was still open then. Cancelled and 50-50 resolutions are dropped.
 - **Model:** logistic regression with four coefficients: logit(price), log(horizon) and their interaction. A version with
   domain terms overfit on validation and lost. Uncertainty intervals come from bootstrapping whole events.
-- **Decision:** edge = model − price; trade only if the edge clears max(spread / 2, 1¢) and the model's bootstrap
+- **Decision:** edge = model − price; trade only if the edge clears max(spread / 2, 1¢) + Polymarket's taker fee (rate × p(1−p), per market) and the model's bootstrap
   interval; stake = ¼ Kelly capped at 5%.
 - **Forward test:** `integrations/forward_test.py` freezes the model's calls on open markets ending within 48 h and
   pushes them to GitHub every 2 h; after resolution it scores only markets whose *scheduled* end has passed (no
@@ -82,5 +83,5 @@ Brought in: the published finding (arXiv 2602.19520), public Polymarket APIs, op
 design preset. Built at OxHack: the data pipeline, the dataset, the model, the backtest, the API and the app.
 
 ## Gallery images
-- `integrations/pitch/when_to_trade.png`: mean return per trade after costs by entry horizon (≈4–5% a week or a month out → ≈14–15% 12–24 hours out).
+- `integrations/pitch/when_to_trade.png`: mean return per trade after costs by entry horizon (−19% a month out → +14.8% 12 hours out, after fees).
   Regenerate with `python integrations/pitch/make_charts.py` whenever backend/results change.

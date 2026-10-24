@@ -55,18 +55,21 @@ On the held-out markets:
 - Prices get overconfident as resolution nears: about fair a month out, clearly too extreme from a week out.
 - A four-coefficient calibration model (logistic regression on logit(price), log(horizon) and their product) beats the market
   price itself: **Brier 0.1297 vs 0.1305**. That's a small gain, but the market price is a hard baseline.
-- Trading only where the edge clears a 1¢ cost and the model's bootstrap interval, at a quarter-Kelly stake:
-  **7,106 trades, +304% of the starting bankroll**, 90% CI [+184%, +440%]. Max drawdown 42%. Hit rate 24%: lots of small
-  losses, a few large wins.
-- "Always back the favourite" on the same markets: **−741%**.
+- Trading only where the edge clears the spread, Polymarket's own taker fee and the model's bootstrap interval, at a
+  quarter-Kelly stake, never more than one bankroll at risk: **6,013 trades, +190% of the starting bankroll**, 90% CI
+  [+94%, +285%], +11.9% per dollar staked. Max drawdown 31%. Hit rate 21%: lots of small losses, a few large wins.
+- "Always back the favourite" on the same markets: **−908%**.
+
+Our first version had no fees and showed +304%. A teammate's agent audited the model, found that 93% of our test
+markets charge takers a fee, and the number dropped to +190%. The edge survived; the headline got honest.
 
 And the part that fits the theme:
 
 ![Mean return per trade after costs by time to resolution](integrations/pitch/when_to_trade.png)
 <!-- replace with the raw GitHub URL -->
 
-The return per trade roughly triples between a month out and a day out. By market type, only sports is solid on its
-own; everything else has an interval that includes zero.
+After fees, a trade a month out loses 19%; a day out it makes 12.6%. By market type, only sports is solid on its own;
+everything else has an interval that includes zero.
 
 ## A test we can't overfit
 
@@ -80,7 +83,7 @@ is that the calls are real and made before the answer existed.
 
 Every page needs an honest "where it fails" section, so ours is on the screen too: no Brier lift 30 days out, none in crypto or
 culture at any horizon, and too few test markets in "other" to say anything. Historical spreads aren't available
-from the API, so a 1¢ cost floor stands in for real costs. That's the first thing we'd fix.
+from the API, so a 1¢ floor stands in for the historical spread (fees are real, from each market's schedule). That's the first thing we'd fix.
 
 ## How we worked
 
