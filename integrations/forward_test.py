@@ -92,35 +92,38 @@ def score(a):
         y = resolution(mid)
         if y is not None:
             scored.append(dict(r, taken_at=taken, outcome=y))
-    df = pd.DataFrame(scored)
-    if df.empty:
-        print(f"{len(first)} markets in {len(snaps)} snapshots, {len(due)} past their end date, none resolved yet")
-        return
+    df = pd.DataFrame(scored, columns=["action", "price_yes", "q_yes", "cost", "kelly_fraction", "outcome", "taken_at",
+                                       "question", "domain", "hours_to_resolution", "url"])
     band = df[M.in_band(df["price_yes"])]
     y = band["outcome"].to_numpy()
     tr = df[df["action"] != "NO_TRADE"].copy()
     tr["ret"] = M.payoff(tr["action"].to_numpy(), tr["price_yes"].to_numpy(), tr["cost"].to_numpy(), tr["outcome"].to_numpy())
     tr["pnl"] = tr["ret"] * tr["kelly_fraction"]
+    first_snap = snaps[0].relative_to(ROOT).as_posix()
+    commit = subprocess.run(["git", "log", "--diff-filter=A", "--format=%H", "--", first_snap], cwd=ROOT,
+                            capture_output=True, text=True).stdout.split()
     out = dict(
-        scored_at=now.isoformat(timespec="seconds"), snapshots=[p.name for p in snaps],
-        n_markets_frozen=len(first), n_due=len(due), n_resolved=len(df), n_in_band=len(band),
+        # Field names agreed with B (inbox 16:45) for the site's sealed-predictions section.
+        frozen_at=json.loads(snaps[0].read_text())["taken_at"],
+        commit_url=f"https://github.com/glebbabichevv/oxhack26/commit/{commit[-1]}" if commit else None,
+        n_markets=len(first), n_trades=sum(r["action"] != "NO_TRADE" for _, r in first.values()),
+        n_resolved=len(df), n_trades_resolved=len(tr), n_won=int((tr["ret"] > 0).sum()),
+        pnl=round(float(tr["pnl"].sum()), 4), updated_at=now.isoformat(timespec="seconds"),
+        n_due=len(due), snapshots=[p.name for p in snaps],
         brier_market=round(M.brier(band["price_yes"], y), 4) if len(band) else None,
         brier_model=round(M.brier(band["q_yes"], y), 4) if len(band) else None,
-        trades=dict(n=len(tr), hit_rate=round(float((tr["ret"] > 0).mean()), 3) if len(tr) else None,
-                    pnl_bankrolls=round(float(tr["pnl"].sum()), 4),
-                    mean_return_per_trade=round(float(tr["ret"].mean()), 4) if len(tr) else None),
+        mean_return_per_trade=round(float(tr["ret"].mean()), 4) if len(tr) else None,
         calls=tr.sort_values("taken_at")[["question", "domain", "taken_at", "hours_to_resolution", "price_yes", "q_yes",
                                          "action", "kelly_fraction", "outcome", "ret", "pnl", "url"]].round(4).to_dict("records"),
     )
     (OUT / "score.json").write_text(json.dumps(out, indent=1, default=str))
-    t = out["trades"]
-    print(f"{len(first)} frozen, {len(due)} due, {len(df)} resolved ({len(band)} in 3-97c band)")
+    print(f"{out['n_markets']} frozen ({out['n_trades']} trades), {len(due)} due, {len(df)} resolved ({len(band)} in 3-97c band)")
     print(f"Brier market {out['brier_market']}  model {out['brier_model']}")
-    print(f"trades {t['n']}  hit {t['hit_rate']}  P&L {t['pnl_bankrolls']:+.4f} bankrolls  mean/trade {t['mean_return_per_trade']}")
+    print(f"trades resolved {out['n_trades_resolved']}  won {out['n_won']}  P&L {out['pnl']:+.4f} bankrolls  "
+          f"mean/trade {out['mean_return_per_trade']}")
     for c in out["calls"]:
         print(f"  {c['action']:8s} p={c['price_yes']:.3f} q={c['q_yes']:.3f} -> {'YES' if c['outcome'] else 'NO '}  "
               f"{c['ret']:+.2f}  {c['question'][:70]}")
-
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
