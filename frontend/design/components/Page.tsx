@@ -7,7 +7,7 @@ export function Nav({ links, action }: { links: { label: string; href: string }[
     <nav className="sticky top-4 z-40 mx-auto mt-4 flex w-[calc(100%-32px)] h-[52px] max-w-[1120px] items-center justify-between rounded-full border border-black/[0.04] bg-[rgba(250,250,250,0.9)] pl-4 pr-2 shadow-nav">
       <span className="text-[17px] font-medium text-ink-strong">Horizon<span className="text-ink-faint">.</span></span>
       <div className="flex gap-3.5 pr-2 text-[13px] text-ink-muted sm:gap-7 sm:text-[14px] md:pr-0">
-        {links.map((l) => <a key={l.href} href={l.href} className="rounded-full transition-colors hover:text-ink-strong">{l.label}</a>)}
+        {links.map((l) => <a key={l.href} href={l.href} className="-my-2 rounded-full py-3 transition-colors hover:text-ink-strong">{l.label}</a>)}
       </div>
       {action ? <span className="hidden md:inline-flex">{action}</span> : null}
     </nav>

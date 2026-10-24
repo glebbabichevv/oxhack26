@@ -74,7 +74,7 @@ export default function Home() {
           first="Polymarket prices are overconfident."
           second="Correcting them pays, most near resolution."
           lead={backtest
-            ? `${int(backtest.n_train_markets + backtest.n_test_markets)} resolved markets. Trained on events that ended before ${dateLong(backtest.cutoff)}, tested on the ${int(backtest.n_test_markets)} that ended after.`
+            ? `Trained on ${int(backtest.n_train_markets)} resolved Polymarket markets that ended before ${dateLong(backtest.cutoff)}; tested out of time on the ${int(backtest.n_test_markets)} that ended after.`
             : undefined}
         />
         {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
@@ -86,7 +86,9 @@ export default function Home() {
               : bin15
                 ? `${horizonPhrase(Number(horizon))}, too few 15¢ ${domainWord}contracts to say`
                 : "How often prices come true"}
-            lead="Longshots resolve YES more often than their price says, favourites less. The model learns how far to shrink each price toward the middle, separately for each horizon. Pick how far from resolution, and which kind of market."
+            lead={`${bin15 && bin15.n >= MIN_BIN
+              ? `Here, contracts priced near 15¢ resolve YES ${bin15.observed > 0.15 ? "more" : "less"} often than their price says. `
+              : ""}The model learns how far to move each price, separately for each horizon; the dots show what actually happened. Pick how far from resolution, and which kind of market.`}
             controls={
               <div className="flex flex-col items-start gap-4">
                 <Segmented label="Time to resolution" options={HORIZONS.map((h) => ({ value: String(h), label: horizonShort(h) }))} value={horizon} onChange={setHorizon} />
