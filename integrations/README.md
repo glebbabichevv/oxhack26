@@ -33,9 +33,9 @@ python integrations/crypto_implied.py fetch      # Binance hourly candles -> dat
 python integrations/crypto_implied.py evaluate   # -> integrations/crypto/results.json
 ```
 
-Out of time (events ending ≥ 2026-05-18; 2,011 rows, 1,110 markets): market Brier 0.1401, exchange 0.1472, blend 0.1410.
-Trading the exchange signal with the 1¢ half-spread + 0.07·p(1−p) crypto fee loses −16%/$ (90% event-bootstrap CI
-[−29%, −3%]); the blend is +3.5% [−12%, +21%], i.e. nothing. Even a spot taken up to an hour *after* the price time only
+Out of time (backend `split_by_time`, cutoff 2026-05-18; 2,007 rows, 1,106 markets): market Brier 0.1399, exchange
+0.1471, blend 0.1408. Trading the exchange signal with the 1¢ half-spread + each market's own taker fee (all test rows:
+crypto 0.07·p(1−p)) loses −16.5%/$ (90% event-bootstrap CI [−29%, −4%]); the blend is +3.3% [−13%, +20%], i.e. nothing. Even a spot taken up to an hour *after* the price time only
 ties the market (0.1412). Polymarket's crypto ladders are already priced like options: no edge from spot + volatility.
 
 ## Earlier pipeline (superseded)
