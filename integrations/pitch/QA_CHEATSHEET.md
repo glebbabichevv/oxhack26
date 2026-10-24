@@ -101,8 +101,8 @@ liquidity data. Say short trades tie up capital ~30× less time.
 - A month out: no Brier lift (0.1050 vs 0.1051), and trading loses 19% a trade after fees.
 - Crypto loses money (−4%, 865 trades); crypto and culture show no lift at any horizon; politics none at 3–7 days.
   27 cells in total on the screen.
-- We also priced 1,110 crypto threshold markets as options from Binance spot and volatility: the market already does
-  it (Brier 0.1401 market vs 0.1472 exchange formula). Null result, PR #10.
+- We also priced 1,106 crypto threshold markets as options from Binance spot and volatility: the market already does
+  it (Brier 0.1399 market vs 0.1471 exchange formula; trading the formula loses 16.5% per $ after fees). Null result, PR #10.
 - Only sports is solid by domain.
 - Under 10¢ a day out, contracts resolve YES ~3%. Very cheap longshots are *not* underpriced; the effect is ~10–35¢.
 
