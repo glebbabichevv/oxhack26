@@ -18,6 +18,8 @@ SESSION.headers["User-Agent"] = "horizon-oxhack26/1.0"
 # First matching group wins, so order is priority: a Fed market tagged both
 # "politics" and "economy" is economics; an election market tagged "world" is politics.
 DOMAIN_TAGS = [
+    # Tweet-count / "will X say Y" markets carry a "politics" tag too but are culture bets.
+    ("culture", {"tweets-markets", "elon-tweets", "mentions"}),
     ("sports", {"sports", "nba", "nfl", "nhl", "mlb", "soccer", "football", "basketball", "tennis",
                 "golf", "ufc", "mma", "boxing", "f1", "formula-1", "cricket", "esports", "epl",
                 "champions-league", "ncaa", "cbb", "cfb", "baseball", "hockey", "chess", "games"}),
