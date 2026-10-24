@@ -6,13 +6,14 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 
 ## Now (13:15 → 16:30 gate)
 ### Role A — model + backend (Gleb)
-- [ ] FastAPI skeleton in `backend/` serving the 3 contract endpoints with the example JSON (so B is unblocked in 15 min)
-- [ ] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
+- [x] [Gleb] FastAPI skeleton in `backend/` serving the 3 contract endpoints with the example JSON (so B is unblocked in 15 min) — PR `gleb/api-skeleton`
+- [ ] [Gleb] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
 - [ ] Decision rule + backtest with/without costs; replace example JSON with real numbers
 - [ ] `/api/live` from `data/live.csv`
 
 ### Role B — frontend
-- [ ] Paste Argos preset into `DESIGN.md`; `/impeccable init` for `PRODUCT.md`
+- [x] [Gleb] Design preset in `DESIGN.md` + tokens/Tailwind preset/starter components in `frontend/design/` — PR `gleb/design-preset`
+- [ ] `/impeccable init` for `PRODUCT.md`
 - [ ] Next.js app in `frontend/` built against the contract's example JSON: live decision cards, calibration chart, backtest equity curve, "where it fails" panel
 - [ ] Deploy to Vercel early (public URL by 16:30)
 
