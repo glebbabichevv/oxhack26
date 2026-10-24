@@ -4,8 +4,8 @@ Paste section by section into Devpost. Placeholders: `[video]`, `[Delta thread l
 Numbers from `backend/results/*.json` (A's 14:46 rerun) — re-check before submitting.
 
 ## "Try it out" links (Devpost field)
-- Demo: https://horizon-two-gilt.vercel.app
-- API: https://horizon-api-iota.vercel.app/api/backtest
+- Demo: https://web-production-c7376.up.railway.app
+- API: https://oxhack26-production.up.railway.app/api/backtest
 - Code: https://github.com/glebbabichevv/oxhack26 *(private now: A to make it public before submitting, after a secrets check)*
 - Video: [video]
 

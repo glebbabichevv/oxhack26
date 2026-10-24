@@ -1,7 +1,7 @@
 # Judge Q&A cheat sheet — HRT (Role C)
 
 Short answers first, detail only if they push. Every number is from `backend/results/*.json` (model 2026-10-24-390c312,
-fees on, 18:15 Sat) and matches https://horizon-two-gilt.vercel.app at 18:25.
+fees on, 18:15 Sat) and matches https://web-production-c7376.up.railway.app at 18:25.
 Golden rule: if you don't know, say "we didn't measure that", then say what we would do. Never guess a number.
 
 ## The numbers to know cold

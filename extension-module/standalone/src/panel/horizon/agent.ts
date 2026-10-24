@@ -12,7 +12,7 @@ import {
 import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
 
-export const API = 'https://horizon-api-iota.vercel.app';
+export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
 
 /** kind = which thinking-orb animation the panel shows while this step runs. */

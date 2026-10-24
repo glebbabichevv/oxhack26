@@ -8,8 +8,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { decideEvent, type Decision, type Leg, type Model } from './horizon';
 import fallbackModel from './model.fallback.json';
 
-const MODEL_URL = 'https://horizon-api-iota.vercel.app/api/model';
-const SITE_URL = 'https://horizon-two-gilt.vercel.app';
+const MODEL_URL = 'https://oxhack26-production.up.railway.app/api/model';
+const SITE_URL = 'https://web-production-c7376.up.railway.app';
 const UP = '#15803d';
 const DOWN = '#e11d48';
 

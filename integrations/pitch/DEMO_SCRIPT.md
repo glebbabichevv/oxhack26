@@ -1,6 +1,6 @@
 # Demo script — 90 seconds (Role C, TheMarkz3)
 
-Walked against https://horizon-two-gilt.vercel.app (18:25 Sat, model 2026-10-24-390c312, fees on) and `backend/results/*.json`.
+Walked against https://web-production-c7376.up.railway.app (18:25 Sat, model 2026-10-24-390c312, fees on) and `backend/results/*.json`.
 Old *-jet-mu URLs are frozen: never show them. Rule: say only numbers that are on the screen. If results change, update this file.
 Live cards change hourly. Pick the hero card on the morning of the demo (see "Hero card" below).
 Length: ~215 spoken words ≈ 90 s at 145 wpm; ~190 (≈ 80 s) without the (cut first) line. Rehearse with a timer.

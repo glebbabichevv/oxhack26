@@ -16,8 +16,8 @@ import { stylePage } from './pageStyle';
 import { Md } from './argos/Message';
 import './horizon-mode.css';
 
-const API = 'https://horizon-api-iota.vercel.app';
-const SITE_URL = 'https://horizon-two-gilt.vercel.app';
+const API = 'https://oxhack26-production.up.railway.app';
+const SITE_URL = 'https://web-production-c7376.up.railway.app';
 const UP = '#15803d';
 const DOWN = '#e11d48';
 const MARKET = '#a1a1aa';
