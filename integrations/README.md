@@ -21,7 +21,7 @@ python integrations/check_data.py                                              #
 - Dropped: non yes/no markets, 50-50 / cancelled / unresolved outcomes, markets under $50k volume.
 - Historical spreads are not available from the API (`spread` is empty in `horizons.csv`); use live spreads (median ≈ 1¢) as the cost assumption.
 - `event_slug` groups legs of the same event (e.g. every Oscars nominee) — their outcomes are correlated, so keep an event's legs on one side of the train/test split.
-- Domains come from Polymarket tags via a priority map in `common.py` (sports > crypto > economics > politics > geopolitics > science_tech > culture > other).
+- Domains come from Polymarket tags via a priority map in `common.py` (tweet/post-count + mention markets → culture first, then sports > crypto > economics > politics > geopolitics > science_tech > culture > other).
 
 ## Earlier pipeline (superseded)
 `polymarket.py`, `sanity.py`, `calibration_check.py` (TheMarkz3) built the first 3.1k-market sample. The team dataset is now the one above (Ayaz, 34.7k markets).
