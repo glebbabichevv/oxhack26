@@ -13,7 +13,11 @@ export type Model = {
   kelly_cap: number;
   domain_tags: [string, string[]][];
   by_horizon: { horizon_hours: number; mean_return_per_trade: number }[];
+  fee_rates?: Record<string, number>; // taker fee rate by domain, used when a market has no feeSchedule
+  version?: string;
 };
+/** Polymarket taker fee per share = rate * (p(1-p))^exponent (docs.polymarket.com/trading/fees). */
+export type Fee = { rate: number; exponent: number };
 type Fit = { intercept: number; coef: number[] };
 
 export type Action = "BUY_YES" | "BUY_NO" | "NO_TRADE";
@@ -41,6 +45,15 @@ function percentile(values: number[], pct: number) {
   return f === c ? s[f] : s[f] + (s[c] - s[f]) * (k - f);
 }
 
+const domainFeeRate = (m: Model, domain: string) => m.fee_rates?.[domain] ?? m.fee_rates?.other ?? 0;
+
+/** A Gamma market's taker fee: its own feeSchedule, else the model's domain rate; zero when fees are off. */
+export function feeOf(m: Model, mk: Record<string, any>, domain: string): Fee {
+  if (!mk.feesEnabled) return { rate: 0, exponent: 1 };
+  const s = mk.feeSchedule ?? {};
+  return { rate: typeof s.rate === "number" ? s.rate : domainFeeRate(m, domain), exponent: Number(s.exponent) || 1 };
+}
+
 export function domainOf(m: Model, tagSlugs: string[]) {
   const slugs = new Set(tagSlugs);
   for (const [domain, keys] of m.domain_tags) if (keys.some((k) => slugs.has(k))) return domain;
@@ -52,9 +65,12 @@ function horizonLabel(h: number) {
   return h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`;
 }
 
-/** price = order-book mid, spread = ask - bid (NaN if unknown), hours = to the scheduled end. */
-export function decide(m: Model, price: number, hours: number, domain: string, spread: number): Decision {
-  const cost = Number.isFinite(spread) ? Math.max(spread / 2, m.min_half_spread) : m.min_half_spread;
+/** price = order-book mid, spread = ask - bid (NaN if unknown), hours = to the scheduled end.
+ *  fee = feeOf(m, market, domain); omitted = the domain's rate (as if fees are on). */
+export function decide(m: Model, price: number, hours: number, domain: string, spread: number,
+  fee: Fee = { rate: domainFeeRate(m, domain), exponent: 1 }): Decision {
+  const feePerShare = fee.rate * Math.pow(price * (1 - price), fee.exponent);
+  const cost = (Number.isFinite(spread) ? Math.max(spread / 2, m.min_half_spread) : m.min_half_spread) + feePerShare;
   const inBand = price >= m.tradable[0] && price <= m.tradable[1];
   if (!inBand) {
     return { price, hours, domain, cost, q: price, lo: price, hi: price, action: "NO_TRADE", kelly: 0, netEdge: 0,
@@ -107,7 +123,8 @@ export async function decideEvent(m: Model, slug: string, now = new Date()): Pro
     const hours = (end.getTime() - now.getTime()) / 3.6e6;
     if (!(hours > 0)) return { question, label, skip: "past its end date" };
     const tags = [...(mk.tags ?? []).map((t: { slug: string }) => t.slug), ...eventTags];
-    return { question, label, marketSlug: mk.slug as string, bid, ask, decision: decide(m, (bid + ask) / 2, hours, domainOf(m, tags), ask - bid) };
+    const domain = domainOf(m, tags);
+    return { question, label, marketSlug: mk.slug as string, bid, ask, decision: decide(m, (bid + ask) / 2, hours, domain, ask - bid, feeOf(m, mk, domain)) };
   });
   return { title: event.title, legs, tags: eventTags, endDate: event.endDate };
 }
@@ -149,8 +166,9 @@ export async function scanTag(m: Model, tag: string, withinHours = 24, top = 5, 
     if (!(hours > 0 && hours <= withinHours) || price < m.tradable[0] || price > m.tradable[1]) continue;
     const tags = (mk.tags ?? []).map((x: { slug: string }) => x.slug);
     const slug = mk.events?.[0]?.slug ?? mk.slug;
+    const domain = domainOf(m, tags);
     rows.push({ question: mk.question, slug, url: `https://polymarket.com/event/${slug}`,
-      decision: decide(m, price, hours, domainOf(m, tags), ask - bid) });
+      decision: decide(m, price, hours, domain, ask - bid, feeOf(m, mk, domain)) });
   }
   rows.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
   const trades = rows.filter((r) => r.decision.action !== "NO_TRADE");
@@ -205,7 +223,7 @@ export async function searchMarkets(m: Model, query: string, top = 6, now = new 
       if (!(hours > 0) || price < m.tradable[0] || price > m.tradable[1]) continue;
       const domain = tags.length ? domainOf(m, tags) : (/bitcoin|ethereum|solana|xrp|crypto/i.test(ev.title) ? "crypto" : "other");
       rows.push({ question: mk.question, slug: ev.slug, url: `https://polymarket.com/event/${ev.slug}`,
-        decision: decide(m, price, hours, domain, ask - bid), volume: Number(mk.volume24hr ?? mk.volumeNum ?? 0) });
+        decision: decide(m, price, hours, domain, ask - bid, feeOf(m, mk, domain)), volume: Number(mk.volume24hr ?? mk.volumeNum ?? 0) });
     }
   }
   rows.sort((a, b) => b.decision.netEdge - a.decision.netEdge || b.volume - a.volume);

@@ -28,6 +28,20 @@ Enter now or wait? Backward induction (optimal stopping) on empirical TRAIN pric
 model and fees as the backtest. Rule chosen on validation, confirmed once on test (`integrations/entry/results.json`):
 **don't enter earlier than 24 h before the scheduled end** → test +4.16 bankrolls vs +1.90 for "enter at the first edge"
 (capped at 1 bankroll), gain +2.26, 90% CI [1.35, 3.19] by event bootstrap. `live` writes `integrations/entry/live.json`.
+## Crypto: exchange-implied probability (null result)
+`crypto_implied.py` prices Polymarket's crypto threshold markets as options on the coin: "above K on date" = digital call
+N(d2), "between" = digital spread, "reach / dip to K" = one-touch by the reflection principle, with spot and realised
+volatility from Binance hourly candles before the price time (sigma × √time-to-expiry).
+
+```bash
+python integrations/crypto_implied.py fetch      # Binance hourly candles -> data/raw/ (gitignored)
+python integrations/crypto_implied.py evaluate   # -> integrations/crypto/results.json
+```
+
+Out of time (events ending ≥ 2026-05-18; 2,011 rows, 1,110 markets): market Brier 0.1401, exchange 0.1472, blend 0.1410.
+Trading the exchange signal with the 1¢ half-spread + 0.07·p(1−p) crypto fee loses −16%/$ (90% event-bootstrap CI
+[−29%, −3%]); the blend is +3.5% [−12%, +21%], i.e. nothing. Even a spot taken up to an hour *after* the price time only
+ties the market (0.1412). Polymarket's crypto ladders are already priced like options: no edge from spot + volatility.
 
 ## Earlier pipeline (superseded)
 `polymarket.py`, `sanity.py`, `calibration_check.py` (TheMarkz3) built the first 3.1k-market sample. The team dataset is now the one above (Ayaz, 34.7k markets).

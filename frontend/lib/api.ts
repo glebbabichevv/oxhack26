@@ -70,6 +70,7 @@ export type Backtest = {
   model_version?: string;
   peak_open_stake?: number;
   return_per_dollar_staked?: number;
+  return_per_dollar_ci?: [number, number];
   capped_exposure?: Run & { return_ci?: [number, number]; cap: number; return_per_dollar_staked?: number };
   by_domain?: { domain: string; n_trades: number; return: number; hit_rate: number; return_ci?: [number, number] }[];
 };

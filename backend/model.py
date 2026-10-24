@@ -311,21 +311,42 @@ def exposure(trades, stake):
     """Open stake over time (entry = scheduled end - horizon, exit = resolution), in starting bankrolls:
     the peak, and a capped variant where a new trade only gets what is left of 1 bankroll."""
     entry = (pd.to_datetime(trades["end_date"], utc=True, format="ISO8601")
-             - pd.to_timedelta(trades["horizon_hours"], unit="h")).to_numpy()
-    exit_ = trades["resolved_at"].to_numpy()
+             - pd.to_timedelta(trades["horizon_hours"], unit="h")).dt.tz_convert(None).to_numpy("datetime64[ns]")
+    exit_ = pd.to_datetime(trades["resolved_at"], utc=True).dt.tz_convert(None).to_numpy("datetime64[ns]")
     stake = np.asarray(stake, float)
     times = np.concatenate([entry, exit_])
     delta = np.concatenate([stake, -stake])
     order = np.lexsort((delta, times))  # at equal times, exits (negative) before entries
     peak = float(np.max(np.cumsum(delta[order]))) if len(delta) else 0.0
+    # Trades entering at the same moment share what is left of the cap pro rata to their Kelly stakes,
+    # so the result does not depend on the input order.
     capped, open_ = np.zeros(len(stake)), []  # open_: (exit, stake)
-    for i in np.argsort(entry, kind="stable"):
-        open_ = [(e, s) for e, s in open_ if e > entry[i]]
-        room = 1.0 - sum(s for _, s in open_)
-        capped[i] = max(0.0, min(stake[i], room))
-        if capped[i] > 0:
-            open_.append((exit_[i], capped[i]))
+    order = np.argsort(entry, kind="stable")
+    groups = np.split(order, np.flatnonzero(np.diff(entry[order]) != np.timedelta64(0)) + 1) if len(order) else []
+    for g in groups:
+        t0 = entry[g[0]]
+        open_ = [(e, s) for e, s in open_ if e > t0]
+        room = max(0.0, 1.0 - sum(s for _, s in open_))
+        want = float(stake[g].sum())
+        scale = 1.0 if want <= room else (room / want if want > 0 else 0.0)
+        for i in g:
+            capped[i] = stake[i] * scale
+            if capped[i] > 0:
+                open_.append((exit_[i], capped[i]))
     return peak, capped
+
+
+def per_dollar_ci(trades, stake, rng, n=1000, level=90):
+    """CI on return per $1 staked (sum of P&L / sum of stakes), resampling whole events."""
+    if not len(trades):
+        return None
+    key = trades[event_key(trades)]
+    g = pd.DataFrame({"pnl": stake * trades["ret"].to_numpy(), "stake": stake}).groupby(key.to_numpy()).sum()
+    pnl, st = g["pnl"].to_numpy(), g["stake"].to_numpy()
+    idx = rng.integers(0, len(pnl), (n, len(pnl)))
+    ratios = pnl[idx].sum(1) / st[idx].sum(1)
+    tail = (100 - level) / 2
+    return [round(float(np.percentile(ratios, tail)), 4), round(float(np.percentile(ratios, 100 - tail)), 4)]
 
 
 def capped_report(trades, rng):
@@ -334,10 +355,13 @@ def capped_report(trades, rng):
     t = trades.assign(kelly=capped)[capped > 0]
     s = equity_stats(t, t["kelly"].to_numpy())
     staked = float(trades["kelly"].sum())
+    capped_ci = return_ci(t, rng)
     return {"peak_open_stake": round(peak, 3),
             "return_per_dollar_staked": round(float(pnl.sum()) / staked, 4) if staked else None,
-            "capped_exposure": {**s, "cap": 1.0, "return_ci": return_ci(t, rng),
+            "return_per_dollar_ci": per_dollar_ci(trades, trades["kelly"].to_numpy(), rng),
+            "capped_exposure": {**s, "cap": 1.0, "return_ci": capped_ci,
                                 "return_per_dollar_staked": round(float((t["kelly"] * t["ret"]).sum() / t["kelly"].sum()), 4) if len(t) else None,
+                                "return_per_dollar_ci": per_dollar_ci(t, t["kelly"].to_numpy(), rng),
                                 "note": "Same trades in entry order; a trade is cut to whatever is left when open stakes "
                                         "would exceed 1 starting bankroll, skipped when nothing is left."}}
 

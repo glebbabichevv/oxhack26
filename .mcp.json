@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "polymarket": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["integrations/mcp_polymarket.py"]
+    }
+  }
+}
