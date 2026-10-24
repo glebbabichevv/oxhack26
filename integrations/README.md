@@ -23,5 +23,11 @@ python integrations/check_data.py                                              #
 - `event_slug` groups legs of the same event (e.g. every Oscars nominee) — their outcomes are correlated, so keep an event's legs on one side of the train/test split.
 - Domains come from Polymarket tags via a priority map in `common.py` (tweet/post-count + mention markets → culture first, then sports > crypto > economics > politics > geopolitics > science_tech > culture > other).
 
+## Optimal entry time (`optimal_entry.py`)
+Enter now or wait? Backward induction (optimal stopping) on empirical TRAIN price transitions 30d→7d→3d→1d→12h, same
+model and fees as the backtest. Rule chosen on validation, confirmed once on test (`integrations/entry/results.json`):
+**don't enter earlier than 24 h before the scheduled end** → test +4.16 bankrolls vs +1.90 for "enter at the first edge"
+(capped at 1 bankroll), gain +2.26, 90% CI [1.35, 3.19] by event bootstrap. `live` writes `integrations/entry/live.json`.
+
 ## Earlier pipeline (superseded)
 `polymarket.py`, `sanity.py`, `calibration_check.py` (TheMarkz3) built the first 3.1k-market sample. The team dataset is now the one above (Ayaz, 34.7k markets).
