@@ -37,7 +37,7 @@ def when_to_trade():
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0f}%")
     ax.set_xlabel("time to resolution when you enter", fontsize=11, color=MUTED, labelpad=10)
 
-    fig.text(0.06, 0.95, "When to trade: the edge appears in the last week",
+    fig.text(0.06, 0.95, "When to trade: the edge grows as resolution nears",
              fontsize=19, color=INK, fontweight="bold", va="top")
     fig.text(0.06, 0.885,
              f"Mean return per trade after a 1¢ cost, out-of-time test on {bt['n_test_markets']:,} Polymarket markets "
