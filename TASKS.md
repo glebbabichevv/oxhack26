@@ -10,13 +10,13 @@ Project: **Horizon** — is the prediction-market time bias tradable? (see "What
 - [x] [Gleb] Load `data/horizons.csv`, out-of-time split, baseline (market price) vs calibration model; Brier + reliability per horizon
 - [x] [Gleb] Decision rule + backtest with/without costs; replace example JSON with real numbers
 - [x] [Gleb] `/api/live` from `data/live.csv`
-- [x] [Gleb] Public API: https://horizon-api-five.vercel.app
+- [x] [Gleb] Public API: https://horizon-api-iota.vercel.app
 
 ### Role B — frontend
 - [x] [Gleb] Design preset in `DESIGN.md` + tokens/Tailwind preset/starter components in `frontend/design/` — PR `gleb/design-preset`
 - [ ] `/impeccable init` for `PRODUCT.md`
 - [ ] Next.js app in `frontend/` built against the contract's example JSON: live decision cards, calibration chart, backtest equity curve, "where it fails" panel
-- [x] Deploy to Vercel early (public URL by 16:30): https://horizon-jet-mu.vercel.app
+- [x] Deploy to Vercel early (public URL by 16:30): https://horizon-two-gilt.vercel.app
 
 ### Role C — data pipeline
 - [x] [Ayaz (B), on C's behalf] Polymarket: list resolved binary markets (with volume + category) → prices at 30d/7d/3d/1d/12h before resolution (explicit startTs/endTs chunks) → `data/horizons.csv` — **team dataset: 34.7k markets** (`integrations/fetch_horizons.py`)

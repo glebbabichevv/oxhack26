@@ -53,7 +53,7 @@ Out-of-time test: train = events that ended before 2026-05-18 (23,838 markets); 
 - **Calibration:** slope ≈ 0.85 pooled, same in train and test; on test the 30d bins are about fair (15¢ → 12.8%, n=492, within noise), 7d–12h clearly overconfident (15¢ → 18–20%) → prices are overconfident: 10–35¢ longshots underpriced, favourites overpriced; the 0–10¢ tail is about fair (24h: 3.0% YES, n=3,904).
 - **Model beats the market** out of time: Brier 0.1297 vs 0.1305, log loss 0.3917 vs 0.3940 (simple 4-coefficient model, picked on validation).
 - **Money after costs:** 7,106 trades, +3.05 starting bankrolls (+304% on screen, additive, ¼ Kelly), 90% CI [1.84, 4.40] by event bootstrap; max drawdown 42%; hit rate 24%. Naive "always back the favourite": −7.41.
-- **When:** return per $1 trade grows toward resolution: 30d +4.6%, 7d +4.6%, 3d +7.3%, 1d +14.3%, 12h +16.3% (each horizon backtested on its own).
+- **When:** return per $1 trade grows toward resolution: 30d +4.6%, 7d +4.6%, 3d +7.3%, 1d +14.3%, 12h +16.3% (each horizon backtested on its own). Robustness (17:20): price points are ≤1h before target on ~100% of traded rows; dropping markets whose event was already over (closed <12h after the price) gives 12h 14.3%, 1d 15.0% — say "≈14–15% per trade 12–24h out". Never "×100 per day".
 - **Where:** sports +1.85 [1.11, 2.63] (4,475 trades), science/tech +0.42 [0.16, 0.72]; politics +0.35, geopolitics, economics, culture, crypto all have CIs touching zero. `by_domain[]` is in `/api/backtest`.
 - **Earlier 3.1k sample (TheMarkz3)** said "politics, a month out": it did not replicate on 11× more data. Keep it in the pitch as the honesty moment.
 
@@ -93,7 +93,7 @@ At the start of every session, ask the human which role they have (if not obviou
 - From Saturday evening: Devpost page, backup demo video, pitch script (see "Pitch" in TASKS.md).
 
 ## API contract (Role A maintains this) — v1
-**Demo screen: https://horizon-jet-mu.vercel.app** · API base URL: `https://horizon-api-five.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
+**Demo screen: https://horizon-two-gilt.vercel.app** · API base URL: `https://horizon-api-iota.vercel.app` (public, Vercel) · `http://localhost:8000` locally. All responses JSON. Role B builds against the example shapes now.
 
 `GET /api/live` → open markets with a decision
 ```json

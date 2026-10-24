@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip } from "@/design/components/Page";
+import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionChip, EdgeTrack } from "@/design/components/Page";
+import { HorizonCurve } from "@/components/HorizonCurve";
+import { Capsule, type CapsuleData } from "@/components/Capsule";
 import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
@@ -39,10 +41,12 @@ export default function Home() {
   const [horizon, setHorizon] = useState<string>("24");
   const [domain, setDomain] = useState<Domain>("all");
   const [showAll, setShowAll] = useState(false);
+  const [capsule, setCapsule] = useState<CapsuleData>();
 
   useEffect(() => {
     getJSON<Backtest>("/api/backtest").then(setBacktest).catch((e) => setError(String(e)));
     getJSON<LiveMarket[]>("/api/live").then(setLive).catch((e) => setError(String(e)));
+    getJSON<CapsuleData>("/api/capsule").then(setCapsule).catch(() => undefined); // optional section
   }, []);
 
   useEffect(() => {
@@ -60,7 +64,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
@@ -77,6 +81,9 @@ export default function Home() {
             ? `Trained on ${int(backtest.n_train_markets)} resolved Polymarket markets that ended before ${dateLong(backtest.cutoff)}; tested out of time on the ${int(backtest.n_test_markets)} that ended after.`
             : undefined}
         />
+        {calibration.all ? (
+          <HorizonCurve horizons={calibration.all.horizons} backtest={backtest} selected={horizon} onSelect={setHorizon} />
+        ) : <div className="mt-14 h-[400px]" />}
         {backtest ? <Kpis b={backtest} /> : <Skeleton className="mt-11 h-[118px]" />}
 
         <div id="calibration">
@@ -127,6 +134,17 @@ export default function Home() {
           </Section>
         </div>
 
+        {capsule?.seals.length ? (
+          <div id="sealed">
+            <Section
+              title="Sealed before the outcomes"
+              lead="A backtest can always be tuned after the fact. So on Saturday afternoon we hashed Horizon's probabilities for every market that ends before judging, after writing down how they would be scored and what we expected. It opens on Sunday, whatever it says."
+            >
+              <Capsule data={capsule} />
+            </Section>
+          </div>
+        ) : null}
+
         <div id="backtest">{backtest ? <BacktestSection b={backtest} /> : null}</div>
         {backtest ? <Failures b={backtest} /> : null}
         <div id="method">{backtest ? <Method b={backtest} /> : null}</div>
@@ -166,7 +184,7 @@ function Kpis({ b }: { b: Backtest }) {
           note: b.return_ci ? `of bankroll · 90% CI ${bankroll(b.return_ci[0])} to ${bankroll(b.return_ci[1])}` : `max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`,
           tone: b.return_ci ? (b.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
-        { label: "Brier, model / market", value: `${b.overall.brier_model.toFixed(4)} / ${b.overall.brier_market.toFixed(4)}`, note: `${brier.text} · lower is better`, tone: brier.tone },
+        { label: "Brier score, model", value: b.overall.brier_model.toFixed(4), note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
         { label: "Where it pays", value: where.value, note: where.note },
         { label: "Trades", value: int(b.n_trades), note: `${pct(b.with_costs.hit_rate)} hit rate, longshot-heavy` },
       ]}
@@ -182,9 +200,10 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
   const when = (h: number) => (h >= 48 ? `${Math.round(h / 24)}d` : `${Math.max(1, Math.round(h))}h`);
   return (
     <>
-      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint">
+      <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3.5 pb-1 text-[12px] text-ink-faint md:grid-cols-[1fr_auto_120px_auto_auto]">
         <span>{trades.length} trades · {passes.length} passes</span>
         <span className="hidden text-right md:block">market</span>
+        <span className="hidden text-center md:block">price → model</span>
         <span className="hidden text-right md:block">model</span>
         <span className="hidden w-[68px] md:block" />
       </div>
@@ -198,6 +217,7 @@ function LiveList({ live, showAll, onToggle }: { live: LiveMarket[]; showAll: bo
           action={m.action}
           href={m.url}
           title={m.reason}
+          track={<EdgeTrack price={m.price_yes} q={m.q_yes} lo={m.q_low} hi={m.q_high} action={m.action} />}
         />
       ))}
       {live.length > 9 ? (

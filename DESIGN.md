@@ -142,7 +142,7 @@ components:
 
 **Creative North Star: "The Quiet Page"**
 
-A white editorial page that makes one argument. A big classical serif headline states the finding, its second line in grey; a calm sans explains it; numbers sit in a single ruled row; each piece of evidence lives in one soft white card that looks like a product screenshot laid on the page. Nothing is glass, nothing blurs, nothing floats except the navigation pill.
+A white editorial page that makes one argument, like a newspaper data story. A big classical serif headline states the finding, its second line in grey; directly under it the hero figure (how often a 15¢ contract wins, by time left) is drawn on the page and annotated in place in italic serif; numbers sit in a single ruled row; each piece of evidence is a figure under a 1px Ink rule, not a card. Nothing is glass, nothing blurs, nothing is boxed, nothing floats except the navigation pill.
 
 The material is soft matte: opaque white surfaces, an 8% hairline, a very low and wide shadow. Depth comes from the faint grey frame around each card, not from effects. The only object with real volume is the dark call-to-action pill, which sits on its own soft grounding shadow.
 
@@ -150,7 +150,8 @@ The material is soft matte: opaque white surfaces, an 8% hairline, a very low an
 - White page, generous whitespace, content max 1120px.
 - Playfair Display headlines (second line grey), Plus Jakarta Sans for everything else.
 - KPIs as one ruled row with hairline separators, not as cards.
-- Evidence in "framed cards": a white 16px card inside a #fafafa 22px frame with a wide soft shadow.
+- Evidence as editorial figures: 1px Ink rule on top, title + Faint meta on one line, the chart below. No boxes, frames or card shadows (changed 15:55: the framed cards read as generic and blocky).
+- One hero figure under the headline, annotated in place (italic Playfair notes, leader-free), with 90% intervals.
 - Pills everywhere: nav, buttons, tabs, chips. Green and rose only for meaning.
 
 ## Colors
