@@ -76,7 +76,9 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
     const domain = domainOf(m, tags);
     const fee = feeOf(m, mk, domain);
     const ctx = context(mk);
-    if (caution({ ...ctx, endDate: mk.endDate }, now.getTime())) continue; // in progress, or smaller than anything tested
+    // In progress: drop. Smaller than anything tested: keep as a book leg for coherence; cohere() gives it no call.
+    const why = caution({ ...ctx, endDate: mk.endDate }, now.getTime());
+    if (why && why.startsWith('Event in progress')) continue;
     picks.push({ marketSlug: mk.slug, eventSlug: ev?.slug ?? mk.slug, question: mk.question, label: mk.groupItemTitle || mk.question,
       bid, ask, closed: false, endDate: mk.endDate, domain, fee, ...ctx, decision: decide(m, price, hours, domain, ask - bid, fee) });
     if (mk.negRisk || ev?.negRisk) negRisk.add(ev?.slug ?? mk.slug);
@@ -85,15 +87,37 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
   const groups = new Map<string, MarketPick[]>();
   for (const p of picks) { const k = `${p.eventSlug}|${p.endDate}`; groups.set(k, [...(groups.get(k) ?? []), p]); }
   for (const g of groups.values()) {
-    const legs = cohere(m, g.map((p) => ({ question: p.question, label: p.label, marketSlug: p.marketSlug, bid: p.bid, ask: p.ask, decision: p.decision, fee: p.fee })), negRisk.has(g[0].eventSlug));
+    const legs = cohere(m, g.map((p) => ({ question: p.question, label: p.label, marketSlug: p.marketSlug, bid: p.bid, ask: p.ask, decision: p.decision, fee: p.fee, volume: p.volume })), negRisk.has(g[0].eventSlug));
     legs.forEach((l, i) => { if (l.decision) g[i].decision = l.decision; });
+  }
+  // Neg-risk events whose book in this scan is incomplete (thin legs outside the top markets, sum < 0.95): fetch the
+  // whole event and decide it as the event page does, so the scan never ranks an un-normalised leg (Hull–Brentford).
+  const incomplete = [...groups.values()].filter((g) => negRisk.has(g[0].eventSlug) && g.reduce((t, p) => t + p.decision.price, 0) < 0.95)
+    .map((g) => g[0].eventSlug).filter((x, i, a) => a.indexOf(x) === i).slice(0, 60);
+  for (let i = 0; i < incomplete.length; i += 8) {
+    await Promise.all(incomplete.slice(i, i + 8).map(async (slug) => {
+      try {
+        const ev = await decideEvent(m, slug, now);
+        for (const p of picks) if (p.eventSlug === slug) { const l = ev.legs.find((x) => x.marketSlug === p.marketSlug); if (l?.decision) p.decision = l.decision; }
+      } catch { /* keep the scan's own decision */ }
+    }));
   }
   const inBand = picks.filter((p) => p.decision.price >= m.tradable[0] && p.decision.price <= m.tradable[1]);
   inBand.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
   // One bet per event: the best leg of each event only.
   const events = new Set<string>();
   const one = inBand.filter((p) => verdictOf(p.decision) !== 'SKIP').filter((p) => (events.has(p.eventSlug) ? false : (events.add(p.eventSlug), true)));
-  return { picks: one.slice(0, top), scanned: seen.size };
+  // The scan only sees the top markets by volume, so an event's thin legs (a $1.5k draw) can be missing from its book.
+  // Re-decide each finalist from its whole event (decideEvent: every leg, COH, one bet per event), like the site.
+  const checked = await Promise.all(one.slice(0, top * 2).map(async (p) => {
+    try {
+      const ev = await decideEvent(m, p.eventSlug);
+      const leg = ev.legs.find((l) => l.marketSlug === p.marketSlug);
+      return leg?.decision ? { ...p, decision: leg.decision } : p;
+    } catch { return p; }
+  }));
+  const final = checked.filter((p) => verdictOf(p.decision) !== 'SKIP').sort((a, b) => b.decision.netEdge - a.decision.netEdge);
+  return { picks: final.slice(0, top), scanned: seen.size };
 }
 
 async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
