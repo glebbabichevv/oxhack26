@@ -159,14 +159,16 @@ def one_bet_per_event(decisions, groups, labels, m=None, policy=None):
     pol = (m.get("policy") or {}) if policy is None else (policy or {})
     if not pol.get("one_per_event"):
         return decisions
+    # Trades and waits alike (a WAIT is a future trade), same as onePerEvent in extension-module/horizon.ts.
+    wants = lambda d: d["action"] != "NO_TRADE" or bool(d.get("wait") and d.get("would_be"))  # noqa: E731
     best = {}
     for i, d in enumerate(decisions):
-        if d["action"] != "NO_TRADE" and groups[i]:
+        if wants(d) and groups[i]:
             if groups[i] not in best or d["net_edge"] > decisions[best[groups[i]]]["net_edge"]:
                 best[groups[i]] = i
     for i, d in enumerate(decisions):
-        if d["action"] != "NO_TRADE" and groups[i] and best[groups[i]] != i:
-            d.update(action="NO_TRADE", kelly=0.0, one_per_event_blocked=True,
+        if wants(d) and groups[i] and best[groups[i]] != i:
+            d.update(action="NO_TRADE", kelly=0.0, wait=False, would_be=None, check_back_in_hours=None, one_per_event_blocked=True,
                      reason=f"One bet per event: {labels[best[groups[i]]]} has the larger edge")
     return decisions
 
