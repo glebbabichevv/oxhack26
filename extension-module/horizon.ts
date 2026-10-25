@@ -31,6 +31,8 @@ export type Decision = {
   q: number; lo: number; hi: number; action: Action; kelly: number; netEdge: number; reason: string;
   /** true when the edge is there but the rule says enter later; wouldBe = the action then. */
   wait: boolean; wouldBe: Action | null; checkBackInHours: number | null;
+  /** Under 12 h to the end: shorter than any horizon Horizon was trained or tested on, so no call. */
+  untested?: boolean;
   /** One bet per event: set when another outcome of the same event has the larger edge. */
   blockedBy?: string;
 };
@@ -95,6 +97,9 @@ export function decide(m: Model, price: number, hours: number, domain: string, s
 }
 
 /** The decision rule for a given probability and band (used by decide and by event coherence). */
+export const TESTED_MIN_H = 12;
+export const UNTESTED_REASON = "Closer to the end than anything Horizon was tested on (12 h)";
+
 export function decideWithQ(m: Model, price: number, q: number, lo: number, hi: number, hours: number, domain: string, spread: number,
   fee: Fee = { rate: domainFeeRate(m, domain), exponent: 1 }, policy: Policy | false = m.policy ?? {}): Decision {
   const pol: Policy = policy || {};
@@ -119,6 +124,10 @@ export function decideWithQ(m: Model, price: number, q: number, lo: number, hi: 
     ? `Model ${pct(q)} (range ${pct(lo)}–${pct(hi)}) vs market ${pct(price)}: the ${gap.toFixed(1)}¢ gap is inside the model's uncertainty plus ${Math.round(cost * 100)}¢ cost`
     : `${horizonLabel(hours)} out, ${domain}: model ${pct(q)} vs market ${pct(price)}, net edge ${(netEdge * 100).toFixed(1)}¢`;
   const base: Decision = { price, hours, domain, cost, q, lo, hi, action, kelly, netEdge, reason, wait: false, wouldBe: null, checkBackInHours: null };
+  // Nothing under 12 h was ever trained or backtested (features clip hours at 12): no call there under any policy.
+  if (policy !== false && hours < TESTED_MIN_H) {
+    return { ...base, action: "NO_TRADE", kelly: 0, untested: true, reason: UNTESTED_REASON };
+  }
   if (action !== "NO_TRADE" && netEdge < (pol.min_edge ?? 0)) {
     return { ...base, action: "NO_TRADE", kelly: 0,
       reason: `Net edge ${(netEdge * 100).toFixed(1)}¢ is under the ${Math.round((pol.min_edge ?? 0) * 100)}¢ minimum: not worth the risk` };
@@ -132,7 +141,7 @@ export function decideWithQ(m: Model, price: number, q: number, lo: number, hi: 
 
 // ---------- Gamma ----------
 
-export type Leg = { question: string; label: string; marketSlug?: string; bid?: number; ask?: number; decision?: Decision; skip?: string; fee?: Fee };
+export type Leg = { question: string; label: string; marketSlug?: string; bid?: number; ask?: number; decision?: Decision; skip?: string; fee?: Fee; volume?: number };
 
 /**
  * COH: on a negRisk event (outcomes are mutually exclusive), when >= 2 open priced legs have mid
@@ -154,8 +163,15 @@ export function cohere(m: Model, legs: Leg[], negRisk: boolean): Leg[] {
       return { ...l, decision: decideWithQ(m, d0.price, q, lo, hi, d0.hours, d0.domain, (l.ask as number) - (l.bid as number), l.fee) };
     });
   }
+  // A leg under the training floor still prices the book above, but gets no call, and so can't block the event's
+  // advisable leg in onePerEvent (same order as backend/live.py).
+  out = out.map((l) => (l.decision && l.volume !== undefined && l.volume < MIN_TRAINED_VOLUME ? { ...l, decision: { ...l.decision,
+    action: "NO_TRADE" as Action, kelly: 0, wait: false, wouldBe: null, checkBackInHours: null,
+    reason: `Smaller market than any Horizon was tested on ($${Math.round(l.volume).toLocaleString("en-US")} traded; every test market had $100k+)` } } : l));
   return onePerEvent(out);
 }
+
+export const MIN_TRAINED_VOLUME = 100_000;
 
 /** Keep the call only on the leg with the largest net edge (trades and waits alike). */
 export function onePerEvent(legs: Leg[]): Leg[] {
@@ -192,7 +208,7 @@ export async function decideEvent(m: Model, slug: string, now = new Date()): Pro
     const tags = [...(mk.tags ?? []).map((t: { slug: string }) => t.slug), ...eventTags];
     const domain = domainOf(m, tags);
     const fee = feeOf(m, mk, domain);
-    return { question, label, marketSlug: mk.slug as string, bid, ask, fee, decision: decide(m, (bid + ask) / 2, hours, domain, ask - bid, fee) };
+    return { question, label, marketSlug: mk.slug as string, bid, ask, fee, volume: Number(mk.volumeNum ?? mk.volume ?? NaN), decision: decide(m, (bid + ask) / 2, hours, domain, ask - bid, fee) };
   });
   return { title: event.title, legs: cohere(m, legs, !!(event.negRisk ?? event.enableNegRisk)), tags: eventTags, endDate: event.endDate };
 }

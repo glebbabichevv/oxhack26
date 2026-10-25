@@ -24,6 +24,7 @@ HERE = Path(__file__).parent
 SNAPSHOT = HERE / "results" / "live.json"
 CACHE_TTL = 300  # seconds
 MIN_VOLUME = 100_000  # the training floor: every one of the 34,677 markets had >= $100k lifetime volume
+LEG_MIN_VOLUME = 1_000  # smaller legs are fetched only so an event's book is complete for coherence; never advised
 MAX_DAYS = 45
 N_TRADES, N_WAIT, N_NO_TRADE = 30, 15, 10
 PAGE, MAX_OFFSET = 100, 2000  # Gamma caps offset around 2,000
@@ -45,7 +46,15 @@ def _get(params, tries=2):
 
 
 def fetch_open(now):
-    base = dict(closed="false", active="true", limit=PAGE, volume_num_min=MIN_VOLUME,
+    # Two passes, so the small legs never push big markets past Gamma's offset cap: every market at the training floor
+    # ($100k+), then the $1k–$100k legs that only complete events' books for coherence (never advised).
+    big = _fetch(now, volume_num_min=MIN_VOLUME)
+    small = _fetch(now, volume_num_min=LEG_MIN_VOLUME, volume_num_max=MIN_VOLUME)
+    return list({m["id"]: m for m in big + small}.values())
+
+
+def _fetch(now, **volume):
+    base = dict(closed="false", active="true", limit=PAGE, **volume,
                 end_date_min=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 end_date_max=(now + timedelta(days=MAX_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 order="endDate", ascending="true", include_tag="true")
@@ -83,6 +92,11 @@ def _rows(markets, now, model):
     scales = horizon_mcp.coherence_scales(legs, model)
     ds = [decide(l["price"], l["hours"], l["domain"], l["spread"], model, l["rate"], l["exp"], q_scale=sc)
           for l, sc in zip(legs, scales)]
+    # The book needs every leg (a $1.5k draw still prices the event), but a leg under the training floor gets no call.
+    for x, d in zip(preps, ds):
+        if x["row"]["volume_usd"] < MIN_VOLUME:
+            d.update(action="NO_TRADE", kelly=0.0, wait=False, would_be=None, check_back_in_hours=None,
+                     reason=f"Smaller market than any Horizon was tested on (${x['row']['volume_usd']:,.0f} traded; every test market had $100k+)")
     horizon_mcp.one_bet_per_event(ds, [l["group"] for l in legs], [l["label"] for l in legs], model)
     out = []
     for x, d in zip(preps, ds):

@@ -73,7 +73,8 @@ def _book(recs, infos, stake_of):
 
 
 def journal_part(install_id):
-    recs = [r for r in journal.STORE.all() if isinstance(r, dict) and r.get("install_id") == install_id and r.get("market_id")]
+    recs = [r for r in journal.STORE.all() if isinstance(r, dict) and r.get("install_id") == install_id and r.get("market_id")
+            and r.get("source") != "paper"]  # paper bets never count as real results
     counts = {s: sum(r.get("status") == s for r in recs) for s in RANK}
     buys = sorted([r for r in recs if r.get("action") in ("BUY_YES", "BUY_NO") and r.get("side")], key=lambda r: r.get("ts") or "")
 

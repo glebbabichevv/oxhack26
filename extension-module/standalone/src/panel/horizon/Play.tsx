@@ -7,10 +7,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
-import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, setBankroll, suggested, type Account, type Position, type Quote, type Side } from './ledger';
+import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, resetPaper, setBankroll, suggested, type Account, type Position, type Quote, type Side } from './ledger';
 import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
+import { isPaper, setPaper, usePaper } from './paper';
 import { apiJSON, gammaLastOk, gammaOk, hhmm } from './net';
 import { fetchMe, getWallet, heldOnEvent, type WalletPos, openMyResults, setWallet, upDown, WALLET_RE, type Me } from './me';
 import { intendedAction, verdictOf, verdictRank } from './policy';
@@ -120,9 +121,10 @@ export function useMarking(model: Model | undefined, a: Account | undefined) {
 export type TabName = 'bet' | 'decisions';
 
 export function Header({ onSettings }: { onSettings: () => void }) {
+  const paperHdr = usePaper();
   return (
     <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3">
-      <span className="hz-display text-[26px] leading-none text-[#0f172a]">Horizon</span>
+      <span className="flex items-center gap-2"><span className="hz-display text-[26px] leading-none text-[#0f172a]">Horizon</span>{paperHdr ? <PaperBadge /> : null}</span>
       <button type="button" onClick={onSettings} aria-label="Budget" title="Budget" className="hz-chip flex h-[30px] w-[30px] items-center justify-center rounded-full text-[#475569]">
         <Icon d={I.gear} size={15} />
       </button>
@@ -194,7 +196,7 @@ function Steps({ steps }: { steps: Step[] }) {
 
 // ---------- setting a bet up on Polymarket, one at a time ----------
 
-const journalOf = (item: PlanItem, source: 'card' | 'agent', status: 'shown' | 'set_up' | 'placed' | 'skipped') => {
+const journalOf = (item: PlanItem, source: 'card' | 'agent' | 'paper', status: 'shown' | 'set_up' | 'placed' | 'skipped') => {
   if (item.kind !== 'buy' || !item.q.decision) return;
   void record({ marketId: item.q.conditionId, slug: item.q.marketSlug, question: item.q.question, d: item.q.decision, stake: item.amount, source, status });
 };
@@ -203,10 +205,33 @@ const journalOf = (item: PlanItem, source: 'card' | 'agent', status: 'shown' | '
  * For each item: fill Polymarket's ticket (narrated, Argos thinking orb), then stop. The user
  * presses Trade there and tells Horizon "I placed it" or "Skip"; both go to the journal.
  */
-export function Doer({ model, tabId, items, source, onFinish }: { model: Model; tabId?: number; items: PlanItem[]; source: 'card' | 'agent'; onFinish: (placed: number) => void }) {
+export function PaperBadge() {
+  return <span className="inline-flex items-center rounded-full bg-[rgba(15,23,42,0.07)] px-2 py-[1px] text-[10.5px] font-semibold uppercase tracking-[0.04em] text-[#475569]">Paper</span>;
+}
+
+/** The same walk on Polymarket in both modes; in paper mode the last step records to the paper book instead of the user pressing Trade. */
+export function Doer(props: { model: Model; tabId?: number; items: PlanItem[]; source: 'card' | 'agent'; onFinish: (placed: number) => void }) {
+  return <RealDoer {...props} />;
+}
+
+/** Paper: record at the live ask read now (+ taker fee), with the card's event-level decision. */
+async function addPaper(model: Model, it: PlanItem, by: 'you' | 'agent') {
+  if (it.kind !== 'buy') return false;
+  const live = (await quotes(model, [it.q.marketSlug]).catch(() => new Map<string, Quote>())).get(it.q.marketSlug);
+  const q = live && live.bid > 0 && live.ask < 1 ? { ...live, decision: it.q.decision } : it.q;
+  await recordBuy(q, it.side, it.amount, by, 'Paper bet (ticket walked on Polymarket, not bought)', 'paper');
+  journalOf(it, 'paper', 'placed');
+  return true;
+}
+
+function RealDoer({ model, tabId, items, source, onFinish }: { model: Model; tabId?: number; items: PlanItem[]; source: 'card' | 'agent'; onFinish: (placed: number) => void }) {
+  const paper = useRef(isPaper()).current;
+  // Agent plans in paper mode: walk every ticket like real, then one press adds them all.
+  const batch = paper && source === 'agent' && items.length > 1;
+  const [walked, setWalked] = useState<{ item: PlanItem; ok: boolean; label: string }[]>([]);
   const [i, setI] = useState(0);
   const [steps, setSteps] = useState<Step[]>([]);
-  const [phase, setPhase] = useState<'filling' | 'ready' | 'finished'>('filling');
+  const [phase, setPhase] = useState<'filling' | 'ready' | 'confirmAll' | 'finished'>('filling');
   const [fill, setFill] = useState<{ ok: boolean; error?: string; label: string }>();
   const [placed, setPlaced] = useState(0);
   const item = items[i];
@@ -219,9 +244,28 @@ export function Doer({ model, tabId, items, source, onFinish }: { model: Model; 
     const ctx = { model, tabId, onStep: (s: Step) => { const k = acc.findIndex((x) => x.id === s.id); if (k >= 0) acc[k] = s; else acc.push(s); setSteps([...acc]); } };
     const amount = item.kind === 'buy' ? item.amount : item.pos.shares * item.fraction;
     const side = item.kind === 'buy' ? item.side : item.pos.side;
-    void fillTicket(ctx, item.q, side, amount, item.kind).then((r) => { setFill(r); setPhase('ready'); if (r.ok) journalOf(item, source, 'set_up'); });
-  }, [i, item, model, tabId, source]);
-  const next = (did: boolean) => {
+    void fillTicket(ctx, item.q, side, amount, item.kind).then((r) => {
+      setFill(r);
+      if (!paper && r.ok) journalOf(item, source, 'set_up');
+      if (batch) {
+        setWalked((w) => [...w, { item, ok: r.ok, label: r.label }]);
+        setTimeout(() => { if (i + 1 >= items.length) setPhase('confirmAll'); else setI(i + 1); }, 1200); // let the user see the ticket
+      } else setPhase('ready');
+    });
+  }, [i, item, model, tabId, source, paper, batch, items.length]);
+  const addAll = async () => {
+    let n = 0;
+    for (const w of walked) if (await addPaper(model, w.item, 'agent')) n++;
+    setPhase('finished'); onFinish(n);
+  };
+  const next = async (did: boolean) => {
+    if (paper) {
+      const ok = did ? await addPaper(model, item, source === 'agent' ? 'agent' : 'you') : false;
+      const n = placed + (ok ? 1 : 0);
+      setPlaced(n);
+      if (i + 1 >= items.length) { setPhase('finished'); onFinish(n); } else setI(i + 1);
+      return;
+    }
     const n = placed + (did ? 1 : 0);
     if (item.kind === 'buy') {
       journalOf(item, source, did ? 'placed' : 'skipped');
@@ -231,13 +275,28 @@ export function Doer({ model, tabId, items, source, onFinish }: { model: Model; 
     if (i + 1 >= items.length) { setPhase('finished'); onFinish(n); } else setI(i + 1);
   };
   if (phase === 'finished' || !item) return null;
+  if (phase === 'confirmAll') {
+    const buys = walked.filter((w) => w.item.kind === 'buy');
+    const total = buys.reduce((s2, w) => s2 + (w.item.kind === 'buy' ? w.item.amount : 0), 0);
+    return (
+      <div className="hz-card hz-enter mt-3 rounded-card px-4 py-3.5">
+        <p className="flex items-center gap-2 text-subhead font-semibold">All {walked.length} tickets walked on Polymarket <PaperBadge /></p>
+        <ul className="mt-1 space-y-0.5">{walked.map((w, k) => <li key={k} className="text-footnote" style={{ color: w.ok ? '#334155' : '#64748b' }}>{w.item.kind === 'buy' ? `${money(w.item.amount)} on ${w.label || clean(w.item.name)} · ${w.item.side === 'YES' ? 'Yes' : 'No'}` : clean(w.item.name)}{w.ok ? '' : ' (ticket not filled)'}</li>)}</ul>
+        <p className="mt-1 text-caption text-[#94a3b8]">Nothing was bought. Adding records them at the live price now, with Polymarket's fee.</p>
+        <div className="mt-3 flex gap-2">
+          <button type="button" onClick={() => void addAll()} className="hz-cta h-10 flex-1 rounded-control text-body font-semibold text-white" style={{ background: INK }}>Add {buys.length} to paper book ({money(total)})</button>
+          <button type="button" onClick={() => { setPhase('finished'); onFinish(0); }} className="hz-chip h-10 rounded-control px-4 text-body font-semibold text-[#475569]">Skip</button>
+        </div>
+      </div>
+    );
+  }
   const side = item.kind === 'buy' ? item.side : item.pos.side;
   const what = item.kind === 'buy'
     ? `${money(item.amount)} on ${fill?.label ?? clean(item.name)} · ${side === 'YES' ? 'Yes' : 'No'}`
     : `${item.fraction >= 0.999 ? 'all' : 'part'} of ${fill?.label ?? clean(item.name)}`;
   return (
     <div className="hz-enter mt-3">
-      {items.length > 1 ? <p className="text-footnote font-medium text-[#64748b]">{i + 1} of {items.length} · {clean(item.name)}</p> : null}
+      {items.length > 1 || paper ? <p className="flex items-center gap-2 text-footnote font-medium text-[#64748b]">{items.length > 1 ? `${i + 1} of ${items.length} · ${clean(item.name)}` : null}{paper ? <PaperBadge /> : null}</p> : null}
       {phase === 'filling' ? <div className="mt-1"><Thinking steps={steps} fallback="Opening Polymarket" /></div> : null}
       <Steps steps={steps} />
       {phase === 'ready' ? (
@@ -245,7 +304,7 @@ export function Doer({ model, tabId, items, source, onFinish }: { model: Model; 
           {fill?.ok ? (
             <>
               <p className="text-subhead font-semibold">Ready on Polymarket</p>
-              <p className="mt-0.5 text-body text-[#334155]">{item.kind === 'buy' ? `${what}. Press Trade to place it.` : `Selling ${what}. Press Sell to do it.`}</p>
+              <p className="mt-0.5 text-body text-[#334155]">{paper ? `${what}. Paper mode: don't press Trade; add it to your paper book instead.` : item.kind === 'buy' ? `${what}. Press Trade to place it.` : `Selling ${what}. Press Sell to do it.`}</p>
             </>
           ) : (
             <>
@@ -254,8 +313,10 @@ export function Doer({ model, tabId, items, source, onFinish }: { model: Model; 
             </>
           )}
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={() => next(true)} className="hz-chip h-10 flex-1 rounded-control text-body font-semibold" style={{ color: UP }}>I placed it</button>
-            <button type="button" onClick={() => next(false)} className="hz-chip h-10 flex-1 rounded-control text-body font-semibold text-[#475569]">Skip</button>
+            {paper ? (
+              <button type="button" onClick={() => void next(true)} className="hz-cta h-10 flex-1 rounded-control text-body font-semibold text-white" style={{ background: INK }}>Add to paper book</button>
+            ) : <button type="button" onClick={() => void next(true)} className="hz-chip h-10 flex-1 rounded-control text-body font-semibold" style={{ color: UP }}>I placed it</button>}
+            <button type="button" onClick={() => void next(false)} className="hz-chip h-10 flex-1 rounded-control text-body font-semibold text-[#475569]">Skip</button>
           </div>
         </div>
       ) : null}
@@ -291,12 +352,13 @@ export function AmountControl({ value, onChange, max, compact = false, label }: 
 export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   model: Model; a?: Account; marketSlug: string; title: string; d: Decision; tabId?: number; onDetails?: () => void;
 }) {
+  const paper = usePaper();
   const [quote, setQuote] = useState<Quote>();
   const [held, setHeld] = useState<WalletPos[]>([]);
   useEffect(() => { if (quote?.eventSlug) void heldOnEvent(quote.eventSlug).then(setHeld); }, [quote?.eventSlug]);
   const mine = held.find((p) => p.conditionId && p.conditionId === quote?.conditionId && (p.size ?? 0) > 0);
   const holding = mine ? 0 : held.length;
-  const unsure = quote ? caution(quote) : undefined;
+  const unsure = d.untested ? 'Closer to the end than anything Horizon was tested on (12 h).' : quote ? caution(quote) : undefined;
   const verdict = unsure || holding || mine ? 'SKIP' : verdictOf(d);
   const side = verdict === 'SKIP' ? undefined : sideOf(d);
   const sug = stakeFor(a, d);
@@ -308,8 +370,10 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   useEffect(() => {
     let dead = false;
     void quotes(model, [marketSlug]).then((m) => {
-      const q = m.get(marketSlug);
-      if (dead || !q) return;
+      const q0 = m.get(marketSlug);
+      if (dead || !q0) return;
+      // The card's d was decided with the whole event (COH); never let the single-market quote override it.
+      const q = q0.decision ? { ...q0, decision: d } : q0;
       setQuote(q);
       if (q.decision) void record({ marketId: q.conditionId, slug: q.marketSlug, question: q.question, d: q.decision, stake: side ? stakeFor(a, q.decision) : 0, source: 'card', status: 'shown' });
     });
@@ -349,7 +413,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
           <div className="mt-4 flex items-stretch gap-2">
             <AmountControl value={amount} onChange={setChosen} max={a?.bankroll ?? 1000} />
             <button type="button" onClick={() => void start()} className="hz-cta h-12 flex-1 rounded-control px-2 text-subhead font-semibold text-white" style={{ background: UP }}>
-              Set up {money(amount)} on {side === 'YES' && !/\?\s*$/.test(title) && clean(title).length <= 16 ? clean(title) : side === 'YES' ? 'Yes' : 'No'}
+              {paper ? 'Paper bet' : 'Set up'} {money(amount)} on {side === 'YES' && !/\?\s*$/.test(title) && clean(title).length <= 16 ? clean(title) : side === 'YES' ? 'Yes' : 'No'}
             </button>
           </div>
           <p className="mt-1.5 text-caption text-[#94a3b8]">
@@ -361,7 +425,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
         </>
       ) : null}
       {msg ? <p className="mt-2 text-footnote font-medium" style={{ color: msg.ok ? UP : DOWN }}>{msg.text}</p> : null}
-      {doing ? <Doer model={model} tabId={tabId} items={doing} source="card" onFinish={(n) => { setDoing(undefined); setMsg({ ok: true, text: n ? 'Saved in My decisions.' : 'Skipped. Saved in My decisions.' }); }} /> : null}
+      {doing ? <Doer model={model} tabId={tabId} items={doing} source="card" onFinish={(n) => { setDoing(undefined); setMsg({ ok: true, text: paper ? (n ? 'Paper bet placed. See My decisions → Paper.' : 'Paper bet not placed.') : n ? 'Saved in My decisions.' : 'Skipped. Saved in My decisions.' }); }} /> : null}
       {onDetails ? <button type="button" onClick={onDetails} className="mt-3 text-footnote font-medium text-[#64748b] underline decoration-[rgba(15,23,42,0.15)] underline-offset-[3px] hover:text-[#0f172a]">Details</button> : null}
     </article>
   );
@@ -413,7 +477,7 @@ function PositionAdvice({ pos, q, d, unsure, title, onSell, busy }: { pos: Walle
             className="hz-cta mt-3 h-11 w-full rounded-control text-subhead font-semibold text-white disabled:opacity-50" style={{ background: INK }}>Set up sale of {shares.toLocaleString()} shares</button>
         </>
       ) : <p className="mt-1 text-subhead font-semibold text-[#0f172a]">Hold: Horizon values it at {c(worth)}, the market pays {c(pays)}.</p>}
-      <p className="mt-1.5 text-caption text-[#94a3b8]">Selling by this rule kept the same profit with a smaller drawdown in our out-of-time test (+30.9¢ vs +31.2¢ per $1, maxDD 0.20 vs 0.23).</p>
+      <p className="mt-1.5 text-caption text-[#94a3b8]">Selling early did not add profit in our test; it slightly reduced drawdown (+30.9¢ vs +31.2¢ per $1, max drawdown 0.20 vs 0.23).</p>
     </div>
   );
 }
@@ -548,7 +612,77 @@ const STATUS_RANK: Record<Entry['status'], number> = { shown: 0, set_up: 1, skip
 const STATUS_WORD: Record<Entry['status'], string> = { shown: 'Shown', set_up: 'Set up', skipped: 'Skipped', placed: 'Placed' };
 
 export function MyDecisions({ model }: { model: Model }) {
-  const [log, setLog] = useState<Entry[]>([]);
+  const paperOn = usePaper();
+  const [view, setView] = useState<'real' | 'paper'>(paperOn ? 'paper' : 'real');
+  return (
+    <>
+      <div className="px-4 pt-4">
+        <div role="tablist" className="hz-seg inline-grid grid-cols-2 rounded-control p-[3px]">
+          {(['real', 'paper'] as const).map((k) => (
+            <button key={k} role="tab" aria-selected={view === k} type="button" onClick={() => setView(k)}
+              className={`rounded-[9px] px-4 py-[5px] text-footnote font-semibold ${view === k ? 'hz-seg-on text-[#0f172a]' : 'text-[#64748b]'}`}>{k === 'real' ? 'Real' : 'Paper'}</button>
+          ))}
+        </div>
+      </div>
+      {view === 'paper' ? <PaperBook model={model} /> : <RealDecisions model={model} />}
+    </>
+  );
+}
+
+/** The paper book: positions at the live ask + fee, marked to the mid, settled at $1/$0 by Gamma. */
+function PaperBook({ model }: { model: Model }) {
+  const [a, setA] = useState<Account>();
+  const [sure, setSure] = useState(false);
+  useEffect(() => { void getAccount('paper').then(setA); return onAccount(setA, 'paper'); }, []);
+  const openKey = a?.positions.filter((p) => p.status === 'open').map((p) => p.marketSlug).join() ?? '';
+  useEffect(() => {
+    if (!openKey) return;
+    const tick = async () => refresh(await quotes(model, openKey.split(',')), 'paper');
+    void tick();
+    const t = setInterval(() => void tick(), 30000);
+    return () => clearInterval(t);
+  }, [model, openKey]);
+  if (!a) return null;
+  const open = a.positions.filter((p) => p.status === 'open'), done = a.positions.filter((p) => p.status !== 'open');
+  const marked = open.reduce((s2, p) => s2 + p.shares * (p.mark ?? p.avgPrice) - p.stake, 0);
+  const settled = done.reduce((s2, p) => s2 + (p.pnl ?? 0), 0);
+  const staked = open.reduce((s2, p) => s2 + p.stake, 0);
+  const cash = a.bankroll - staked + settled + open.reduce((s2, p) => s2 + (p.pnl ?? 0), 0);
+  const sign = (x: number) => `${x >= 0.005 ? '+' : x <= -0.005 ? '−' : ''}${money(Math.abs(x))}`;
+  return (
+    <div className="px-4 pb-6 pt-4">
+      <h1 className="hz-display flex items-center gap-2 text-[32px] leading-none">Paper book <PaperBadge /></h1>
+      <p className="mt-2 text-body text-[#475569]">Practice money: {money(a.bankroll)} to start. Nothing here was sent to Polymarket.</p>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+        {[['Cash', money(cash), INK], ['Open, marked', sign(marked), marked >= 0 ? UP : DOWN], ['Settled', sign(settled), settled >= 0 ? UP : DOWN]].map(([k, v, col]) => (
+          <div key={k} className="hz-card rounded-card px-2 py-2.5"><p className="text-caption text-[#64748b]">{k}</p><p className="text-subhead font-semibold tabular-nums" style={{ color: col }}>{v}</p></div>
+        ))}
+      </div>
+      {a.positions.length ? (
+        <ul className="mt-4">
+          {a.positions.slice(0, 100).map((p) => {
+            const pl = p.status === 'open' ? p.shares * (p.mark ?? p.avgPrice) - p.stake : (p.pnl ?? 0);
+            return (
+              <li key={p.id} className="hz-rule flex items-center gap-3 py-3">
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-2 block text-body font-medium">{clean(p.question)}</span>
+                  <span className="flex items-center gap-1.5 text-caption text-[#64748b]"><PaperBadge /> {money(p.stake)} on {p.side === 'YES' ? 'Yes' : 'No'} at {Math.round(p.avgPrice * 100)}¢ · {p.status === 'open' ? 'open' : p.status === 'settled' ? (p.exitPrice === 1 ? 'won' : 'lost') : 'closed'}{p.by === 'agent' ? ' · agent' : ''}</span>
+                </span>
+                <span className="shrink-0 text-footnote font-semibold tabular-nums" style={{ color: Math.abs(pl) < 0.005 ? MUTED : pl > 0 ? UP : DOWN }}>{sign(pl)}</span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : <p className="mt-4 text-body text-[#64748b]">No paper bets yet. Turn on Paper trading in settings, then press a Paper bet button or ask the agent.</p>}
+      <button type="button" onClick={() => { if (!sure) { setSure(true); return; } setSure(false); void resetPaper(1000); }}
+        className="hz-chip mt-6 rounded-control px-4 py-2 text-footnote font-semibold" style={sure ? { color: DOWN } : undefined}>{sure ? 'Tap again to clear the paper book' : 'Reset paper book ($1,000)'}</button>
+    </div>
+  );
+}
+
+function RealDecisions({ model }: { model: Model }) {
+  const [log0, setLog] = useState<Entry[]>([]);
+  const log = log0.filter((e) => e.source !== 'paper');
   const [id, setId] = useState<string>();
   const [res, setRes] = useState<Map<string, Quote>>(new Map());
   useEffect(() => { void localJournal().then(setLog); void installId().then(setId); return onJournal(setLog); }, []);
@@ -622,6 +756,7 @@ export function Settings({ a, onClose }: { a?: Account; onClose: () => void }) {
         <button type="submit" className="hz-cta rounded-control bg-[#0f172a] px-5 text-body font-semibold text-white">Save</button>
       </form>
       <WalletField />
+      <PaperToggle />
     </div>
   );
 }
@@ -651,6 +786,23 @@ function WalletField() {
       {msg ? <p className="mt-1.5 text-caption" style={{ color: msg.ok ? UP : DOWN }}>{msg.text}</p> : null}
       <SellAlertsToggle hasWallet={WALLET_RE.test(v.trim())} />
     </div>
+  );
+}
+
+/** Practice mode for the team: bets go to the paper book, never to Polymarket's ticket. Off by default. */
+function PaperToggle() {
+  const on = usePaper();
+  return (
+    <label className="mt-8 flex items-center justify-between gap-3">
+      <span>
+        <span className="flex items-center gap-2 text-body font-medium text-[#0f172a]">Paper trading {on ? <PaperBadge /> : null}</span>
+        <span className="block text-caption text-[#64748b]">Practice with $1,000 of paper money at live prices and fees. Nothing goes to Polymarket.</span>
+      </span>
+      <button type="button" role="switch" aria-checked={on} aria-label="Paper trading" onClick={() => void setPaper(!on)}
+        className="relative h-6 w-10 shrink-0 rounded-full transition-ui duration-fast" style={{ background: on ? '#0f172a' : 'rgba(15,23,42,0.15)' }}>
+        <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-fast" style={{ left: 2, transform: on ? 'translateX(16px)' : 'none' }} />
+      </button>
+    </label>
   );
 }
 
@@ -725,7 +877,7 @@ export function useAgent(model: Model | undefined, tabId: number | undefined) {
     ctx.plan = [...ctx.plan.filter((x) => !later(x) && !subTabOf(x.q)), ...ctx.plan.filter((x) => !later(x) && subTabOf(x.q)), ...ctx.plan.filter(later)];
     for (const item of ctx.plan) journalOf(item, 'agent', 'shown');
     // The model's words only when they are plain and on-message; with a plan, one line of ours.
-    if (answer && /\b(demo|balance|portfolio|simulat|paper)/i.test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
+    if (answer && (isPaper() ? /\b(demo|simulat)/i : /\b(demo|balance|portfolio|simulat|paper)/i).test(answer)) answer = ctx.plan.length ? undefined : 'Nothing to set up right now.';
     if (ctx.plan.length) {
       const n = ctx.plan.length, buys = ctx.plan.every((x) => x.kind === 'buy');
       answer = buys ? `Here ${n === 1 ? 'is 1 good bet' : `are ${n} good bets`}.` : `Here ${n === 1 ? 'is 1 change' : `are ${n} changes`}.`;
@@ -742,6 +894,8 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
   const [amounts, setAmounts] = useState<Record<number, number>>({});
   const plan = plan0.map((p, k) => (p.kind === 'buy' && amounts[k] !== undefined ? { ...p, amount: amounts[k] } : p));
   const isLater = (x: PlanItem) => !!x.q.decision && verdictOf(x.q.decision) === 'WAIT';
+  const paper = isPaper();
+  // Paper: every bet that is due now goes into the paper book; real: the top 3 main-line bets are set up on the page.
   const LIVE = Math.min(3, plan.filter((x) => !subTabOf(x.q) && !isLater(x)).length);
   const firstLater = plan.findIndex(isLater);
   const [liveDone, setLiveDone] = useState(LIVE === 0);
@@ -784,7 +938,7 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
       </div>
       {!liveDone && LIVE > 0 ? (
         <div className="mt-4">
-          <p className="text-footnote font-medium text-[#64748b]">Setting up the top {Math.min(LIVE, plan.length)} on Polymarket{plan.length > LIVE ? '. The rest stay in the list.' : ''}</p>
+          <p className="text-footnote font-medium text-[#64748b]">{paper ? `Paper mode: walking the top ${LIVE} on Polymarket, then one press adds them to your paper book` : `Setting up the top ${Math.min(LIVE, plan.length)} on Polymarket${plan.length > LIVE ? '. The rest stay in the list.' : ''}`}</p>
           <Doer model={model} tabId={tabId} items={plan.slice(0, LIVE)} source="agent" onFinish={() => setLiveDone(true)} />
         </div>
       ) : <p className="mt-3 text-footnote text-[#64748b]">Saved in My decisions.{plan.length > LIVE ? ' Tap Set up on any other bet.' : ''}</p>}
