@@ -2113,7 +2113,7 @@
  },
  {
   "block": "tournament",
-  "name": "V3 shipped (M0)",
+  "name": "V3 (shipped before)",
   "value": 0.343,
   "lo": 0.1998,
   "hi": 0.4872,
@@ -2124,7 +2124,7 @@
  },
  {
   "block": "tournament",
-  "name": "event coherence + one bet per event",
+  "name": "Event coherence",
   "value": 0.431,
   "lo": 0.2413,
   "hi": 0.6179,
@@ -2135,7 +2135,7 @@
  },
  {
   "block": "tournament",
-  "name": "beta calibration (Kull 2017)",
+  "name": "Beta calibration",
   "value": 0.2766,
   "lo": 0.1579,
   "hi": 0.3932,
@@ -2146,7 +2146,7 @@
  },
  {
   "block": "tournament",
-  "name": "mean ensemble (8 members)",
+  "name": "Mean of 8 models",
   "value": 0.3084,
   "lo": 0.1797,
   "hi": 0.4347,
@@ -2157,7 +2157,7 @@
  },
  {
   "block": "tournament",
-  "name": "ensemble + agreement filter",
+  "name": "Models agree",
   "value": 0.3013,
   "lo": 0.0999,
   "hi": 0.5035,
@@ -2168,7 +2168,7 @@
  },
  {
   "block": "tournament",
-  "name": "time-weighted log pool",
+  "name": "Log pool",
   "value": 0.1461,
   "lo": 0.0067,
   "hi": 0.2841,
@@ -2179,7 +2179,7 @@
  },
  {
   "block": "tournament",
-  "name": "Shin 1993 (TheMarkz3)",
+  "name": "Shin 1993",
   "value": -0.2724,
   "lo": -0.6424,
   "hi": 0.0488,
@@ -2190,7 +2190,7 @@
  },
  {
   "block": "tournament",
-  "name": "power method (TheMarkz3)",
+  "name": "Power method",
   "value": -1.0,
   "lo": -1.0,
   "hi": -1.0,
@@ -2201,7 +2201,7 @@
  },
  {
   "block": "tournament",
-  "name": "isotonic (TheMarkz3)",
+  "name": "Isotonic",
   "value": 0.2318,
   "lo": 0.121,
   "hi": 0.3461,
@@ -2212,7 +2212,7 @@
  },
  {
   "block": "tournament",
-  "name": "hierarchical domain (TheMarkz3)",
+  "name": "Hierarchical",
   "value": 0.148,
   "lo": 0.0563,
   "hi": 0.2304,
@@ -2223,7 +2223,7 @@
  },
  {
   "block": "tournament",
-  "name": "exit: FIX FIX(48,12)",
+  "name": "Sell early (48h→12h)",
   "value": -0.1131,
   "lo": -0.1684,
   "hi": -0.0584,
@@ -2234,7 +2234,7 @@
  },
  {
   "block": "tournament",
-  "name": "exit: DYNAMIC (sell when market reaches q)",
+  "name": "Sell when market catches up",
   "value": 0.336,
   "lo": 0.196,
   "hi": 0.4709,
@@ -2608,7 +2608,7 @@
  },
  {
   "block": "test",
-  "name": "V3 shipped (M0)",
+  "name": "V3 (shipped before)",
   "value": 0.1713,
   "lo": 0.1181,
   "hi": 0.2318,
@@ -2619,7 +2619,7 @@
  },
  {
   "block": "test",
-  "name": "event coherence + one bet per event",
+  "name": "Event coherence",
   "value": 0.3119,
   "lo": 0.2276,
   "hi": 0.3982,
@@ -3421,8 +3421,8 @@
   "source": "C-Ayaz"
  },
  {
-  "block": "monthly_coh",
-  "name": "summary",
+  "block": "monthly_coh_summary",
+  "name": "COH months positive",
   "value": 15.0,
   "lo": null,
   "hi": null,
