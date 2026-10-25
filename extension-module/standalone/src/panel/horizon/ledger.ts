@@ -5,6 +5,7 @@
  * Horizon only fills Polymarket's ticket; the user presses Trade. Nothing here moves money.
  */
 import { decide, domainOf, feeOf, type Decision, type Fee, type Model } from './horizon';
+import { isPaper } from './paper';
 
 export type Side = 'YES' | 'NO';
 export type Position = {
@@ -25,6 +26,8 @@ export type Quote = {
 
 /** Two books with the same maths: 'real' (what the user placed on Polymarket) and 'paper' (practice, never on Polymarket). */
 export type Book = 'real' | 'paper';
+/** The book in use: paper while Paper trading is on (sizing, checks and budget then follow the paper book). */
+export const activeBook = (): Book => (isPaper() ? 'paper' : 'real');
 const keyOf = (book: Book = 'real') => (book === 'paper' ? 'horizonPaper' : 'horizonLedger');
 const GAMMA = 'https://gamma-api.polymarket.com';
 export const fresh = (bankroll = 1000): Account => ({ bankroll, positions: [] });
@@ -38,7 +41,7 @@ export function migrate() {
 // ---------- storage, serialised so parallel calls never clobber each other ----------
 
 let chain: Promise<unknown> = Promise.resolve();
-export async function getAccount(book: Book = 'real'): Promise<Account> {
+export async function getAccount(book: Book = activeBook()): Promise<Account> {
   const KEY = keyOf(book);
   const r = await chrome.storage.local.get(KEY).catch(() => ({} as Record<string, unknown>));
   return (r[KEY] as Account | undefined) ?? fresh();
@@ -54,7 +57,7 @@ export function mutate<T>(fn: (a: Account) => Promise<T> | T, book: Book = 'real
   chain = run.catch(() => undefined);
   return run;
 }
-export function onAccount(cb: (a: Account) => void, book: Book = 'real') {
+export function onAccount(cb: (a: Account) => void, book: Book = activeBook()) {
   const KEY = keyOf(book);
   const l = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
     if (area === 'local' && changes[KEY]?.newValue) cb(changes[KEY].newValue as Account);
@@ -241,6 +244,6 @@ export function resetPaper(bankroll = 1000) {
   return mutate((a) => { a.bankroll = bankroll; a.positions = []; }, 'paper');
 }
 
-export function setBankroll(n: number) {
-  return mutate((a) => { a.bankroll = Math.min(Math.max(n, 1), 1e7); });
+export function setBankroll(n: number, book: Book = activeBook()) {
+  return mutate((a) => { a.bankroll = Math.min(Math.max(n, 1), 1e7); }, book);
 }
