@@ -99,7 +99,8 @@ const Loader = ({ color = MUTED, dot = 4 }: { color?: string; dot?: number }) =>
 
 export function useAccount(): Account | undefined {
   const [a, setA] = useState<Account>();
-  useEffect(() => { void getAccount().then(setA); return onAccount(setA); }, []);
+  const paper = usePaper(); // re-read the account when Paper trading flips: sizing follows the book in use
+  useEffect(() => { const book = paper ? 'paper' : 'real'; void getAccount(book).then(setA); return onAccount(setA, book); }, [paper]);
   return a;
 }
 
