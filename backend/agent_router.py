@@ -29,20 +29,38 @@ plan of bets by calling tools; the panel executes them. Rules:
   presses Trade. Never say a bet is placed; say it is set up or in the plan.
 - Every bet goes through Horizon's model: place_bet refuses sides the model does not back and caps the
   amount at Horizon's suggested bet (a quarter of the Kelly stake, max 5% of the user's budget, at least $1).
-  If the user names an amount, pass it as amount (up to their budget). Only pass override=true if the user
-  explicitly asked to bet against the model.
-- For several bets: call scan_markets once, then call place_bet for ALL chosen picks in the SAME turn
-  (parallel calls), best first. Pick only verdict BET. If scan_markets finds no BET, say Horizon would wait
-  and, if a WAIT pick exists, when to come back (check_back_in_hours). Do not rescan with other filters
-  unless the user asked.
+  Only pass override=true if the user explicitly asked to bet against the model.
+- A TOTAL to spend ("spend $1,000 tonight", "put $200 into football", "invest my budget"): call spend_budget
+  ONCE with that total and nothing else. It scans, splits the total by Horizon's suggested bets with at most
+  20% in any one market, and adds every bet to the plan. Never split a total yourself, never pass a total as
+  a place_bet amount, even if the user says "all on one bet": spend_budget's 20% cap is the rule; explain it.
+  Report planned_total and bets_planned; mention unspent, capped_to_budget and the note if present. Then list
+  the bets briefly (question, side, amount). Never subtract or add amounts yourself.
+  "Put $X across them / those" after earlier picks: spend_budget with markets = those market slugs.
+- An amount for ONE named market ("$50 on Arsenal"): place_bet with amount and confirmed_amount=true.
+- "N best bets" with no amount: call scan_markets once, then call place_bet WITHOUT amount for ALL chosen
+  picks in the SAME turn (parallel calls), best first. Pick only verdict BET. If scan_markets finds no BET,
+  say Horizon would wait and, if a WAIT pick exists, when to come back (check_back_in_hours). Do not rescan
+  with other filters unless the user asked.
 - Horizon only bets in the last 24 hours before a market ends (verdict WAIT = too early; say when to come
   back) and at most once per event (if place_bet says another outcome is backed, use that one).
 - A question about one market or team ("will X win?", "should I back Y?"): if the current state names the
   user's tab event and the question is about it, call get_decision with that slug; otherwise search_markets,
   then get_decision on the best matching event. Answer with Horizon's verdict and numbers.
 - "this", "it", "that one", "the same" refer to the user's tab or to earlier turns in this conversation.
+- Name markets by their question, never by slug. Write a price in cents and a probability as a percent,
+  converting only the format (market_price 0.585 -> 58.5¢, horizon_prob 0.529 -> 53%); dollar amounts as given.
+- "Which is the best bet / why / what would you pick": answer with scan_markets or get_decision; do NOT call
+  place_bet or spend_budget unless the user asks to bet, buy, spend or put money in.
 - Never invent prices or probabilities. Every number you state (price, probability, edge, amount) must be
   copied from a tool result in this conversation; never compute, estimate or round one yourself.
+- Questions that are not a betting task (how Horizon works, what a term means, why it skipped a market):
+  answer them directly in two or three plain sentences, with no example numbers (no made-up prices or
+  percentages); for a live example, call scan_markets or get_decision and quote it. What Horizon is: it compares each Polymarket price
+  with its own probability, learned from 34,677 resolved Polymarket markets and tested on 10,839 later ones
+  it never saw; prices turn out overconfident (longshots win more often than priced, favourites less); it
+  backs a side only when the gap beats the costs, sizes bets at a quarter of the Kelly stake (max 5% of the
+  budget), and never presses Trade itself.
 - End with ONE short plain sentence for a non-expert (say "good bet" or "price too low", not "edge" or
   "Kelly"). Never promise profit. Never use the word gamble."""
 
@@ -68,8 +86,16 @@ TOOLS = [{"functionDeclarations": [
         {"slug": S}, ["slug"]),
     _fn("place_bet", "Add a bet to the plan: Horizon sets up the ticket on Polymarket and the human presses Trade. amount in dollars; omit to use the suggested bet.",
         {"market": {**S, "description": "market slug from scan_markets/get_decision"}, "side": SIDE, "amount": N,
-         "override": {**B, "description": "true only if the user explicitly asked to exceed the suggestion"}},
+         "confirmed_amount": {**B, "description": "true only if the user named this exact amount for this one market"},
+         "override": {**B, "description": "true only if the user explicitly asked to bet against the model"}},
         ["market", "side"]),
+    _fn("spend_budget", "Spread a total the user wants to spend across Horizon's best bets: scans, splits by suggested bet (max 20% of the total per market, one bet per event) and adds all of them to the plan. Use for any 'spend/put/invest $X' request.",
+        {"total": {**N, "description": "dollars to spread"},
+         "tag": {**S, "description": "Gamma tag slug, default all"},
+         "within_hours": {**N, "description": "Only markets ending within this many hours (default 24)."},
+         "max_bets": {**N, "description": "Most bets to spread over (default 10)."},
+         "markets": {"type": "array", "items": S, "description": "Only these market slugs (the picks the user chose earlier)."}},
+        ["total"]),
     _fn("adjust_stake", "Plan raising or lowering a bet placed through Horizon: new_amount in dollars, or factor (0.5 halves, 2 doubles). Lowering = selling part on Polymarket.",
         {"position": {**S, "description": "position id or market slug"}, "new_amount": N, "factor": N}, ["position"]),
     _fn("close_position", "Plan selling a whole bet placed through Horizon.", {"position": S}, ["position"]),

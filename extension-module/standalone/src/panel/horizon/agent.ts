@@ -148,6 +148,35 @@ export function planOutlook(items: PlanItem[]) {
   return { ...outlook(bets), total: bets.reduce((s, b) => s + b.stake, 0), n: bets.length };
 }
 
+/** Largest share of one total any single bet may take, so "spend $X" never lands in one basket. */
+export const MAX_SHARE = 0.2;
+
+/**
+ * Split `total` across picks in proportion to Horizon's suggested bets (quarter Kelly), each at most
+ * MAX_SHARE of the total; what a capped bet cannot take goes to the others. Deterministic: same picks,
+ * same split. Under $1 a bet is dropped (Polymarket's minimum). With fewer than 1/MAX_SHARE picks part
+ * of the total stays unspent, on purpose.
+ */
+export function splitBudget(total: number, weights: number[], maxShare = MAX_SHARE): number[] {
+  const cap = Math.max(total * maxShare, 1); // a tiny total still makes $1 bets
+  const out = weights.map(() => 0);
+  let free = weights.map((w, i) => (w > 0 ? i : -1)).filter((i) => i >= 0);
+  let left = total;
+  while (free.length && left > 0.005) {
+    const w = free.reduce((s, i) => s + weights[i], 0);
+    const over = free.filter((i) => out[i] + (left * weights[i]) / w > cap);
+    if (!over.length) { for (const i of free) out[i] += (left * weights[i]) / w; left = 0; break; }
+    for (const i of over) { left -= cap - out[i]; out[i] = cap; }
+    free = free.filter((i) => !over.includes(i));
+  }
+  // Whole cents that add up to what was allocated: floor, then hand the leftover cents to the largest remainders.
+  const cents = out.map((x) => (x >= 1 ? Math.floor(x * 100 + 1e-6) : 0));
+  let spare = Math.round(out.reduce((t, x, i) => t + (cents[i] ? x : 0), 0) * 100) - cents.reduce((t, c) => t + c, 0);
+  const order = out.map((x, i) => i).filter((i) => cents[i]).sort((i, j) => (out[j] * 100 - cents[j]) - (out[i] * 100 - cents[i]));
+  for (const i of order) { if (spare <= 0) break; if (cents[i] + 1 <= Math.round(cap * 100)) { cents[i]++; spare--; } }
+  return cents.map((c) => c / 100);
+}
+
 // ---------- tools (planning only: buys and sells go into the plan list) ----------
 
 type Args = Record<string, any>;
@@ -205,11 +234,49 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: q.decision.blockedBy ? `one bet per event: Horizon backs ${q.decision.blockedBy} instead` : 'price is fair after costs (advantage under 1¢): skip' };
       if (q.decision && verdictOf(q.decision) === 'WAIT' && !args.override)
         return { error: `too early: Horizon only bets in the last 24 hours before the end; check back in about ${Math.round(q.decision.checkBackInHours ?? q.decision.hours - 24)} h`, verdict: 'WAIT' };
+      if (Number(args.amount) > a.bankroll * MAX_SHARE && !args.confirmed_amount && !args.override) {
+        return { error: `$${args.amount} is over ${MAX_SHARE * 100}% of the budget in one market. To spend a total across several bets call spend_budget; pass confirmed_amount=true only if the user named this amount for this one market.` };
+      }
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });
       return { added_to_plan: true, amount: c.amount, horizon_suggests: c.suggested, above_suggestion: c.above, capped_to_budget_from: c.capped,
         note: 'Horizon will set up this ticket on Polymarket; the user presses Trade' };
+    }
+    case 'spend_budget': {
+      const asked = Number(args.total);
+      if (!(asked >= 1)) return { error: 'total must be at least $1' };
+      const a = await getAccount();
+      // Never plan more than the budget; never more bets than whole dollars (Polymarket's minimum is $1).
+      const total = Math.min(asked, a.bankroll);
+      const maxBets = Math.min(Math.max(Number(args.max_bets ?? 10), 1), 40, Math.floor(total));
+      const s = await runTool(ctx, 'scan_markets', { tag: args.tag ?? 'all', within_hours: args.within_hours ?? 24, top: Math.max(maxBets * 2, 10) }) as
+        { picks?: { market: string; question: string; side: Side; suggested_bet: number; verdict?: string; check_back_in_hours?: number }[]; error?: string };
+      if (s.error) return { error: s.error };
+      const have = new Set(a.positions.filter((p) => p.status === 'open').map((p) => p.marketSlug));
+      // markets = the user's own choice ("put $300 across them"): split across exactly those, up to 1/n each.
+      const only = Array.isArray(args.markets) && args.markets.length ? new Set((args.markets as unknown[]).map(String)) : undefined;
+      const picks = (s.picks ?? []).filter((p) => p.side && p.verdict !== 'WAIT' && !have.has(p.market) && (!only || only.has(p.market))).slice(0, only ? 40 : maxBets);
+      const wait = (s.picks ?? []).filter((p) => p.verdict === 'WAIT').map((p) => p.check_back_in_hours).filter((h): h is number => h != null);
+      const over = asked > total ? { capped_to_budget: total, note_budget: `Asked for ${money(asked)} but the budget is ${money(total)}: planned within the budget.` } : {};
+      if (!picks.length) return { total, ...over, planned_total: 0, note: 'No good bets right now: Horizon would wait and spend nothing.',
+        ...(wait.length ? { check_back_in_hours: Math.round(Math.min(...wait)) } : {}) };
+      const share = only ? Math.max(MAX_SHARE, 1 / picks.length) : MAX_SHARE;
+      const amounts = splitBudget(total, picks.map((p) => Math.max(p.suggested_bet, 1)), share);
+      const bets: { market: string; question: string; side: Side; amount: number }[] = [];
+      for (let i = 0; i < picks.length && !ctx.signal.stop; i++) {
+        if (!amounts[i]) continue;
+        const r = await runTool(ctx, 'place_bet', { market: picks[i].market, side: picks[i].side, amount: amounts[i], confirmed_amount: true }) as { added_to_plan?: boolean; amount?: number };
+        if (r.added_to_plan) bets.push({ market: picks[i].market, question: picks[i].question, side: picks[i].side, amount: r.amount ?? amounts[i] });
+      }
+      const spent = +bets.reduce((t, b) => t + b.amount, 0).toFixed(2);
+      const left = +(total - spent).toFixed(2);
+      const sug = +picks.reduce((t, p) => t + p.suggested_bet, 0).toFixed(2);
+      return { total, ...over, planned_total: spent, bets_planned: bets.length, ...(left >= 1 ? { unspent: left } : {}), bets,
+        horizon_alone_would_bet: sug,
+        rule: `split by Horizon's suggested bets, at most ${Math.round(share * 100)}% of the total in one market, one bet per event`,
+        note: left >= 1 ? `${bets.length} bets at most ${Math.round(share * 100)}% each: ${money(left)} stays unspent rather than piling into one market.`
+          : sug < spent ? `The user asked for more than Horizon would bet on its own (${money(sug)}); say so in one plain sentence.` : undefined };
     }
     case 'adjust_stake': {
       const p = await findPosition(String(args.position ?? ''));
@@ -437,9 +504,20 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
 
   const amt = num(/\$\s*([\d,]+(?:\.\d+)?)/) ?? num(/([\d,]+(?:\.\d+)?)\s*(?:dollars|usd|bucks)\b/);
   const count = num(/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|twenty|dozen)\s+(?:best|top|good|great|bets?|picks?|markets?)/) ?? (/\bbest( \w+)? (bet|market|pick)\b/.test(t) ? 1 : undefined);
-  if (/\b(bet|place|put|buy|back|find|pick|play)\b/.test(t) || count !== undefined) {
-    const n = Math.min(count ?? (amt !== undefined ? 1 : 5), 40);
+  if (/\b(bet|place|put|buy|back|find|pick|play|spend|invest|split|allocate)\b/.test(t) || count !== undefined) {
     const where = tag ? TAGS[tag] : 'all';
+    // A dollar amount is a total to spread ("spend $1,000 tonight") unless it is said to be per bet.
+    if (amt !== undefined && !/\b(each|per bet|apiece|a bet|per pick)\b/.test(t)) {
+      const r = await runTool(ctx, 'spend_budget', { total: amt, tag: where, within_hours: within, max_bets: count ?? 10 }) as
+        { error?: string; bets?: unknown[]; planned_total?: number; unspent?: number; horizon_alone_would_bet?: number; capped_to_budget?: number };
+      if (r.error) return `Could not look at the markets: ${r.error}.`;
+      if (!r.bets?.length) return `Nothing ${where === 'all' ? '' : `in ${where} `}is a good bet right now. Horizon would wait and spend nothing.`;
+      return `Here is the plan: ${money(r.planned_total ?? 0)} over ${r.bets.length} bets, at most ${MAX_SHARE * 100}% in any one.`
+        + (r.unspent && r.unspent >= 1 ? ` ${money(r.unspent)} stays unspent: not enough good bets.` : '')
+        + (r.horizon_alone_would_bet !== undefined && r.horizon_alone_would_bet < (r.planned_total ?? 0) ? ` Horizon on its own would put in ${money(r.horizon_alone_would_bet)}.` : '')
+        + (r.capped_to_budget !== undefined ? ` Kept within your ${money(r.capped_to_budget)} budget.` : '');
+    }
+    const n = Math.min(count ?? 5, 40);
     const s = await runTool(ctx, 'scan_markets', { tag: where, within_hours: within, top: Math.max(n * 2, 10) }) as { picks?: { market: string; side: Side }[]; error?: string };
     if (s.error) return `Could not look at the markets: ${s.error}.`;
     const a = await getAccount();
@@ -448,10 +526,17 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
     for (const p of s.picks ?? []) {
       if (added >= n || ctx.signal.stop) break;
       if (have.has(p.market)) continue;
-      const r = await runTool(ctx, 'place_bet', { market: p.market, side: p.side, amount: amt, override }) as { added_to_plan?: boolean };
+      const r = await runTool(ctx, 'place_bet', { market: p.market, side: p.side, amount: amt, confirmed_amount: amt !== undefined, override }) as { added_to_plan?: boolean };
       if (r.added_to_plan) added++;
     }
     return added ? 'Here is the plan.' : `Nothing ${where === 'all' ? '' : `in ${where} `}is a good bet right now. Horizon would wait.`;
+  }
+
+  // Questions about Horizon itself: without the LLM, a fixed plain answer beats "did not catch that".
+  if (/\b(how does|how do you|what is|what are|what do|why|explain|who are you|what can you)\b/.test(t) && !/\b(my|portfolio|budget)\b/.test(t)) {
+    return 'Horizon compares each Polymarket price with its own probability, learned from tens of thousands of resolved markets and tested on later ones it never saw. '
+      + 'It backs a side only when the price is off by more than the costs, and suggests a small bet (a quarter of the usual formula, at most 5% of your budget). '
+      + 'It sets up the ticket; you press Trade. Try "Spend $100 on the best bets tonight", "Sell what lost its edge" or ask about one market.';
   }
 
   if (/\b(my (stats|results|record)|how am i doing|am i (up|down)|show (me )?my)\b/.test(t)) {
