@@ -54,6 +54,8 @@ So why does this work? Polymarket says something has a 15% chance. Is that true?
 **Gleb:**
 A month before the end, yes. In the last day, no: it actually happens about 20% of the time.
 Near the end people get too sure about the favourite, so the underdog ends up too cheap.
+That's what Horizon picks up. It corrects the price for how much time is left, and only suggests a bet
+when the gap is bigger than Polymarket's fees.
 
 Ayaz built the model and the testing, so he'll explain how it works.
 
