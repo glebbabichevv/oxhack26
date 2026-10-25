@@ -10,6 +10,13 @@
       "problemMatcher": []
     },
     {
+      "label": "Pitch 3: backtest log, every test trade (CSV + summary)",
+      "type": "shell",
+      "command": "backend/.venv/bin/python integrations/backtest_log.py && open -a 'Visual Studio Code' pitch-proof/3-backtest-trades.csv",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Pitch 2: verify the sealed predictions (hash + Bitcoin)",
       "type": "shell",
       "command": "backend/.venv/bin/python integrations/verify_seals.py",
