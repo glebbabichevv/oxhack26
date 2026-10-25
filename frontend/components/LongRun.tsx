@@ -102,7 +102,7 @@ function Fan({ d }: { d: LongRunData }) {
           <div key={p.n_bets}>
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-[13px]">
               <span className="font-semibold text-ink-strong">{p.n_bets} bets of $1</span>
-              <span className="tabular-nums text-ink-muted"><b className="font-semibold text-up">{pctTxt(p.share_up)}</b> of portfolios ended up</span>
+              <span className="tabular-nums text-ink-muted"><b className="font-semibold text-up">{pctTxt(p.share_up)}</b> of portfolios ended up ahead</span>
             </div>
             <div className="relative mt-2 h-7">
               <div className="absolute top-1/2 h-px w-full -translate-y-1/2 bg-hairline" />
@@ -112,7 +112,7 @@ function Fan({ d }: { d: LongRunData }) {
             </div>
             <div className="mt-1 flex justify-between text-[11px] tabular-nums text-ink-faint">
               <span>{usd(p.p5)} (bad 5%)</span>
-              <span>typical {usd(p.p50)}</span>
+              <span>median {usd(p.p50)}</span>
               <span>{usd(p.p95)} (good 5%)</span>
             </div>
           </div>
@@ -145,7 +145,8 @@ export function LongRun() {
               <b className="font-semibold text-ink-strong">Losing streaks are normal here.</b> The longest in the test was{" "}
               <b className="font-semibold text-ink-strong">{s.longest_losing_streak} losses in a row</b>. Any given {s.streak} bets all lose{" "}
               {pctTxt(s.p_given_run_all_lose, 1)} of the time, but across 200 bets a {s.streak}-loss streak turns up in{" "}
-              {pctTxt(s.p_streak_in_200)} of portfolios, and it happened {s.streaks_ge_20_in_test} times in the {int(d.n_trades)} test bets.
+              {pctTxt(s.p_streak_in_200)} of portfolios.{" "}
+              {s.streaks_ge_20_in_test ? `It happened ${s.streaks_ge_20_in_test} times in the ${int(d.n_trades)} test bets.` : `In the ${int(d.n_trades)} test bets the longest run was ${s.longest_losing_streak}, so a ${s.streak}-loss run never happened.`}
               That is why each stake is a small slice of the bankroll: a quarter of the Kelly stake, at most 5%.
             </p>
             <p className="mt-3 text-[12px] text-ink-faint">{d.caption}</p>

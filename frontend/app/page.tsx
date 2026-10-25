@@ -12,7 +12,7 @@ import { CalibrationChart } from "@/components/CalibrationChart";
 import { EquityChart } from "@/components/EquityChart";
 import {
   API_URL, cents, dateLong, getJSON, horizonLabel, horizonPhrase, horizonShort, int, pct, bankroll,
-  type Backtest, type Calibration, type LiveMarket, type LivePayload,
+  type Backtest, type Calibration, type LiveMarket, type LivePayload, type PolicyStats,
 } from "@/lib/api";
 
 const LIVE_REFRESH_MS = 2 * 60 * 1000;
@@ -229,7 +229,7 @@ function whereItPays(b: Backtest) {
   const top = clear[0];
   return {
     value: clear.map((d) => domainName(d.domain)).join(", "),
-    note: `${bankroll(top.return)}, CI ${bankroll(top.return_ci![0])} to ${bankroll(top.return_ci![1])}; other types' CIs include 0`,
+    note: `${bankroll(top.return)} of bankroll, CI ${bankroll(top.return_ci![0])} to ${bankroll(top.return_ci![1])}; other types' CIs include 0`,
   };
 }
 
@@ -248,9 +248,9 @@ function Kpis({ b }: { b: Backtest }) {
           tone: (b.headline.per_dollar_ci[0] > 0 ? "up" : "down") as "up" | "down",
         }] : []),
         {
-          label: "Bankroll, ≤1 at risk",
+          label: "Total, % of starting bankroll",
           value: bankroll(head.return),
-          note: head.return_ci ? `90% CI ${bankroll(head.return_ci[0])} to ${bankroll(head.return_ci[1])} · concentrated: mostly sports` : `max drawdown ${Math.round(head.max_drawdown * 100)}% of bankroll`,
+          note: head.return_ci ? `90% CI ${bankroll(head.return_ci[0])} to ${bankroll(head.return_ci[1])} · never more than 1 bankroll at risk · mostly sports` : `max drawdown ${Math.round(head.max_drawdown * 100)}% of bankroll`,
           tone: head.return_ci ? (head.return_ci[0] > 0 ? "up" : "down") : undefined,
         },
         { label: "Brier score, model", value: b.overall.brier_model.toFixed(4), note: `vs market ${b.overall.brier_market.toFixed(4)} · lower is better`, tone: brier.tone },
@@ -311,7 +311,7 @@ function BacktestSection({ b }: { b: Backtest }) {
         : `After fees and spread, the test made ${bankroll(b.with_costs.return)} of its starting bankroll`}
       lead={`Out-of-time test on ${int(b.n_test_markets)} markets. The rule: trade only when the net edge after fees and the model's uncertainty is at least 1¢, and only within 24 hours of the end; across the outcomes of one event, probabilities are scaled to sum to 100% and at most one outcome is backed (picked on validation among 10 variants; the test was opened once for the two finalists). One trade per market at ¼ Kelly, at most one bankroll staked at once, P&L summed as a share of the starting bankroll${b.headline ? `: ${bankroll(b.headline.return)}, 90% CI ${bankroll(b.headline.return_ci[0])} to ${bankroll(b.headline.return_ci[1])}, mostly from sports` : ""}. Before costs it would have been ${bankroll(b.without_costs.return)}; always backing the favourite would have returned ${bankroll(b.naive_favourite.return)}.`}
     >
-      <FramedCard title="Equity, test period, uncapped stakes" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
+      <FramedCard title="Equity over the test period, at most 1 bankroll at risk" meta={`${int(b.with_costs.n_trades)} trades · max drawdown ${Math.round(b.with_costs.max_drawdown * 100)}% of bankroll`}>
         <EquityChart withCosts={b.with_costs.equity} withoutCosts={b.without_costs.equity} />
         <div className="mt-5 border-t border-hairline-soft pt-3">
           <div className="mb-2 text-[13px] font-semibold text-ink-strong">Why within 24 hours: mean return per trade after costs, if you entered at each horizon</div>
@@ -340,10 +340,28 @@ function BacktestSection({ b }: { b: Backtest }) {
   );
 }
 
-// How we chose the rule: V0/V2/V3 (round 1) and COH (round 2, event coherence); validation picked, test shown side by side.
+// How we chose the rule: round 1 (V0/V2/V3 on all of validation) and round 2 (10 rules on the later half of
+// validation, event coherence picked). Validation picked in each round; test shown side by side.
 function PolicyTable({ pc }: { pc: NonNullable<Backtest["policy_comparison"]> }) {
-  const rows = pc.rows.filter((r) => r.variant !== "V1");
+  const r1 = pc.rows.filter((r) => r.variant !== "V1");
+  const r2 = (pc.round2 ?? []).filter((r) => r.variant === "V3" || r.variant === "COH");
   const ci = (c: [number, number]) => `${perDollar(c[0])} to ${perDollar(c[1])}`;
+  const name = (v: string) =>
+    v === "V0" ? "First edge, any horizon" : v === "V2" ? "Only within 24 h" : v === "V3" ? "Within 24 h, edge ≥ 1¢" : v === "COH" ? "+ one bet per event, outcomes sum to 100%" : v;
+  const Row = ({ r, badge }: { r: { variant: string; picked_by_validation: boolean; validation: PolicyStats; test: PolicyStats }; badge: string }) => (
+    <tr className="border-t border-hairline-soft">
+      <td className="py-1.5 pr-3">
+        <span className={r.picked_by_validation ? "font-semibold text-ink-strong" : "text-ink-muted"}>{name(r.variant)}</span>
+        {r.picked_by_validation ? <span className="ml-2 rounded-full bg-up-tint px-2 py-[2px] text-[11px] font-semibold text-up">{badge}</span> : null}
+      </td>
+      <td className="py-1.5 pr-3 text-right" title={`90% CI ${ci(r.validation.per_dollar_ci)}`}>{perDollar(r.validation.per_dollar)}</td>
+      <td className="py-1.5 pr-3 text-right" title={`90% CI ${ci(r.test.per_dollar_ci)}`}><b className="font-semibold text-ink-strong">{perDollar(r.test.per_dollar)}</b> <span className="text-ink-faint">{ci(r.test.per_dollar_ci)}</span></td>
+      <td className="py-1.5 text-right text-ink-muted">{int(r.test.n_trades)}</td>
+    </tr>
+  );
+  const Head = ({ text }: { text: string }) => (
+    <tr><td colSpan={4} className="pt-3 pb-1 text-[12px] font-semibold text-ink-faint">{text}</td></tr>
+  );
   return (
     <div className="mt-5 border-t border-hairline-soft pt-3">
       <div className="mb-2 text-[13px] font-semibold text-ink-strong">How we chose the rule: per $1 staked after fees</div>
@@ -358,21 +376,14 @@ function PolicyTable({ pc }: { pc: NonNullable<Backtest["policy_comparison"]> })
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.variant} className="border-t border-hairline-soft">
-                <td className="py-1.5 pr-3">
-                  <span className={r.picked_by_validation ? "font-semibold text-ink-strong" : "text-ink-muted"}>{r.variant === "V0" ? "First edge, any horizon" : r.variant === "V2" ? "Only within 24 h" : "Within 24 h, edge ≥ 1¢"}</span>
-                  {r.picked_by_validation ? <span className="ml-2 rounded-full bg-up-tint px-2 py-[2px] text-[11px] font-semibold text-up">picked on validation</span> : null}
-                </td>
-                <td className="py-1.5 pr-3 text-right" title={`90% CI ${ci(r.validation.per_dollar_ci)}`}>{perDollar(r.validation.per_dollar)}</td>
-                <td className="py-1.5 pr-3 text-right" title={`90% CI ${ci(r.test.per_dollar_ci)}`}><b className="font-semibold text-ink-strong">{perDollar(r.test.per_dollar)}</b> <span className="text-ink-faint">{ci(r.test.per_dollar_ci)}</span></td>
-                <td className="py-1.5 text-right text-ink-muted">{int(r.test.n_trades)}</td>
-              </tr>
-            ))}
+            <Head text="Round 1: when to enter (validation = last 20% of training)" />
+            {r1.map((r) => <Row key={`1-${r.variant}`} r={r} badge="round 1 pick" />)}
+            {r2.length ? <Head text="Round 2: ten rules on top of it (validation = its later half)" /> : null}
+            {r2.map((r) => <Row key={`2-${r.variant}`} r={r} badge="shipped" />)}
           </tbody>
         </table>
       </div>
-      <p className="mt-1.5 text-[12px] text-ink-faint">The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only. Same model, fees and stake caps for every row.</p>
+      <p className="mt-1.5 text-[12px] text-ink-faint">Each round picked its rule on validation; the test results are shown side by side, not used to choose. In round 1, V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only. Round 2 rows come from the playoff harness; the headline above re-runs the shipped pipeline, so its count differs slightly (1,827 vs 1,899 trades). Same model, fees and stake caps for every row.</p>
     </div>
   );
 }
