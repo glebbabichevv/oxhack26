@@ -141,3 +141,20 @@ Short answers:
 - **Extension or agent hangs:** play the backup video. Don't fix it in front of the judges.
 - **Card says "Not sure here":** "This market closes too soon. We never tested under 12 hours, so it won't advise." Switch to the backup match.
 - **Judge is in a hurry:** do only the arrows, "about 30 cents per dollar", and the card on the match.
+
+---
+
+## Commands (VS Code terminal, repo root)
+```bash
+git pull origin main
+python integrations/reproduce.py        # re-runs the pipeline, diffs every headline number
+python backend/capsule.py open --all --dry-run   # capsule result, publishes nothing
+python backend/capsule.py open --all             # 12:30: the real opening
+```
+
+## Proof trail (if they ask for logs)
+- GitHub commits + PRs reviewed by another role
+- `team/inbox/` — agents and people, timestamped: who found the fee bug, the time leak, COH
+- `team/STORY.md` — the day as a timeline
+- `integrations/ensemble/results.json`, `integrations/robustness/` — model tournament and stress tests
+- `capsule/` — sealed files, `.ots` timestamps, `posts.json` (Discord post times), `EXPECTATIONS.md`
