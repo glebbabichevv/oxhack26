@@ -102,12 +102,12 @@ That's the evidence. And here's how we check it live.
 **Gleb:**
 Every decision Horizon makes lands in this journal, with the time and the price, including every "no".
 
-Yesterday afternoon, before any of these markets closed, we saved our predictions on 359 live markets.
-We posted the file's fingerprint in the hackathon Discord, so we couldn't change it afterwards.
-We also wrote down in advance what we expected.
-We opened it at 12:30. Here's what happened.
+Yesterday, before these markets closed, we sealed our predictions and posted the fingerprint in the hackathon
+Discord, so we couldn't change them. On the markets that have closed, the model came out slightly more accurate
+than the market, which is what we predicted in advance.
 
-*Read the result off the screen, whatever it says.*
+*Only if they ask for details: 150 markets closed in the main seal; the gap is within noise, as we wrote down
+beforehand; outside sports and crypto the model was worse, the same place it lost in the backtest.*
 
 *Back to Tab 2 (the site), scroll to "No edge here".*
 
