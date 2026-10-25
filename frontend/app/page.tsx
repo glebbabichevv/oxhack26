@@ -5,6 +5,7 @@ import { FramedCard, Hero, KpiRow, Nav, Section, Segmented, DecisionRow, ActionC
 import { HorizonCurve } from "@/components/HorizonCurve";
 import { CorrectionField } from "@/components/CorrectionField";
 import { LongRun } from "@/components/LongRun";
+import { Trained } from "@/components/Trained";
 import { CachedNote } from "@/components/CachedNote";
 import { Capsule, type CapsuleData } from "@/components/Capsule";
 import { CalibrationChart } from "@/components/CalibrationChart";
@@ -115,7 +116,7 @@ export default function Home() {
   return (
     <>
       <Nav
-        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "My results", href: "/me" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Method", href: "#method" }, { label: "How we chose", href: "/methods" }]}
+        links={[{ label: "Calibration", href: "#calibration" }, { label: "Live", href: "#live" }, { label: "Journal", href: "/journal" }, { label: "My results", href: "/me" }, { label: "Sealed", href: "#sealed" }, { label: "Backtest", href: "#backtest" }, { label: "Trained", href: "#trained" }, { label: "Method", href: "#method" }, { label: "How we chose", href: "/methods" }]}
         action={<a href="#backtest" className="inline-flex h-9 items-center rounded-full bg-ink-strong px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2a2a2e]">See the backtest</a>}
       />
       <main className="mx-auto max-w-[1120px] px-4 pb-24">
@@ -203,6 +204,7 @@ export default function Home() {
         <div id="backtest">{backtest ? <BacktestSection b={backtest} /> : null}</div>
         <CachedNote paths={["/api/backtest", "/api/calibration"]} className="mt-3" />
         {backtest ? <Failures b={backtest} /> : null}
+        <div id="trained"><Trained /></div>
         <div id="method">{backtest ? <Method b={backtest} /> : null}</div>
 
         <footer className="mt-20 border-t border-hairline pt-6 text-[12px] text-ink-faint">
