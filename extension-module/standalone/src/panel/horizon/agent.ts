@@ -332,18 +332,25 @@ export function subTabOf(q: Pick<Quote, 'question' | 'marketSlug'>): string | un
 /** True while Horizon is steering the tab, so the panel does not jump views mid-bet. */
 export const pageDrive = { active: false };
 
-async function openEvent(ctx: Pick<Ctx, 'tabId'>, eventSlug: string) {
-  const url = `https://polymarket.com/event/${eventSlug}`;
+/**
+ * Open the market. With a market slug: the deep link polymarket.com/market/<slug>, which Polymarket
+ * redirects to /event/<event>/<market> with that market preselected (sports: to the event page).
+ * Waits for the load with a bounded poll; the ticket itself is awaited by prepareOrder.
+ */
+async function openEvent(ctx: Pick<Ctx, 'tabId'>, eventSlug: string, marketSlug?: string, force = false) {
+  const url = marketSlug ? `https://polymarket.com/market/${marketSlug}` : `https://polymarket.com/event/${eventSlug}`;
   if (ctx.tabId === undefined) { await chrome.tabs.create({ url }); return; }
   const t = await chrome.tabs.get(ctx.tabId).catch(() => undefined);
-  if (t?.url?.includes(eventSlug)) return;
-  await chrome.tabs.update(ctx.tabId, { url });
-  for (let i = 0; i < 40; i++) {
+  const here = marketSlug ? !!t?.url?.includes(marketSlug) || (!!t?.url?.includes('/sports/') && !!t?.url?.includes(eventSlug)) : !!t?.url?.includes(eventSlug);
+  if (here && !force) return;
+  if (here && force) await chrome.tabs.reload(ctx.tabId);
+  else await chrome.tabs.update(ctx.tabId, { url });
+  for (let i = 0; i < 60; i++) {
     await new Promise((r) => setTimeout(r, 250));
     const t2 = await chrome.tabs.get(ctx.tabId).catch(() => undefined);
-    if (t2?.status === 'complete') break;
+    if (t2?.status === 'complete' && i >= 2) break;
   }
-  await new Promise((r) => setTimeout(r, 2500)); // let Polymarket hydrate the order ticket
+  await new Promise((r) => setTimeout(r, 600)); // first paint; prepareOrder then polls for the ticket (<= 5 s)
 }
 
 const plainPageError = (e: string) => /ticket not found/i.test(e) ? "Polymarket's order box is not on screen"
@@ -359,7 +366,7 @@ const plainPageError = (e: string) => /ticket not found/i.test(e) ? "Polymarket'
  * outcome, type the amount. Stops there: the user presses Trade. On failure the outcome is
  * highlighted and the reason given in plain words.
  */
-export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q: Quote, side: Side, amount: number, mode: 'buy' | 'sell'):
+export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q: Quote, side: Side, amount: number, mode: 'buy' | 'sell', retry = false):
   Promise<{ ok: boolean; error?: string; label: string }> {
   const sh = stepper(ctx, 'shaping');
   let label = q.label.replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
@@ -367,7 +374,7 @@ export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q
   const open = sh('Opening the market on Polymarket');
   pageDrive.active = true;
   try {
-    await openEvent(ctx, q.eventSlug);
+    await openEvent(ctx, q.eventSlug, q.marketSlug, !!retry);
     open('ok');
     await stylePage(ctx.tabId);
     void markPage(ctx.tabId, 'act');

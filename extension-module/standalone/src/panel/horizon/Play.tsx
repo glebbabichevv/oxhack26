@@ -62,6 +62,16 @@ export const reasonOf = (d: Decision) => intendedAction(d) === 'BUY_YES'
     ? (d.price > 0.5 ? 'Favourites like this lose more often than their price says.' : 'Horizon thinks this is less likely than the price says.')
     : 'The price looks about right.';
 
+/** "Ends Sun 21:00 · in 19 h": when the market ends, local time, and how long is left. */
+export function endsLine(hours: number) {
+  const end = new Date(Date.now() + hours * 3.6e6);
+  const today = new Date().toDateString() === end.toDateString();
+  const day = today ? 'today' : end.toLocaleDateString(undefined, { weekday: 'short' });
+  const hm = end.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const left = hours < 1 ? `${Math.max(1, Math.round(hours * 60))} min` : hours < 48 ? `${Math.round(hours)} h` : `${Math.round(hours / 24)} days`;
+  return `Ends ${day} ${hm} · in ${left}`;
+}
+
 /** Best window from the backtest: 24h to 12h before the scheduled end, in local time. */
 export function bestTime(hours: number) {
   if (hours <= 12) return 'Best time: now, it ends soon';
@@ -245,7 +255,8 @@ function RealDoer({ model, tabId, items, source, onFinish }: { model: Model; tab
     const ctx = { model, tabId, onStep: (s: Step) => { const k = acc.findIndex((x) => x.id === s.id); if (k >= 0) acc[k] = s; else acc.push(s); setSteps([...acc]); } };
     const amount = item.kind === 'buy' ? item.amount : item.pos.shares * item.fraction;
     const side = item.kind === 'buy' ? item.side : item.pos.side;
-    void fillTicket(ctx, item.q, side, amount, item.kind).then((r) => {
+    // One retry per ticket (page reloaded) before giving up on it; a run never stops at one failure.
+    void fillTicket(ctx, item.q, side, amount, item.kind).then((r) => (r.ok ? r : fillTicket(ctx, item.q, side, amount, item.kind, true))).then((r) => {
       setFill(r);
       if (!paper && r.ok) journalOf(item, source, 'set_up');
       if (batch) {
@@ -402,7 +413,7 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
       {mine && quote ? <PositionAdvice pos={mine} q={quote} d={d} unsure={!!unsure} title={title} onSell={(it) => setDoing([it])} busy={!!doing} /> : null}
       {verdict === 'SKIP' && !unsure && !holding && !mine && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
       {d.domain === 'crypto' ? <p className="mt-1 text-caption text-[#94a3b8]">Crypto: our tests show no edge here. Polymarket prices these well.</p> : null}
-      {side && verdict === 'BET' ? <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {bestTime(d.hours)}</p> : null}
+      <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {endsLine(d.hours)}{side && verdict === 'BET' ? ` · ${bestTime(d.hours)}` : ''}</p>
       {side && verdict === 'WAIT' ? (
         <div className="mt-4 rounded-card bg-[rgba(15,23,42,0.04)] px-3.5 py-3">
           <p className="inline-flex items-center gap-1.5 text-subhead font-semibold text-[#0f172a]"><Icon d={I.clock} size={15} /> Wait. {bestTime(d.hours)}</p>
@@ -938,7 +949,7 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
                   <p className="mt-0.5 text-caption text-[#94a3b8]">{d && d.kelly * budget < 1 ? <>Horizon suggests {money(Math.floor(d.kelly * budget * 100) / 100)} · Polymarket minimum is $1</> : <>Horizon suggests {money(p.suggested)}</>}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
                 ) : null}
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
-                {isLater(p) && d ? <p className="mt-1 inline-flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {bestTime(d.hours)}</p> : null}
+                {d ? <p className="mt-1 inline-flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {endsLine(d.hours)} · {isLater(p) ? `Wait. ${bestTime(d.hours)}` : bestTime(d.hours)}</p> : null}
                 {k >= LIVE && liveDone && one !== k && !isLater(p) ? (subTabOf(p.q) ? (
                   <a href={`https://polymarket.com/event/${p.q.eventSlug}`} target="_blank" rel="noreferrer" className="hz-chip mt-1.5 inline-flex items-center gap-1 rounded-control px-3 py-1 text-footnote font-semibold">Open <Icon d={I.external} size={12} /></a>
                 ) : (
