@@ -14,10 +14,9 @@ ENS = ROOT / "integrations" / "ensemble"
 OUT = ROOT / "integrations" / "methods" / "summary.json"
 SRC = "C-Ayaz"
 
-LABELS = {"V3": "V3 shipped (M0)", "COH": "event coherence + one bet per event", "BETA": "beta calibration (Kull 2017)",
-          "ENS": "mean ensemble (8 members)", "AGREE": "ensemble + agreement filter", "POOL": "time-weighted log pool",
-          "shin": "Shin 1993 (TheMarkz3)", "power": "power method (TheMarkz3)", "isotonic": "isotonic (TheMarkz3)",
-          "hier": "hierarchical domain (TheMarkz3)"}
+LABELS = {"V3": "V3 (shipped before)", "COH": "Event coherence", "BETA": "Beta calibration", "ENS": "Mean of 8 models",
+          "AGREE": "Models agree", "POOL": "Log pool", "shin": "Shin 1993", "power": "Power method",
+          "isotonic": "Isotonic", "hier": "Hierarchical"}
 
 
 def row(block, name, value, lo=None, hi=None, n=None, split="", note=""):
@@ -43,8 +42,9 @@ def main():
         rows.append(row("tournament", LABELS.get(c, c), v.get("per_dollar"), lo, hi, v.get("n_trades"), "val2",
                         f"¢/$ after fees, V3 rules on this q; Brier {v['brier']}, log loss {v['logloss']}; "
                         f"winner {res['winner']}; {n_var} variants compared in total"))
-    for name, v in (("exit: FIX " + ex["fixed_pair_chosen_on_val1"], ex["val2"].get(ex["fixed_pair_chosen_on_val1"], {})),
-                    ("exit: DYNAMIC (sell when market reaches q)", ex["val2"]["DYNAMIC"])):
+    fx = ex["fixed_pair_chosen_on_val1"]
+    for name, v in (("Sell early " + fx.replace("FIX", "").replace(",", "h→").replace(")", "h)"), ex["val2"].get(fx, {})),
+                    ("Sell when market catches up", ex["val2"]["DYNAMIC"])):
         lo, hi = ci(v)
         rows.append(row("tournament", name, v.get("per_dollar"), lo, hi, v.get("n_trades"), "val2",
                         "¢/$ after fees on both legs; pair chosen on VAL1"))
@@ -101,7 +101,7 @@ def main():
                 rows.append(row("monthly_coh", f"{r['month']} {pol}", v["per_dollar"], lo, hi, v["n_trades"], "walkforward",
                                 "¢/$ after fees; M0 refitted on events ended before the month"))
         ms = rb["monthly_summary"]
-        rows.append(row("monthly_coh", "summary", ms["COH"]["positive"], n=ms["COH"]["months"], split="walkforward",
+        rows.append(row("monthly_coh_summary", "COH months positive", ms["COH"]["positive"], n=ms["COH"]["months"], split="walkforward",
                         note=f"COH positive in {ms['COH']['positive']} of {ms['COH']['months']} months (V3 {ms['V3']['positive']} of "
                              f"{ms['V3']['months']}); CI below 0 in {ms['COH']['ci_below_0']} (a 1-trade month)"))
         pl = rb["placebo_coh"]

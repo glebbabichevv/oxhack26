@@ -251,10 +251,12 @@ async def add(request: Request):
 
 
 @router.get("/api/journal")
-def feed(me: Optional[str] = None, limit: int = 50):
+def feed(me: Optional[str] = None, limit: int = 50, paper: bool = False):
     limit = max(1, min(int(limit), 200))
     try:
         recs = [r for r in STORE.all() if isinstance(r, dict) and r.get("market_id") and r.get("action")]
+        # Paper bets (extension's team-only paper mode, source "paper") never mix with real decisions; ?paper=1 shows only them.
+        recs = [r for r in recs if (r.get("source") == "paper") == paper]
     except Exception as e:  # noqa: BLE001
         raise HTTPException(503, f"journal storage unavailable ({type(e).__name__})")
     if me:

@@ -4,7 +4,7 @@
  * through checkBet (Horizon's call; at least $1, at most the budget). The plan is shown as a
  * list; the panel sets up Polymarket's ticket for the top few, one at a time; the user presses Trade.
  */
-import { decide, decideEvent, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
+import { cohere, decide, decideEventCached, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
 import { caution, context,
   checkBet, getAccount, inPlay, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
   type Position, type Quote, type Side,
@@ -13,6 +13,7 @@ import { fallbackHint, prepareOrder } from './prepareOrder';
 import { markPage, stylePage } from './pageStyle';
 import { intendedAction, verdictOf } from './policy';
 import { fetchMe, openMyResults } from './me';
+import { isPaper } from './paper';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -56,6 +57,7 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
   const batches = await Promise.all(Array.from({ length: 6 }, (_, i) =>
     fetch(`${GAMMA}/markets?${base}&offset=${i * 100}`).then((r) => (r.ok ? r.json() : [])).catch(() => [])));
   const seen = new Set<string>();
+  const negRisk = new Set<string>();
   const picks: MarketPick[] = [];
   for (const mk of batches.flat() as Record<string, any>[]) {
     if (seen.has(mk.id)) continue;
@@ -67,25 +69,69 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
     if (!(bid > 0 && bid < ask && ask < 1)) continue;
     const hours = (new Date(mk.endDate).getTime() - now.getTime()) / 3.6e6;
     const price = (bid + ask) / 2;
-    if (!(hours > 0) || price < m.tradable[0] || price > m.tradable[1]) continue;
+    // Out-of-band legs stay in (q = price) so an event's book sums the same way as on the site; dropped after coherence.
+    if (!(hours > 0)) continue;
     const tags = (mk.tags ?? []).map((x: { slug: string }) => x.slug);
     const ev = mk.events?.[0];
     const domain = domainOf(m, tags);
     const fee = feeOf(m, mk, domain);
     const ctx = context(mk);
-    if (caution({ ...ctx, endDate: mk.endDate }, now.getTime())) continue; // in progress, or smaller than anything tested
+    // In progress: drop. Smaller than anything tested: keep as a book leg for coherence; cohere() gives it no call.
+    const why = caution({ ...ctx, endDate: mk.endDate }, now.getTime());
+    if (why && why.startsWith('Event in progress')) continue;
     picks.push({ marketSlug: mk.slug, eventSlug: ev?.slug ?? mk.slug, question: mk.question, label: mk.groupItemTitle || mk.question,
       bid, ask, closed: false, endDate: mk.endDate, domain, fee, ...ctx, decision: decide(m, price, hours, domain, ask - bid, fee) });
+    if (mk.negRisk || ev?.negRisk) negRisk.add(ev?.slug ?? mk.slug);
   }
-  picks.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
+  // COH, exactly as /api/live: per event and end time, scale q across the legs (cohere), then one bet per event.
+  const groups = new Map<string, MarketPick[]>();
+  for (const p of picks) { const k = `${p.eventSlug}|${p.endDate}`; groups.set(k, [...(groups.get(k) ?? []), p]); }
+  for (const g of groups.values()) {
+    const legs = cohere(m, g.map((p) => ({ question: p.question, label: p.label, marketSlug: p.marketSlug, bid: p.bid, ask: p.ask, decision: p.decision, fee: p.fee, volume: p.volume })), negRisk.has(g[0].eventSlug));
+    legs.forEach((l, i) => { if (l.decision) g[i].decision = l.decision; });
+  }
+  // Neg-risk events whose book in this scan is incomplete (thin legs outside the top markets, sum < 0.95): fetch the
+  // whole event and decide it as the event page does, so the scan never ranks an un-normalised leg (Hull–Brentford).
+  const incomplete = [...groups.values()].filter((g) => negRisk.has(g[0].eventSlug) && g.reduce((t, p) => t + p.decision.price, 0) < 0.95)
+    .map((g) => g[0].eventSlug).filter((x, i, a) => a.indexOf(x) === i).slice(0, 60);
+  for (let i = 0; i < incomplete.length; i += 8) {
+    await Promise.all(incomplete.slice(i, i + 8).map(async (slug) => {
+      try {
+        const ev = await decideEventCached(m, slug);
+        for (const p of picks) if (p.eventSlug === slug) { const l = ev.legs.find((x) => x.marketSlug === p.marketSlug); if (l?.decision) p.decision = l.decision; }
+      } catch { /* keep the scan's own decision */ }
+    }));
+  }
+  const inBand = picks.filter((p) => p.decision.price >= m.tradable[0] && p.decision.price <= m.tradable[1]);
+  inBand.sort((a, b) => b.decision.netEdge - a.decision.netEdge);
   // One bet per event: the best leg of each event only.
   const events = new Set<string>();
-  const one = picks.filter((p) => verdictOf(p.decision) !== 'SKIP').filter((p) => (events.has(p.eventSlug) ? false : (events.add(p.eventSlug), true)));
-  return { picks: one.slice(0, top), scanned: seen.size };
+  const one = inBand.filter((p) => verdictOf(p.decision) !== 'SKIP').filter((p) => (events.has(p.eventSlug) ? false : (events.add(p.eventSlug), true)));
+  // The scan only sees the top markets by volume, so an event's thin legs (a $1.5k draw) can be missing from its book.
+  // Re-decide each finalist from its whole event (decideEvent: every leg, COH, one bet per event), like the site.
+  const checked = await Promise.all(one.slice(0, top * 2).map(async (p) => {
+    try {
+      const ev = await decideEventCached(m, p.eventSlug);
+      const leg = ev.legs.find((l) => l.marketSlug === p.marketSlug);
+      return leg?.decision ? { ...p, decision: leg.decision } : p;
+    } catch { return p; }
+  }));
+  const final = checked.filter((p) => verdictOf(p.decision) !== 'SKIP').sort((a, b) => b.decision.netEdge - a.decision.netEdge);
+  return { picks: final.slice(0, top), scanned: seen.size };
 }
 
 async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
-  return (await quotes(m, [slug])).get(slug);
+  return withEventDecision(m, (await quotes(m, [slug])).get(slug));
+}
+
+/** A quote's decision made the COH way: from its whole event (cohere + one bet per event), not the market alone. */
+export async function withEventDecision(m: Model, q?: Quote): Promise<Quote | undefined> {
+  if (!q?.decision || !q.eventSlug) return q;
+  try {
+    const ev = await decideEventCached(m, q.eventSlug);
+    const leg = ev.legs.find((l) => l.marketSlug === q.marketSlug);
+    return leg?.decision ? { ...q, decision: leg.decision } : q;
+  } catch { return q; }
 }
 async function findPosition(ref: string): Promise<Position | undefined> {
   const a = await getAccount();
@@ -117,18 +163,38 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
         done('ok', undefined, picks.length ? `Found ${picks.length} good bet${picks.length === 1 ? '' : 's'} in ${scanned.toLocaleString()} markets` : `No good bets in ${scanned.toLocaleString()} markets`);
         const a = await getAccount();
         return { scanned, picks: picks.map((p) => ({ market: p.marketSlug, question: p.question, side: sideOf(p.decision),
-          market_price: +p.decision.price.toFixed(3), horizon_prob: +p.decision.q.toFixed(3), suggested_bet: suggested(a, p.decision), hours_left: +p.decision.hours.toFixed(1) })) };
+          market_price: +p.decision.price.toFixed(3), horizon_prob: +p.decision.q.toFixed(3), suggested_bet: suggested(a, p.decision), hours_left: +p.decision.hours.toFixed(1),
+          verdict: verdictOf(p.decision), check_back_in_hours: p.decision.checkBackInHours, event: p.eventSlug })),
+          note: 'verdict BET = bet now; WAIT = Horizon only bets in the last 24 h: tell the user when to come back (check_back_in_hours), do not place_bet' };
       } catch (e) { done('fail', String((e as Error).message ?? e)); return { error: String((e as Error).message ?? e) }; }
+    }
+    case 'search_markets': {
+      const query = String(args.query ?? '').trim();
+      if (query.length < 2) return { error: 'query too short' };
+      const done = step('Looking it up on Polymarket');
+      const rows = await searchMarkets(m, query, Math.min(Number(args.top ?? 5), 10)).catch(() => []);
+      done(rows.length ? 'ok' : 'fail', rows.length ? undefined : 'Nothing open matches');
+      return { results: rows.map((r) => ({ event: r.slug, question: r.question, market_price: +r.decision.price.toFixed(3), hours_left: +r.decision.hours.toFixed(1) })),
+        note: "call get_decision with an event slug for Horizon's call (all outcomes, one bet per event)" };
     }
     case 'get_decision': {
       const slug = String(args.slug ?? '');
       const done = step('Reading the market');
       const q = await quoteOne(m, slug);
-      if (q?.decision) { done('ok'); return { market: q.marketSlug, question: q.question, side: sideOf(q.decision) ?? 'none', market_price: q.decision.price, horizon_prob: q.decision.q }; }
-      try {
-        const ev = await decideEvent(m, slug);
+      if (q?.decision) {
         done('ok');
-        return { event: slug, title: ev.title, legs: ev.legs.filter((l) => l.decision).map((l) => ({ market: l.marketSlug, label: l.label, side: sideOf(l.decision!) ?? 'none', market_price: l.decision!.price, horizon_prob: l.decision!.q })) };
+        const a = await getAccount();
+        return { market: q.marketSlug, event: q.eventSlug, question: q.question, side: sideOf(q.decision) ?? 'none', verdict: verdictOf(q.decision),
+          market_price: q.decision.price, horizon_prob: q.decision.q, hours_left: +q.decision.hours.toFixed(1),
+          check_back_in_hours: q.decision.checkBackInHours, suggested_bet: verdictOf(q.decision) === 'BET' ? suggested(a, q.decision) : 0,
+          why: q.decision.blockedBy ? `one bet per event: ${q.decision.blockedBy} has the larger edge` : q.decision.reason };
+      }
+      try {
+        const ev = await decideEventCached(m, slug);
+        done('ok');
+        return { event: slug, title: ev.title, legs: ev.legs.filter((l) => l.decision).map((l) => ({ market: l.marketSlug, label: l.label, side: sideOf(l.decision!) ?? 'none',
+          verdict: verdictOf(l.decision!), market_price: l.decision!.price, horizon_prob: l.decision!.q, hours_left: +l.decision!.hours.toFixed(1),
+          check_back_in_hours: l.decision!.checkBackInHours })) };
       } catch { done('fail', 'Not found'); return { error: `no market or event "${slug}"` }; }
     }
     case 'place_bet': {
@@ -136,7 +202,9 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const q = await quoteOne(m, slug);
       if (!q) return { error: 'market not found' };
       const a = await getAccount();
-      if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: 'price is fair after costs (advantage under 1¢): skip' };
+      if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: q.decision.blockedBy ? `one bet per event: Horizon backs ${q.decision.blockedBy} instead` : 'price is fair after costs (advantage under 1¢): skip' };
+      if (q.decision && verdictOf(q.decision) === 'WAIT' && !args.override)
+        return { error: `too early: Horizon only bets in the last 24 hours before the end; check back in about ${Math.round(q.decision.checkBackInHours ?? q.decision.hours - 24)} h`, verdict: 'WAIT' };
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });
@@ -203,8 +271,11 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const done = step('Opening your results');
       await openMyResults();
       const me = await fetchMe();
+      const paper = isPaper() ? await paperSummary(m) : undefined;
       done('ok');
-      return { opened: true, summary: me?.summary };
+      // In paper mode the practice book is what the user is playing with; the results page shows real decisions only.
+      return { opened: true, summary: me?.summary, ...(paper ? { paper_mode: true, paper_book: paper, paper_summary: paperLine(paper),
+        note: 'Paper trading is on: report the paper book (practice money, nothing on Polymarket). The results page shows real decisions only.' } : {}) };
     }
     case 'set_bankroll': {
       const n = Number(args.amount);
@@ -218,12 +289,30 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const open = a.positions.filter((x) => x.status === 'open');
       await refresh(await quotes(m, open.map((p) => p.marketSlug)));
       const a2 = await getAccount();
-      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2) };
+      const paper = isPaper() ? await paperSummary(m) : undefined;
+      return { budget: a2.bankroll, bets_user_placed: open.length, dollars_in_those_bets: +inPlay(a2).toFixed(2), result_so_far: +pnlTotal(a2).toFixed(2),
+        ...(paper ? { paper_mode: true, paper_book: paper, note: 'Paper trading is on: these practice bets were never sent to Polymarket.' } : {}) };
     }
     default:
       return { error: `unknown tool ${name}` };
   }
 }
+
+// ---------- paper book summary (paper mode) ----------
+
+type PaperSum = { bankroll: number; open_bets: number; staked: number; marked_pnl: number; settled_pnl: number; settled_bets: number };
+async function paperSummary(m: Model): Promise<PaperSum> {
+  const a = await getAccount('paper');
+  const open = a.positions.filter((x) => x.status === 'open');
+  if (open.length) await refresh(await quotes(m, open.map((p) => p.marketSlug)), 'paper');
+  const b = await getAccount('paper');
+  const o = b.positions.filter((x) => x.status === 'open'), d = b.positions.filter((x) => x.status !== 'open');
+  return { bankroll: b.bankroll, open_bets: o.length, staked: +o.reduce((s, p) => s + p.stake, 0).toFixed(2),
+    marked_pnl: +o.reduce((s, p) => s + p.shares * (p.mark ?? p.avgPrice) - p.stake, 0).toFixed(2),
+    settled_pnl: +d.reduce((s, p) => s + (p.pnl ?? 0), 0).toFixed(2), settled_bets: d.length };
+}
+const paperLine = (p: PaperSum) => !p.open_bets && !p.settled_bets ? 'Paper book: no paper bets yet.'
+  : `Paper book: ${p.open_bets} open bet${p.open_bets === 1 ? '' : 's'} (${money(p.staked)}), ${p.marked_pnl >= 0 ? 'up' : 'down'} ${money(Math.abs(p.marked_pnl))} at today's prices${p.settled_bets ? `; ${p.settled_bets} settled, ${p.settled_pnl >= 0 ? '+' : '−'}${money(Math.abs(p.settled_pnl))}` : ''}.`;
 
 // ---------- the page ----------
 
@@ -282,7 +371,7 @@ export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q
     open('ok');
     await stylePage(ctx.tabId);
     void markPage(ctx.tabId, 'act');
-    const ev = await decideEvent(ctx.model, q.eventSlug);
+    const ev = await decideEventCached(ctx.model, q.eventSlug);
     const leg = ev.legs.find((l) => l.marketSlug === q.marketSlug);
     label = (leg?.label ?? q.label).replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
     let cur: ((s: Step['status'], d?: string) => void) | undefined;
@@ -366,7 +455,8 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
   }
 
   if (/\b(my (stats|results|record)|how am i doing|am i (up|down)|show (me )?my)\b/.test(t)) {
-    const r = await runTool(ctx, 'open_my_results', {}) as { summary?: string };
+    const r = await runTool(ctx, 'open_my_results', {}) as { summary?: string; paper_summary?: string };
+    if (r.paper_summary) return `${r.paper_summary} Your real results are open in a new tab.`;
     return r.summary ? `${r.summary}. Your results are open in a new tab.` : 'Your results are open in a new tab.';
   }
 
@@ -396,7 +486,7 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
 
 // ---------- Gemini planning via our API ----------
 
-type Part = { text?: string; functionCall?: { name: string; args?: Args }; functionResponse?: unknown; [k: string]: unknown };
+type Part = { text?: string; functionCall?: { name: string; args?: Args; id?: string }; functionResponse?: unknown; [k: string]: unknown };
 type Content = { role: string; parts: Part[] };
 
 export async function llmAvailable(): Promise<boolean> {
@@ -406,11 +496,27 @@ export async function llmAvailable(): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Last few user requests and answers, so a follow-up ("now $5 each", "and the other one?") has context. */
+const memory: Content[] = [];
+const MEMORY_TURNS = 6;
+
+async function pageContext(tabId?: number): Promise<string> {
+  if (tabId === undefined) return '';
+  const t = await chrome.tabs.get(tabId).catch(() => undefined);
+  const slug = t?.url?.match(/polymarket\.com\/(?:[a-z]{2}\/)?event\/([^/?#]+)/)?.[1];
+  return slug ? ` The user's tab is on the Polymarket event "${slug}": "this market/match/one" means that event (get_decision with slug "${slug}").` : '';
+}
+
 /** Gemini plans with the tools above (buys/sells only queue). Undefined if the LLM is unavailable. */
 export async function planWithLLM(ctx: Ctx, text: string): Promise<string | undefined> {
-  const contents: Content[] = [{ role: 'user', parts: [{ text }] }];
+  const contents: Content[] = [...memory, { role: 'user', parts: [{ text }] }];
   const a = await getAccount();
-  const context = `the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up. Horizon only sets up tickets; the user presses Trade on Polymarket.`;
+  const context = `now ${new Date().toISOString()}; the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up. Horizon only sets up tickets; the user presses Trade on Polymarket.${isPaper() ? ' Paper trading is on (practice money).' : ''}${await pageContext(ctx.tabId)}`;
+  const remember = (answer: string) => {
+    memory.push({ role: 'user', parts: [{ text }] }, { role: 'model', parts: [{ text: answer }] });
+    memory.splice(0, Math.max(0, memory.length - MEMORY_TURNS * 2));
+    return answer;
+  };
   for (let i = 0; i < 25 && !ctx.signal.stop; i++) {
     let res: Response;
     try {
@@ -420,14 +526,21 @@ export async function planWithLLM(ctx: Ctx, text: string): Promise<string | unde
     const { content } = await res.json() as { content: Content };
     contents.push(content);
     const calls = content.parts.filter((p) => p.functionCall);
-    if (!calls.length) return content.parts.map((p) => p.text ?? '').join('').trim() || 'Here is the plan.';
-    const results: Part[] = [];
-    for (const c of calls) {
+    if (!calls.length) return remember(content.parts.map((p) => p.text ?? '').join('').trim() || (ctx.plan.length ? 'Here is the plan.' : 'Nothing to do right now.'));
+    // Lookups run together; plan-changing tools keep their order (the plan list is ranked).
+    const lookup = (n: string) => n === 'get_decision' || n === 'search_markets';
+    const results: Part[] = new Array(calls.length);
+    const answer = async (k: number) => {
+      const f = calls[k].functionCall!;
+      results[k] = { functionResponse: { id: f.id, name: f.name, response: await runTool(ctx, f.name, f.args ?? {}) } };
+    };
+    await Promise.all(calls.map((c, k) => (lookup(c.functionCall!.name) ? answer(k) : undefined)));
+    for (const [k, c] of calls.entries()) {
+      if (lookup(c.functionCall!.name)) continue;
       if (ctx.signal.stop) break;
-      const out = await runTool(ctx, c.functionCall!.name, c.functionCall!.args ?? {});
-      results.push({ functionResponse: { name: c.functionCall!.name, response: out } });
+      await answer(k);
     }
-    contents.push({ role: 'user', parts: results });
+    contents.push({ role: 'user', parts: results.filter(Boolean) });
   }
-  return ctx.signal.stop ? 'Stopped.' : 'Here is the plan.';
+  return ctx.signal.stop ? 'Stopped.' : remember(ctx.plan.length ? 'Here is the plan.' : 'I could not finish that; try a shorter request.');
 }

@@ -16,7 +16,7 @@ export type Status = 'shown' | 'set_up' | 'placed' | 'skipped';
 export type Entry = {
   install_id: string; ts: string; market_id: string; slug: string; question: string; side: 'YES' | 'NO' | null;
   price: number; q: number; q_low: number; q_high: number; action: Decision['action']; stake_usd: number;
-  kelly_fraction: number; source: 'card' | 'agent'; status: Status;
+  kelly_fraction: number; source: 'card' | 'agent' | 'paper'; status: Status;
 };
 
 let idCache: string | undefined;
@@ -60,7 +60,7 @@ const seenShown = new Set<string>();
 
 /** Record one decision. "shown" is logged once per market+side per panel session. */
 export async function record(x: {
-  marketId?: string; slug: string; question: string; d: Decision; stake: number; source: 'card' | 'agent'; status: Status;
+  marketId?: string; slug: string; question: string; d: Decision; stake: number; source: 'card' | 'agent' | 'paper'; status: Status;
 }) {
   const side = x.d.action === 'BUY_YES' ? 'YES' : x.d.action === 'BUY_NO' ? 'NO' : null;
   const key = `${x.slug}:${side}`;

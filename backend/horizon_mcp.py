@@ -173,6 +173,10 @@ def one_bet_per_event(decisions, groups, labels, m=None, policy=None):
     return decisions
 
 
+TESTED_MIN_H = 12  # the shortest horizon in training and in the backtest
+UNTESTED_REASON = "Closer to the end than anything Horizon was tested on (12 h)"
+
+
 def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponent=1.0, policy=None, q_scale=1.0):
     """price = order-book mid, spread = ask - bid (None if unknown), hours = to the scheduled end.
     Taker fee per share = fee_rate * (p(1-p))**fee_exponent (fee_of(market)); fee_rate None = the domain's rate.
@@ -217,6 +221,9 @@ def decide(price, hours, domain, spread=None, m=None, fee_rate=None, fee_exponen
         reason = (f"{_horizon_label(hours)} out, {domain}: model {_pct(q)} vs market {_pct(price)}, "
                   f"net edge {net_edge * 100:.1f}¢")
     out = {**base, "q": q, "lo": lo, "hi": hi, "action": action, "kelly": kelly, "net_edge": net_edge, "reason": reason}
+    if policy is not False and hours < TESTED_MIN_H:  # nothing under 12 h was trained or backtested: no call
+        out.update(action="NO_TRADE", kelly=0.0, untested=True, reason=UNTESTED_REASON)
+        return out
     if action != "NO_TRADE" and net_edge < pol.get("min_edge", 0.0):
         out.update(action="NO_TRADE", kelly=0.0,
                    reason=f"Net edge {net_edge * 100:.1f}¢ is under the {pol['min_edge'] * 100:.0f}¢ minimum: not worth the risk")
