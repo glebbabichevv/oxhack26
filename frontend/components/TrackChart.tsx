@@ -19,6 +19,11 @@ export function TrackChart({ track }: { track: Track }) {
     l && l.n_resolved ? `${name}: ${l.n_resolved} resolved, ${dollars(l.total)} total, ${dollars(l.mean ?? 0)} per $1 (${l.n_open} open)` : `${name}: none resolved yet${l ? ` (${l.n_open} open)` : ""}`;
   return (
     <div>
+      {/* Legend with the numbers sits above the chart, one line per series, so it reads as the headline, not a footnote. */}
+      <div className="mb-3 space-y-1 text-[13px] tabular-nums text-ink-muted">
+        <div><span className="mr-1.5 inline-block h-[2px] w-3 align-middle" style={{ background: INK }} />{line(track.journal, "Journal decisions (before fees)")}</div>
+        <div><span className="mr-1.5 inline-block h-[2px] w-3 align-middle" style={{ background: ASH }} />{line(track.seal, "Seal 1 calls (after fees)")}</div>
+      </div>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -6 }}>
@@ -32,10 +37,6 @@ export function TrackChart({ track }: { track: Track }) {
             <Line dataKey="seal" stroke={ASH} strokeWidth={1.5} dot={false} connectNulls isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
-      </div>
-      <div className="mt-2 space-y-0.5 text-[12px] tabular-nums text-ink-muted">
-        <div><span className="mr-1.5 inline-block h-[2px] w-3 align-middle" style={{ background: INK }} />{line(track.journal, "Journal decisions (before fees)")}</div>
-        <div><span className="mr-1.5 inline-block h-[2px] w-3 align-middle" style={{ background: ASH }} />{line(track.seal, "Seal 1 calls (after fees)")}</div>
       </div>
     </div>
   );

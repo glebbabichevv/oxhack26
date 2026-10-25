@@ -20,6 +20,27 @@ type Journal = {
 };
 
 const REFRESH_MS = 60_000;
+const SHOW = 30;
+const SAME_WINDOW_MS = 30 * 60_000;
+
+type Grouped = Entry & { times: number; edge: number };
+
+/** The card logs a "shown" row every time it renders: identical (market, action, status, source) rows within
+ *  30 minutes of each other collapse into the newest one, with a count. Records arrive newest first. */
+function collapse(records: Entry[]): Grouped[] {
+  const out: Grouped[] = [];
+  const last = new Map<string, Grouped>();
+  for (const e of records) {
+    const key = `${e.market_id}|${e.action}|${e.status ?? ""}|${e.source ?? ""}`;
+    const g = last.get(key);
+    const t = Date.parse(e.ts);
+    if (g && g.edge - t <= SAME_WINDOW_MS) { g.times += 1; g.edge = t; continue; } // within 30 min of the previous repeat
+    const row = { ...e, times: 1, edge: t };
+    last.set(key, row);
+    out.push(row);
+  }
+  return out;
+}
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 const perDollar = (x: number) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(0)}¢`;
 
@@ -33,17 +54,18 @@ function Result({ e }: { e: Entry }) {
   );
 }
 
-function Row({ e }: { e: Entry }) {
+function Row({ e }: { e: Grouped }) {
   // Horizon's probability for the side taken (q is always P(YES)).
   const horizon = e.q == null ? null : e.side === "NO" ? 1 - e.q : e.q;
   const paid = e.side ? `${cents(e.price)} for ${e.side}` : `market ${cents(e.price)}`;
-  const meta = [when(e.ts), e.source, e.status, e.stake_usd ? `$${e.stake_usd.toFixed(0)}` : null].filter(Boolean).join(" · ");
+  const meta = [when(e.ts), e.source, e.status, e.stake_usd ? `$${e.stake_usd.toFixed(0)}` : null, e.times > 1 ? `×${e.times} within 30 min` : null]
+    .filter(Boolean).join(" · ");
   return (
-    <div className="grid grid-cols-[1fr_auto] items-center gap-x-3.5 gap-y-1 border-t border-hairline-soft py-3 first:border-t-0 md:grid-cols-[1fr_auto_auto_auto]">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3.5 gap-y-1 border-t border-hairline-soft py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
       <div className="col-span-2 min-w-0 md:col-span-1">
         {e.slug ? (
-          <a href={`https://polymarket.com/event/${e.slug}`} target="_blank" rel="noreferrer" className="line-clamp-2 font-medium hover:underline hover:decoration-ink-faint hover:underline-offset-4 md:line-clamp-1">{e.question}</a>
-        ) : <div className="line-clamp-2 font-medium md:line-clamp-1">{e.question}</div>}
+          <a href={`https://polymarket.com/event/${e.slug}`} target="_blank" rel="noreferrer" className="line-clamp-2 font-medium hover:underline hover:decoration-ink-faint hover:underline-offset-4">{e.question}</a>
+        ) : <div className="line-clamp-2 font-medium">{e.question}</div>}
         <div className="text-[12px] text-ink-faint tabular-nums">{meta}</div>
       </div>
       <div className="text-[13px] tabular-nums text-ink-muted md:text-right">
@@ -62,6 +84,7 @@ export default function JournalPage() {
   const [capsule, setCapsule] = useState<CapsuleData>();
   const [track, setTrack] = useState<Track>();
   const [error, setError] = useState<string>();
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("me");
@@ -87,6 +110,8 @@ export default function JournalPage() {
   }, [scope, me]);
 
   const s = data?.summary;
+  const rows = data ? collapse(data.records) : [];
+  const visible = showAll ? rows : rows.slice(0, SHOW);
   return (
     <>
       <Nav links={[{ label: "Evidence", href: "/" }, { label: "Decisions", href: "#decisions" }, { label: "My results", href: me ? `/me?id=${encodeURIComponent(me)}` : "/me" }, { label: "Seals", href: "#seals" }]} />
@@ -134,8 +159,16 @@ export default function JournalPage() {
             <FramedCard>
               {!data ? (
                 <div className="h-[240px] animate-pulse rounded-input bg-fill-soft" />
-              ) : data.records.length ? (
-                data.records.map((e) => <Row key={e.id} e={e} />)
+              ) : rows.length ? (
+                <>
+                  {visible.map((e) => <Row key={e.id} e={e} />)}
+                  {rows.length > SHOW ? (
+                    <button type="button" onClick={() => setShowAll((v) => !v)}
+                      className="mt-2 w-full border-t border-hairline-soft pt-3 text-[13px] font-medium text-ink-strong underline decoration-hairline underline-offset-4 hover:decoration-ink-faint">
+                      {showAll ? "Show the latest 30" : `Show ${int(rows.length - SHOW)} more`}
+                    </button>
+                  ) : null}
+                </>
               ) : (
                 <p className="py-10 text-center text-ink-muted">{scope === "me" ? "No decisions from this install yet." : "No decisions logged yet."}</p>
               )}
