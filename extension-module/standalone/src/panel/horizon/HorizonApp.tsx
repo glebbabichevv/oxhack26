@@ -13,6 +13,8 @@ import { pageDrive } from './agent';
 import { AgentRun, Composer, Header, MarketBet, MyDecisions, Settings, Tabs, Tonight, Welcome, useAccount, useAgent, useMarking, type TabName } from './Play';
 import { flush } from './journal';
 import { initPaper } from './paper';
+import { fillTicket } from './agent';
+import { quotes } from './ledger';
 import { apiJSON, hhmm } from './net';
 import { stylePage } from './pageStyle';
 import { Md } from './argos/Message';
@@ -57,6 +59,20 @@ export function HorizonApp() {
   const [model, setModel] = useState<Model>();
   const agent = useAgent(model, tab.id);
   const scroller = useRef<HTMLDivElement>(null);
+  // Test hook for the fill matrix: fill one ticket on the active tab, never presses Trade.
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__hzFill = async (marketSlug: string, side: 'YES' | 'NO', amount: number) => {
+      const m = await loadModel();
+      const q = (await quotes(m, [marketSlug])).get(marketSlug);
+      if (!q) return { ok: false, error: 'no quote' };
+      const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const steps: string[] = [];
+      const t0 = Date.now();
+      let r = await fillTicket({ model: m, tabId: t?.id, onStep: (st) => { if (st.status !== 'run') steps.push(`${st.status}:${st.text}`); } }, q, side, amount, 'buy');
+      if (!r.ok) r = await fillTicket({ model: m, tabId: t?.id, onStep: (st) => { if (st.status !== 'run') steps.push(`retry ${st.status}:${st.text}`); } }, q, side, amount, 'buy', true);
+      return { ...r, ms: Date.now() - t0, steps };
+    };
+  }, []);
   useEffect(() => { void initPaper(); void migrate(); void loadModel().then(setModel); void flush(); }, []);
   useEffect(() => { void chrome.storage.local.get(WELCOME_KEY).then((r) => setWelcome(!r[WELCOME_KEY])).catch(() => setWelcome(false)); }, []);
   const dismiss = () => { setWelcome(false); setView('bet'); void chrome.storage.local.set({ [WELCOME_KEY]: true }); };

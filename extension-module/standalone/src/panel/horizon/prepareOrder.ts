@@ -1,4 +1,24 @@
 /**
+ * SELECTORS — Polymarket's DOM as measured on 2026-10-25 (headless Chromium, logged out, 1280 px).
+ *
+ * | What                       | Page type     | Selector / pattern                                                                 |
+ * |----------------------------|---------------|-------------------------------------------------------------------------------------|
+ * | Deep link to one market    | non-sports    | polymarket.com/market/<marketSlug> → /event/<eventSlug>/<marketSlug>, market preselected |
+ * |                            | sports        | polymarket.com/market/<marketSlug> → /sports/<league>/<eventSlug> (selection lost)  |
+ * | Ticket box                 | all           | closest ancestor of button[role=radio][value="BUY"] that contains #market-order-amount-input |
+ * | Ticket header              | all           | ticket box innerText lines: [0] event title, [1] outcome ("Aleksandar Vučić", "Barcelona", "4°C"), then "· Yes" |
+ * | Buy / Sell tabs            | all           | button[role=radio][value="BUY"] / [value="SELL"], aria-checked                      |
+ * | Yes / No toggle in ticket  | all           | button.trading-button[role=radio][value="0"] (Yes, first outcome) / [value="1"] (No); aria-checked; text "Yes 67.0¢" |
+ * | Amount input               | all           | #market-order-amount-input (type=text, placeholder "$0"); quick adds "+$1 +$5 +$10 +$100"; final button "Trade" (never clicked) |
+ * | Outcome row (multi)        | non-sports    | row with the label leaf ("4°C", "82-83°F", "Aleksandar Vučić") and two buttons "Buy Yes 21¢" / "Buy No 80¢" (data-active) |
+ * | Hidden outcomes            | non-sports    | buttons "Show more" / "View more" / "More"                                           |
+ * | Moneyline row              | sports        | leaf text "Moneyline" → container with 3 buttons "BAR 60¢", "DRAW 16¢", "REA 26¢" (code = Gamma slug suffix, upper-case: COR1, DRAW, BRE) |
+ * | Sub-tabs                   | sports        | button (type=button) with exact text "Game Lines" / "Exact Score" / "Halves" / "Corners" |
+ * | Sub-tab rows               | sports        | row label leaf ("Club Atlético de Madrid 2 - 0 RC Deportivo A Coruña") with buttons "YES 13¢" / "NO 88¢" |
+ *
+ * Primary path: deep link → hardcoded selectors → verify header + price → type amount → re-check.
+ * Only if that fails, the older heuristics below run as a fallback.
+ *
  * Fill Polymarket's order ticket: Horizon decides, the browser-use layer acts. Drives the open
  * event page through the content script's existing EXECUTE_ACTION ops (find → click → fill_input):
  * selects the leg, the Buy or Sell tab, the outcome, and types the amount. Pressing the final
@@ -44,6 +64,132 @@ export async function click(tabId: number, ref: string) {
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const NEVER = /^(trade|buy|confirm|place order|sign up|log in)\b/i; // never a target, whatever matches
 
+// ---------- primary path: hardcoded selectors ----------
+
+type TicketState = { url: string; lines: string[]; yes?: { checked: boolean; text: string }; no?: { checked: boolean; text: string }; value: string; buy: boolean };
+
+/** Read the ticket (read-only). */
+async function ticket(tabId: number): Promise<TicketState | undefined> {
+  const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, func: () => {
+    const inp = document.querySelector<HTMLInputElement>('#market-order-amount-input');
+    const buy = document.querySelector('button[role=radio][value="BUY"]');
+    let box: Element | null = buy;
+    while (box && inp && !box.contains(inp)) box = box.parentElement;
+    const tb = (v: string) => { const b = document.querySelector<HTMLElement>(`button.trading-button[role=radio][value="${v}"]`); return b ? { checked: b.getAttribute('aria-checked') === 'true', text: b.innerText.replace(/\s+/g, ' ').trim() } : undefined; };
+    return { url: location.href, lines: box ? (box as HTMLElement).innerText.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 6) : [],
+      yes: tb('0'), no: tb('1'), value: inp?.value ?? '', buy: buy?.getAttribute('aria-checked') === 'true' };
+  } }).catch(() => [{ result: undefined }]);
+  return (r?.result ?? undefined) as TicketState | undefined;
+}
+
+/** Bounded poll (no fixed sleeps): resolve with the first truthy result within `ms`. */
+async function until<T>(fn: () => Promise<T | undefined | false>, ms = 5000, every = 200): Promise<T | undefined> {
+  const t0 = Date.now();
+  for (;;) {
+    const v = await fn().catch(() => undefined);
+    if (v) return v as T;
+    if (Date.now() - t0 > ms) return undefined;
+    await new Promise((r) => setTimeout(r, every));
+  }
+}
+
+const normLabel = (x: string) => x.normalize('NFC').replace(/[\u00a0\s]+/g, ' ').replace(/º/g, '°').replace(/\s*°\s*/g, '°').replace(/\s*-\s*/g, '-').replace(/\?$/, '').trim().toLowerCase();
+
+/** Mark one element on the page for the browser-use layer to click. */
+async function mark(tabId: number, kind: 'tab' | 'moneyline' | 'side', arg: string): Promise<boolean> {
+  const [r] = await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, args: [kind, arg], func: (k: string, a: string) => {
+    document.querySelectorAll('[data-hz-target]').forEach((x) => x.removeAttribute('data-hz-target'));
+    let el: HTMLElement | null | undefined;
+    const txt = (e: Element) => (e as HTMLElement).innerText.replace(/\s+/g, ' ').trim();
+    if (k === 'tab') el = Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => txt(b) === a);
+    if (k === 'side') el = document.querySelector<HTMLElement>(`button.trading-button[role=radio][value="${a}"]`);
+    if (k === 'moneyline') {
+      const leaf = Array.from(document.querySelectorAll<HTMLElement>('body *')).find((e) => e.children.length === 0 && e.textContent?.trim() === 'Moneyline');
+      let row: HTMLElement | null | undefined = leaf;
+      for (let i = 0; i < 8 && row && row.querySelectorAll('button').length < 2; i++) row = row.parentElement;
+      const want = a.toUpperCase();
+      el = row ? Array.from(row.querySelectorAll<HTMLElement>('button')).find((b) => txt(b).replace(/\s+/g, '').toUpperCase().startsWith(want) && /\d/.test(txt(b).replace(want, '').slice(0, 3) + '0')) : undefined;
+      // the code must be followed by the price, so "BAR" never matches "BARC…"
+      if (el && !new RegExp(`^${want}\\s*[\\d.]+¢`, 'i').test(txt(el))) el = undefined;
+    }
+    if (!el) return false;
+    el.setAttribute('data-hz-target', '1');
+    el.scrollIntoView({ block: 'center' });
+    return true;
+  } }).catch(() => [{ result: false }]);
+  return !!r?.result;
+}
+
+async function clickMarked(tabId: number) {
+  const r = await send(tabId, { op: 'click', target: { selector: '[data-hz-target="1"]' } }).catch(() => undefined);
+  return !!r?.success;
+}
+
+/**
+ * Primary path. Expects the tab on the deep link (non-sports: /event/<event>/<market>, market preselected)
+ * or the sports event page. Returns undefined when it can't be sure (the caller then falls back).
+ */
+async function primary(opts: { tabId: number; eventSlug: string; marketSlug?: string; label: string; legCount: number; side: 'YES' | 'NO'; amount: number;
+  bid?: number; ask?: number; tab?: string; say: (t: string) => void; steps: PrepareStep[]; byDomRow: () => Promise<boolean> }): Promise<boolean | undefined> {
+  const { tabId, label, side, amount, say, steps } = opts;
+  const st0 = await until(async () => { const t = await ticket(tabId); return t && t.lines.length >= 2 && t.yes ? t : undefined; }, 5000);
+  if (!st0) return undefined;
+  const sports = /\/sports\//.test(st0.url);
+  const want = normLabel(label);
+  const cents = (t?: string) => { const m = t?.match(/([\d.]+)¢/); return m ? Number(m[1]) : undefined; };
+  const wantC = opts.bid !== undefined && opts.ask !== undefined ? Number(((side === 'YES' ? opts.ask : 1 - opts.bid) * 100).toFixed(1)) : undefined;
+  // Non-sports headers name the outcome exactly, so the header is the check; the price (Gamma can lag the
+  // book on thin No sides) is only the tiebreaker on sports pages, whose headers use short names.
+  const priceOk = (t: TicketState) => !sports || wantC === undefined || Math.abs((cents(side === 'YES' ? t.yes?.text : t.no?.text) ?? -99) - wantC) <= 1.5;
+  const headerOk = (t: TicketState) => {
+    if (opts.legCount <= 1) return true;
+    const h = normLabel(t.lines[1] ?? '');
+    if (!sports) return h === want;
+    // sports headers use the short name ("Barcelona" for "FC Barcelona", "Draw" for "Draw (A vs. B)")
+    if (/^draw\b/.test(want)) return h.startsWith('draw');
+    return want.split(/[\s.]+/).filter((w) => w.length >= 4).some((w) => h.includes(w)) || h.includes(want);
+  };
+  if (opts.legCount > 1) {
+    say(`Choosing ${label}`);
+    let picked = headerOk(st0) && priceOk(st0);
+    if (!picked && sports) {
+      if (opts.tab) {
+        if (await mark(tabId, 'tab', opts.tab)) await clickMarked(tabId);
+        picked = (await opts.byDomRow()) && !!(await until(async () => { const t = await ticket(tabId); return t && priceOk(t) ? t : undefined; }, 3000));
+      } else {
+        const code = opts.marketSlug?.startsWith(`${opts.eventSlug}-`) ? opts.marketSlug.slice(opts.eventSlug.length + 1) : '';
+        if (code && (await mark(tabId, 'moneyline', code)) && (await clickMarked(tabId))) {
+          picked = !!(await until(async () => { const t = await ticket(tabId); return t && headerOk(t) && priceOk(t) ? t : undefined; }, 3000));
+        }
+      }
+    }
+    if (!picked && !sports) picked = (await opts.byDomRow()) && !!(await until(async () => { const t = await ticket(tabId); return t && headerOk(t) && priceOk(t) ? t : undefined; }, 3000));
+    if (!picked) return undefined;
+    steps.push({ step: `Select “${label}”`, ok: true });
+  }
+  // Side: the ticket's own Yes/No toggle.
+  const word = side === 'YES' ? 'Yes' : 'No';
+  say(`Picking ${word}`);
+  const v = side === 'YES' ? '0' : '1';
+  let st = await ticket(tabId);
+  if (!(side === 'YES' ? st?.yes?.checked : st?.no?.checked)) {
+    if (await mark(tabId, 'side', v)) await clickMarked(tabId);
+    st = await until(async () => { const t = await ticket(tabId); return t && (side === 'YES' ? t.yes?.checked : t.no?.checked) ? t : undefined; }, 3000);
+  }
+  if (!st || !priceOk(st)) return undefined;
+  steps.push({ step: `Outcome ${word}`, ok: true, detail: (side === 'YES' ? st.yes?.text : st.no?.text)?.replace(/\s+\d.*$/, '') });
+  // Amount, then re-check value + header + side once more.
+  const value = amount >= 10 ? String(Math.round(amount)) : amount.toFixed(2);
+  say(`Typing $${value}`);
+  const r = await send(tabId, { op: 'fill_input', target: { selector: '#market-order-amount-input', text: 'Amount' }, payload: { value } });
+  const done = r?.success && await until(async () => {
+    const t = await ticket(tabId);
+    return t && Number(t.value.replace(/[$,]/g, '')) === Number(value) && headerOk(t) && priceOk(t) && (side === 'YES' ? t.yes?.checked : t.no?.checked) ? t : undefined;
+  }, 2500);
+  steps.push({ step: `Amount $${value}`, ok: !!done, detail: done ? undefined : 'amount or ticket changed after typing' });
+  return !!done;
+}
+
 export async function prepareOrder(opts: {
   tabId: number; eventSlug: string; marketSlug?: string; label: string; legCount: number;
   side: 'YES' | 'NO'; amount: number; bid?: number; ask?: number;
@@ -79,6 +225,11 @@ export async function prepareOrder(opts: {
   //    fold: scroll the row into view by its label (search_page scans and scrolls), then click the
   //    in-view button for the chosen side at this leg's price. Single-market pages: nothing to pick.
   //    Afterwards the ticket must show this leg's price, or nothing is typed.
+  if (legCount <= 1 && opts.mode !== 'sell') {
+    const ok = await primary({ ...opts, say, steps, byDomRow: async () => false });
+    if (ok) return { ok: true, steps };
+    steps.length = 0;
+  }
   if (legCount > 1) {
     say(`Choosing ${label}`);
     const suffix = marketSlug?.startsWith(`${eventSlug}-`) ? marketSlug.slice(eventSlug.length + 1) : '';
@@ -163,7 +314,7 @@ export async function prepareOrder(opts: {
           // the deepest element carrying exactly this text
           const leaves = hits.filter((e) => !hits.some((o) => o !== e && e.contains(o)));
           document.querySelectorAll('[data-hz-target]').forEach((x) => x.removeAttribute('data-hz-target'));
-          const re = new RegExp(`^buy\\s*${w}(?![a-z])`, 'i');
+          const re = new RegExp(`^(buy\\s*)?${w}(?![a-z])`, 'i');
           for (const el of leaves) {
             let row: HTMLElement | null = el;
             for (let i = 0; i < 10 && row; i++) {
@@ -215,6 +366,13 @@ export async function prepareOrder(opts: {
         && h.name.toLowerCase().includes(label.toLowerCase()) && !NEVER.test(h.name));
       return hit ? click(tabId, hit.ref) : false;
     };
+    // Primary: hardcoded selectors on the deep-linked page; the heuristics below only if it can't be sure.
+    if (opts.mode !== 'sell') {
+      const t0 = steps.length;
+      const ok = await primary({ ...opts, say, steps, byDomRow });
+      if (ok) return { ok: true, steps };
+      steps.length = t0;
+    }
     let picked = false;
     if (opts.tab) {
       say(`Opening the ${opts.tab} tab`);
