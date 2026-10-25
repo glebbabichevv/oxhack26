@@ -244,6 +244,13 @@ export function resetPaper(bankroll = 1000) {
   return mutate((a) => { a.bankroll = bankroll; a.positions = []; }, 'paper');
 }
 
+/** Forget every bet: open positions in both books and the local decision log (budgets kept; the server journal untouched). */
+export async function clearHistory() {
+  await mutate((a) => { a.positions = []; }, 'real');
+  await mutate((a) => { a.positions = []; }, 'paper');
+  await chrome.storage.local.remove('horizonJournal').catch(() => {});
+}
+
 export function setBankroll(n: number, book: Book = activeBook()) {
   return mutate((a) => { a.bankroll = Math.min(Math.max(n, 1), 1e7); }, book);
 }

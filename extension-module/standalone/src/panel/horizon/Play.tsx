@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
-import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, resetPaper, setBankroll, suggested, type Account, type Position, type Quote, type Side } from './ledger';
+import { caution, checkBet, clearHistory, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, resetPaper, setBankroll, suggested, type Account, type Position, type Quote, type Side } from './ledger';
 import { alreadyIn, fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
@@ -787,7 +787,24 @@ export function Settings({ a, onClose }: { a?: Account; onClose: () => void }) {
       </form>
       <WalletField />
       <PaperToggle />
+      <ClearHistory />
     </div>
+  );
+}
+
+/** Start clean: Horizon forgets which markets you already bet on (so it suggests them again). Two taps. */
+function ClearHistory() {
+  const [sure, setSure] = useState(false);
+  const [done, setDone] = useState(false);
+  return (
+    <section className="hz-rule mt-6 pt-4">
+      <p className="text-body font-semibold">Bet history</p>
+      <p className="mt-1 text-footnote text-[#64748b]">Horizon never bets the same market twice. Clear the history to start fresh: open bets in both books and My decisions on this device. Your budgets stay; nothing changes on Polymarket.</p>
+      <button type="button" onClick={async () => { if (!sure) { setSure(true); return; } await clearHistory(); setSure(false); setDone(true); }}
+        className="hz-chip mt-3 rounded-control px-4 py-2 text-footnote font-semibold" style={sure ? { color: DOWN } : undefined}>
+        {sure ? 'Tap again to clear everything' : done ? 'Cleared' : 'Clear my bet history'}
+      </button>
+    </section>
   );
 }
 
