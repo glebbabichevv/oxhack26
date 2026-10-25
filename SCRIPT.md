@@ -21,8 +21,11 @@ Lines in *italics* are what you do on screen. Everything else is what you say.
 *Tab 1 is on screen. Point at the arrows.*
 
 **Gleb:**
-Hi, we're Horizon.
-Polymarket says something has a 15% chance. Is that true? We checked 34,000 closed markets.
+Hi, we're Horizon. It's a Chrome extension and an AI agent for Polymarket.
+You open any market, and it tells you if the price is wrong, how much to bet, and whether to bet now or wait.
+The agent can also find tonight's best bets for you and fill in the orders.
+
+Here's why it works. Polymarket says something has a 15% chance. Is that true? We checked 34,000 closed markets.
 
 *Drag the time slider slowly from 30 days to 12 hours.*
 
