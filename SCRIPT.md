@@ -5,6 +5,29 @@ Lines in *italics* are what you do on screen. Everything else is what you say.
 
 ---
 
+## 2.5-MINUTE VERSION (use this; no live agent run, it takes too long)
+
+**Gleb, 0:00–1:00, tab with the match**
+Hi, we're Horizon, a Chrome extension and AI agent for Polymarket. On any market it tells you if the price is wrong and how much to bet.
+*(Point at the card.)* Market says [p], Horizon says [q], so it's too cheap. *(Click.)* It fills the order, I press Trade.
+Why it works: near the end of a market, people get too sure about the favourite, so the underdog is too cheap. A 15% outcome actually happens about 20% of the time.
+
+**Ayaz, 1:00–1:50, the site**
+The model only looks at the price and the time left. We tested it against eleven other models, including gradient boosting; the simple one held up, and the search gave us our best rule: one bet per match.
+On 10,000 markets it never saw, after fees, it made about 30 cents per dollar, profitable in 15 of 17 months. Most single bets lose; it works over hundreds.
+
+**Gleb, 1:50–2:20, the capsule**
+Yesterday we sealed our live predictions and posted the hash in Discord before the markets closed. On the ones that closed, Horizon was about as accurate as the market, slightly ahead, as we expected for one night.
+
+**Gleb, 2:20–2:30**
+That's Horizon. Questions?
+
+*Agent, journal, "where it fails": only in answers to questions.*
+
+---
+
+## Full version (too long for 2.5 min — reference only)
+
 ## Setup (before the judges arrive)
 
 *Gleb's laptop, three tabs open:*
