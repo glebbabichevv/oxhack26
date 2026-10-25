@@ -4,7 +4,7 @@
  * through checkBet (Horizon's call; at least $1, at most the budget). The plan is shown as a
  * list; the panel sets up Polymarket's ticket for the top few, one at a time; the user presses Trade.
  */
-import { cohere, decide, decideEvent, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
+import { cohere, decide, decideEventCached, searchMarkets, domainOf, feeOf, type Decision, type Model } from './horizon';
 import { caution, context,
   checkBet, getAccount, inPlay, outlook, pnlTotal, pWinOf, quotes, refresh, setBankroll, suggested,
   type Position, type Quote, type Side,
@@ -97,7 +97,7 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
   for (let i = 0; i < incomplete.length; i += 8) {
     await Promise.all(incomplete.slice(i, i + 8).map(async (slug) => {
       try {
-        const ev = await decideEvent(m, slug, now);
+        const ev = await decideEventCached(m, slug);
         for (const p of picks) if (p.eventSlug === slug) { const l = ev.legs.find((x) => x.marketSlug === p.marketSlug); if (l?.decision) p.decision = l.decision; }
       } catch { /* keep the scan's own decision */ }
     }));
@@ -111,7 +111,7 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
   // Re-decide each finalist from its whole event (decideEvent: every leg, COH, one bet per event), like the site.
   const checked = await Promise.all(one.slice(0, top * 2).map(async (p) => {
     try {
-      const ev = await decideEvent(m, p.eventSlug);
+      const ev = await decideEventCached(m, p.eventSlug);
       const leg = ev.legs.find((l) => l.marketSlug === p.marketSlug);
       return leg?.decision ? { ...p, decision: leg.decision } : p;
     } catch { return p; }
@@ -128,7 +128,7 @@ async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
 export async function withEventDecision(m: Model, q?: Quote): Promise<Quote | undefined> {
   if (!q?.decision || !q.eventSlug) return q;
   try {
-    const ev = await decideEvent(m, q.eventSlug);
+    const ev = await decideEventCached(m, q.eventSlug);
     const leg = ev.legs.find((l) => l.marketSlug === q.marketSlug);
     return leg?.decision ? { ...q, decision: leg.decision } : q;
   } catch { return q; }
@@ -163,18 +163,38 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
         done('ok', undefined, picks.length ? `Found ${picks.length} good bet${picks.length === 1 ? '' : 's'} in ${scanned.toLocaleString()} markets` : `No good bets in ${scanned.toLocaleString()} markets`);
         const a = await getAccount();
         return { scanned, picks: picks.map((p) => ({ market: p.marketSlug, question: p.question, side: sideOf(p.decision),
-          market_price: +p.decision.price.toFixed(3), horizon_prob: +p.decision.q.toFixed(3), suggested_bet: suggested(a, p.decision), hours_left: +p.decision.hours.toFixed(1) })) };
+          market_price: +p.decision.price.toFixed(3), horizon_prob: +p.decision.q.toFixed(3), suggested_bet: suggested(a, p.decision), hours_left: +p.decision.hours.toFixed(1),
+          verdict: verdictOf(p.decision), check_back_in_hours: p.decision.checkBackInHours, event: p.eventSlug })),
+          note: 'verdict BET = bet now; WAIT = Horizon only bets in the last 24 h: tell the user when to come back (check_back_in_hours), do not place_bet' };
       } catch (e) { done('fail', String((e as Error).message ?? e)); return { error: String((e as Error).message ?? e) }; }
+    }
+    case 'search_markets': {
+      const query = String(args.query ?? '').trim();
+      if (query.length < 2) return { error: 'query too short' };
+      const done = step('Looking it up on Polymarket');
+      const rows = await searchMarkets(m, query, Math.min(Number(args.top ?? 5), 10)).catch(() => []);
+      done(rows.length ? 'ok' : 'fail', rows.length ? undefined : 'Nothing open matches');
+      return { results: rows.map((r) => ({ event: r.slug, question: r.question, market_price: +r.decision.price.toFixed(3), hours_left: +r.decision.hours.toFixed(1) })),
+        note: "call get_decision with an event slug for Horizon's call (all outcomes, one bet per event)" };
     }
     case 'get_decision': {
       const slug = String(args.slug ?? '');
       const done = step('Reading the market');
       const q = await quoteOne(m, slug);
-      if (q?.decision) { done('ok'); return { market: q.marketSlug, question: q.question, side: sideOf(q.decision) ?? 'none', market_price: q.decision.price, horizon_prob: q.decision.q }; }
-      try {
-        const ev = await decideEvent(m, slug);
+      if (q?.decision) {
         done('ok');
-        return { event: slug, title: ev.title, legs: ev.legs.filter((l) => l.decision).map((l) => ({ market: l.marketSlug, label: l.label, side: sideOf(l.decision!) ?? 'none', market_price: l.decision!.price, horizon_prob: l.decision!.q })) };
+        const a = await getAccount();
+        return { market: q.marketSlug, event: q.eventSlug, question: q.question, side: sideOf(q.decision) ?? 'none', verdict: verdictOf(q.decision),
+          market_price: q.decision.price, horizon_prob: q.decision.q, hours_left: +q.decision.hours.toFixed(1),
+          check_back_in_hours: q.decision.checkBackInHours, suggested_bet: verdictOf(q.decision) === 'BET' ? suggested(a, q.decision) : 0,
+          why: q.decision.blockedBy ? `one bet per event: ${q.decision.blockedBy} has the larger edge` : q.decision.reason };
+      }
+      try {
+        const ev = await decideEventCached(m, slug);
+        done('ok');
+        return { event: slug, title: ev.title, legs: ev.legs.filter((l) => l.decision).map((l) => ({ market: l.marketSlug, label: l.label, side: sideOf(l.decision!) ?? 'none',
+          verdict: verdictOf(l.decision!), market_price: l.decision!.price, horizon_prob: l.decision!.q, hours_left: +l.decision!.hours.toFixed(1),
+          check_back_in_hours: l.decision!.checkBackInHours })) };
       } catch { done('fail', 'Not found'); return { error: `no market or event "${slug}"` }; }
     }
     case 'place_bet': {
@@ -182,7 +202,9 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const q = await quoteOne(m, slug);
       if (!q) return { error: 'market not found' };
       const a = await getAccount();
-      if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: 'price is fair after costs (advantage under 1¢): skip' };
+      if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: q.decision.blockedBy ? `one bet per event: Horizon backs ${q.decision.blockedBy} instead` : 'price is fair after costs (advantage under 1¢): skip' };
+      if (q.decision && verdictOf(q.decision) === 'WAIT' && !args.override)
+        return { error: `too early: Horizon only bets in the last 24 hours before the end; check back in about ${Math.round(q.decision.checkBackInHours ?? q.decision.hours - 24)} h`, verdict: 'WAIT' };
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });
@@ -349,7 +371,7 @@ export async function fillTicket(ctx: Pick<Ctx, 'model' | 'tabId' | 'onStep'>, q
     open('ok');
     await stylePage(ctx.tabId);
     void markPage(ctx.tabId, 'act');
-    const ev = await decideEvent(ctx.model, q.eventSlug);
+    const ev = await decideEventCached(ctx.model, q.eventSlug);
     const leg = ev.legs.find((l) => l.marketSlug === q.marketSlug);
     label = (leg?.label ?? q.label).replace(/\s*\(.*\)\s*$/, '').replace(/\?$/, '').trim();
     let cur: ((s: Step['status'], d?: string) => void) | undefined;
@@ -464,7 +486,7 @@ export async function planFromWords(ctx: Ctx, text: string): Promise<string> {
 
 // ---------- Gemini planning via our API ----------
 
-type Part = { text?: string; functionCall?: { name: string; args?: Args }; functionResponse?: unknown; [k: string]: unknown };
+type Part = { text?: string; functionCall?: { name: string; args?: Args; id?: string }; functionResponse?: unknown; [k: string]: unknown };
 type Content = { role: string; parts: Part[] };
 
 export async function llmAvailable(): Promise<boolean> {
@@ -474,11 +496,27 @@ export async function llmAvailable(): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Last few user requests and answers, so a follow-up ("now $5 each", "and the other one?") has context. */
+const memory: Content[] = [];
+const MEMORY_TURNS = 6;
+
+async function pageContext(tabId?: number): Promise<string> {
+  if (tabId === undefined) return '';
+  const t = await chrome.tabs.get(tabId).catch(() => undefined);
+  const slug = t?.url?.match(/polymarket\.com\/(?:[a-z]{2}\/)?event\/([^/?#]+)/)?.[1];
+  return slug ? ` The user's tab is on the Polymarket event "${slug}": "this market/match/one" means that event (get_decision with slug "${slug}").` : '';
+}
+
 /** Gemini plans with the tools above (buys/sells only queue). Undefined if the LLM is unavailable. */
 export async function planWithLLM(ctx: Ctx, text: string): Promise<string | undefined> {
-  const contents: Content[] = [{ role: 'user', parts: [{ text }] }];
+  const contents: Content[] = [...memory, { role: 'user', parts: [{ text }] }];
   const a = await getAccount();
-  const context = `the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up. Horizon only sets up tickets; the user presses Trade on Polymarket.`;
+  const context = `now ${new Date().toISOString()}; the user's budget is $${a.bankroll}; ${a.positions.filter((p) => p.status === 'open').length} bets they placed after Horizon set them up. Horizon only sets up tickets; the user presses Trade on Polymarket.${isPaper() ? ' Paper trading is on (practice money).' : ''}${await pageContext(ctx.tabId)}`;
+  const remember = (answer: string) => {
+    memory.push({ role: 'user', parts: [{ text }] }, { role: 'model', parts: [{ text: answer }] });
+    memory.splice(0, Math.max(0, memory.length - MEMORY_TURNS * 2));
+    return answer;
+  };
   for (let i = 0; i < 25 && !ctx.signal.stop; i++) {
     let res: Response;
     try {
@@ -488,14 +526,21 @@ export async function planWithLLM(ctx: Ctx, text: string): Promise<string | unde
     const { content } = await res.json() as { content: Content };
     contents.push(content);
     const calls = content.parts.filter((p) => p.functionCall);
-    if (!calls.length) return content.parts.map((p) => p.text ?? '').join('').trim() || 'Here is the plan.';
-    const results: Part[] = [];
-    for (const c of calls) {
+    if (!calls.length) return remember(content.parts.map((p) => p.text ?? '').join('').trim() || (ctx.plan.length ? 'Here is the plan.' : 'Nothing to do right now.'));
+    // Lookups run together; plan-changing tools keep their order (the plan list is ranked).
+    const lookup = (n: string) => n === 'get_decision' || n === 'search_markets';
+    const results: Part[] = new Array(calls.length);
+    const answer = async (k: number) => {
+      const f = calls[k].functionCall!;
+      results[k] = { functionResponse: { id: f.id, name: f.name, response: await runTool(ctx, f.name, f.args ?? {}) } };
+    };
+    await Promise.all(calls.map((c, k) => (lookup(c.functionCall!.name) ? answer(k) : undefined)));
+    for (const [k, c] of calls.entries()) {
+      if (lookup(c.functionCall!.name)) continue;
       if (ctx.signal.stop) break;
-      const out = await runTool(ctx, c.functionCall!.name, c.functionCall!.args ?? {});
-      results.push({ functionResponse: { name: c.functionCall!.name, response: out } });
+      await answer(k);
     }
-    contents.push({ role: 'user', parts: results });
+    contents.push({ role: 'user', parts: results.filter(Boolean) });
   }
-  return ctx.signal.stop ? 'Stopped.' : 'Here is the plan.';
+  return ctx.signal.stop ? 'Stopped.' : remember(ctx.plan.length ? 'Here is the plan.' : 'I could not finish that; try a shorter request.');
 }
