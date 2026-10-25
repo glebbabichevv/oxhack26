@@ -17,6 +17,24 @@
     "geopolitics": 3
    },
    "opened": null
+  },
+  {
+   "name": "seal-20261025T003801Z.json",
+   "sealed_at": "2026-10-25T00:38:01+00:00",
+   "deadline": "2026-10-25T13:00:00+00:00",
+   "sha256": "30121ef66e7fff362c44714a5c01a3930c1f2c73330ebaf0f9305d8fb352a21b",
+   "timestamped": true,
+   "n_markets": 248,
+   "n_primary": 20,
+   "by_domain": {
+    "science_tech": 154,
+    "politics": 44,
+    "sports": 34,
+    "culture": 12,
+    "geopolitics": 2,
+    "crypto": 2
+   },
+   "opened": null
   }
  ],
  "expectations": "capsule/EXPECTATIONS.md",
