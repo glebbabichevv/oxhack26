@@ -5,20 +5,24 @@ Lines in *italics* are what you do on screen. Everything else is what you say.
 
 ---
 
-## 2-MINUTE VERSION (use this; no live agent run, no capsule)
+## 2-MINUTE VERSION (use this)
 
-**Gleb, 0:00–1:00, tab with the match**
-Hi, we're Horizon, a Chrome extension and AI agent for Polymarket. On any market it tells you if the price is wrong and how much to bet.
-*(Point at the card.)* Market says [p], Horizon says [q], so it's too cheap. *(Click.)* It fills the order, I press Trade.
-Why it works: near the end of a market, people get too sure about the favourite, so the underdog is too cheap. A 15% outcome actually happens about 20% of the time.
+*Before the judges arrive: the Polymarket market is open and the Horizon card is ALREADY computed and visible. No waiting, no live agent run.*
 
-**Ayaz, 1:00–1:50, the site**
-The model only looks at the price and the time left. We tested it against eleven other models, including gradient boosting; the simple one held up, and the search gave us our best rule: one bet per match.
-On 10,000 markets it never saw, after fees, it made about 30 cents per dollar, profitable in 15 of 17 months. Most single bets lose; it works over hundreds.
+**Gleb, 0:00–0:45, tab with the market**
+This is Horizon, a Chrome extension for Polymarket. I'm on a real market. Polymarket says [p]. Horizon says [q], so it thinks the price is wrong and suggests [$X] on [Yes/No]. *(Click.)* One click fills the order, and I press Trade.
+So why does Horizon disagree with the market? Because the market makes a predictable mistake near the end.
 
-**Gleb, 1:50–2:00**
+**Gleb, 0:45–1:05, switch to the site (arrows)**
+On 34,000 past markets: a month before the end, prices are fair. In the last day, people get too sure about the favourite. Favourites end up too expensive, underdogs too cheap. That's the gap Horizon bets on.
+
+**Ayaz, 1:05–1:55, the site (headline number)**
+The model only uses the price and the time left. We tested it against eleven other models; the simple one held up. On 10,000 markets it never saw, after fees, it made about 30 cents per dollar, profitable in 15 of 17 months. Most single bets lose; it works over hundreds.
+
+**Gleb, 1:55–2:00**
 That's Horizon. Questions?
 
+*If the card says Wait or Skip: "Most of the time Horizon says don't bet: the edge only shows up near the end and has to beat the fees." Then switch to a market where it does bet.*
 *Agent, journal, capsule, "where it fails": only in answers to questions.*
 
 ---
