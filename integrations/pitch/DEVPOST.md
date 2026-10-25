@@ -51,7 +51,7 @@ after it. All markets of one event stay on one side.
 - **Baseline:** "always back the favourite" on the same markets loses 8.7 bankrolls.
 - **Where:** sports carries most of it (+35¢ per $1); culture is the one domain that lost; crypto is about zero.
 - **Is it luck?**
-  - Refitted every month, the edge is positive in 15 of 17 months. For the simpler rule it is 13 of 15, never
+  - Refitted every month, the edge is positive in 14 of 15 months with 30 or more bets. For the simpler rule it is 13 of 15, never
     significantly negative. All five test months are positive.
   - If prices were exactly right, the same bets would lose 8¢ per $1; none of 1,000 placebo draws came close.
   - Deflated Sharpe: 0.9999.

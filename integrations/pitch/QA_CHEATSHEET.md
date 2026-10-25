@@ -22,7 +22,7 @@ Golden rule: if you don't know, say "we didn't measure that", then what we would
 | why 24 h | return per trade by entry horizon: 7d +7.8%, 3d +8.8%, 1d +13.8%, 12h +18.5%; 30d: nothing clears 1¢ after fees |
 | models compared | 10 candidates on validation (V3, COH, beta, mean ensemble, agreement filter, time-weighted pool, Shin, power, isotonic, hierarchical) |
 | model errors correlate | 0.987–0.9999 ("every model reads the same price") |
-| by month (V3, refit monthly) | positive in **13 of 15** months, CI below 0 in none; all 5 test months positive · COH: **15 of 17** |
+| by month (V3, refit monthly) | positive in **13 of 15** months, CI below 0 in none; all 5 test months positive · COH: **14 of 15** (months with 30+ bets; 15 of 17 counting 1- and 4-bet months) |
 | placebo "prices are right" | same COH trades with outcome ~ Bernoulli(price): −8.1¢ [−15.2, −0.6]; real +31.2¢; **0 of 1,000** draws |
 | deflated Sharpe | COH 0.9999 (12 trials) · V3 test P(true SR > 0) 0.999996 |
 | costs ×2 | V3 survives double Polymarket fees: +15.7¢ [9, 22] (1¢ floor), +13.8¢ [5, 22] (2¢ floor) |
@@ -106,7 +106,7 @@ doesn't depend on leverage.
 
 ## Is it luck? (robustness)
 **Q: One lucky period?** Refit monthly over the whole history: V3 positive in 13 of 15 months, CI below zero in none;
-COH positive in 15 of 17. All five test months positive: the bias isn't fading as Polymarket grows.
+COH positive in 14 of 15 months with 30+ bets. All five test months positive: the bias isn't fading as Polymarket grows.
 **Q: Placebo?** If prices were exactly right (outcome drawn from the price), the same COH trades lose 8¢ per $1. We make
 +31¢. Zero of 1,000 draws came close.
 **Q: Multiple testing?** Deflated Sharpe for COH among 12 trials: 0.9999. The trials are near-copies (errors correlate

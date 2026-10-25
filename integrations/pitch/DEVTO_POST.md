@@ -91,7 +91,7 @@ Two findings came out of it:
 
 ## Trying to break it
 
-- **Refit every month** over the whole history: positive in 15 of 17 months, and all five test months positive. The
+- **Refit every month** over the whole history: positive in 14 of 15 months with 30+ bets, and all five test months positive. The
   bias isn't fading as Polymarket grows.
 - **Placebo:** if prices were exactly right, the same bets would lose 8¢ per dollar. None of 1,000 draws came close to
   +31¢. Our first placebo shuffled outcomes within price buckets, which kept the bias by construction, so of course it
