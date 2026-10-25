@@ -1,0 +1,35 @@
+{
+ "frozen_at": "2026-10-24T14:43:36+00:00",
+ "commit_url": "https://github.com/glebbabichevv/oxhack26/commit/6fb34b52a41750d960e4324c3f32dfa51ae53356",
+ "n_markets": 184,
+ "n_trades": 87,
+ "n_resolved": 8,
+ "n_trades_resolved": 1,
+ "n_won": 1,
+ "pnl": 0.0106,
+ "updated_at": "2026-10-24T17:14:50+00:00",
+ "n_due": 23,
+ "snapshots": [
+  "snapshot_20261024T1443Z.json",
+  "snapshot_20261024T1644Z.json"
+ ],
+ "brier_market": 0.4843,
+ "brier_model": 0.4502,
+ "mean_return_per_trade": 2.0367,
+ "calls": [
+  {
+   "question": "Will the price of Bitcoin be between $78,000 and $80,000 on October 24?",
+   "domain": "crypto",
+   "taken_at": "2026-10-24T14:43:36+00:00",
+   "hours_to_resolution": 1.3,
+   "price_yes": 0.2865,
+   "q_yes": 0.3361,
+   "action": "BUY_YES",
+   "kelly_fraction": 0.0052,
+   "outcome": 1,
+   "ret": 2.0367,
+   "pnl": 0.0106,
+   "url": "https://polymarket.com/event/bitcoin-price-on-october-24-2026"
+  }
+ ]
+}
