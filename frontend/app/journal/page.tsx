@@ -42,7 +42,7 @@ function Row({ e }: { e: Entry }) {
     <div className="grid grid-cols-[1fr_auto] items-center gap-x-3.5 gap-y-1 border-t border-hairline-soft py-3 first:border-t-0 md:grid-cols-[1fr_auto_auto_auto]">
       <div className="col-span-2 min-w-0 md:col-span-1">
         {e.slug ? (
-          <a href={`https://polymarket.com/event/${e.slug}`} target="_blank" rel="noreferrer" className="line-clamp-2 font-medium hover:underline hover:decoration-ink-faint hover:underline-offset-4 md:line-clamp-1">{e.question}</a>
+          <a href={`https://polymarket.com/market/${e.slug}`} target="_blank" rel="noreferrer" className="line-clamp-2 font-medium hover:underline hover:decoration-ink-faint hover:underline-offset-4 md:line-clamp-1">{e.question}</a>
         ) : <div className="line-clamp-2 font-medium md:line-clamp-1">{e.question}</div>}
         <div className="text-[12px] text-ink-faint tabular-nums">{meta}</div>
       </div>
