@@ -1,0 +1,20 @@
+{
+  // Pitch: Cmd+Shift+P → "Tasks: Run Task" → pick one. Runs in the repo root with the backend venv.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Pitch 1: reproduce every headline number",
+      "type": "shell",
+      "command": "backend/.venv/bin/python integrations/reproduce.py",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pitch 2: verify the sealed predictions (hash + Bitcoin)",
+      "type": "shell",
+      "command": "backend/.venv/bin/python integrations/verify_seals.py",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true, "focus": true },
+      "problemMatcher": []
+    }
+  ]
+}
