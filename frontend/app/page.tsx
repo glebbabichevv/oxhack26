@@ -72,7 +72,14 @@ export default function Home() {
 
   useEffect(() => {
     getJSON<Backtest>("/api/backtest").then(setBacktest).catch((e) => setError(String(e)));
-    getJSON<CapsuleData>("/api/capsule").then(setCapsule).catch(() => undefined); // optional section
+  }, []);
+
+  // Sealed predictions: refetched every 5 min while the tab is visible, so the opening appears on its own.
+  useEffect(() => {
+    const load = () => getJSON<CapsuleData>("/api/capsule").then(setCapsule).catch(() => undefined); // optional section
+    load();
+    const id = setInterval(() => { if (document.visibilityState === "visible") load(); }, 5 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
 
   // Live decisions: fetched now, then every 2 min while the tab is visible (the API recomputes every ~5 min).

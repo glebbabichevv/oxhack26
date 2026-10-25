@@ -11,6 +11,7 @@ tab for the top few and stops; the human presses Trade. Nothing here places an o
 import json
 import os
 import urllib.error
+from datetime import datetime, timezone
 import urllib.request
 
 from fastapi import APIRouter, HTTPException, Request
@@ -31,18 +32,27 @@ plan of bets by calling tools; the panel executes them. Rules:
   Only pass override=true if the user explicitly asked to bet against the model.
 - A TOTAL to spend ("spend $1,000 tonight", "put $200 into football", "invest my budget"): call spend_budget
   ONCE with that total and nothing else. It scans, splits the total by Horizon's suggested bets with at most
-  20% in any one market, and adds every bet to the plan. Never split a total yourself and never put a total
-  into one place_bet. Report planned_total, the number of bets, and unspent / horizon_suggests_total if given.
+  20% in any one market, and adds every bet to the plan. Never split a total yourself, never pass a total as
+  a place_bet amount. Report planned_total, the number of bets, and unspent / horizon_suggests_total if given.
 - An amount for ONE named market ("$50 on Arsenal"): place_bet with amount and confirmed_amount=true.
-  "N best bets" with no amount: scan_markets, then place_bet for each pick without amount, best first.
+- "N best bets" with no amount: call scan_markets once, then call place_bet WITHOUT amount for ALL chosen
+  picks in the SAME turn (parallel calls), best first. Pick only verdict BET. If scan_markets finds no BET,
+  say Horizon would wait and, if a WAIT pick exists, when to come back (check_back_in_hours). Do not rescan
+  with other filters unless the user asked.
+- Horizon only bets in the last 24 hours before a market ends (verdict WAIT = too early; say when to come
+  back) and at most once per event (if place_bet says another outcome is backed, use that one).
+- A question about one market or team ("will X win?", "should I back Y?"): if the current state names the
+  user's tab event and the question is about it, call get_decision with that slug; otherwise search_markets,
+  then get_decision on the best matching event. Answer with Horizon's verdict and numbers.
+- "this", "it", "that one", "the same" refer to the user's tab or to earlier turns in this conversation.
 - Never invent prices or probabilities. Every number you state (price, probability, edge, amount) must be
   copied from a tool result in this conversation; never compute, estimate or round one yourself.
 - Questions that are not a betting task (how Horizon works, what a term means, why it skipped a market):
-  answer them directly in two or three plain sentences, calling get_decision if one market is named. What
-  Horizon is: it compares each Polymarket price with its own probability, learned from 34,677 resolved
-  Polymarket markets and tested on 10,839 later ones it never saw; prices turn out overconfident (longshots
-  win more often than priced, favourites less); it backs a side only when the gap beats the costs, sizes bets
-  at a quarter of the Kelly stake (max 5% of the budget), and never presses Trade itself.
+  answer them directly in two or three plain sentences. What Horizon is: it compares each Polymarket price
+  with its own probability, learned from 34,677 resolved Polymarket markets and tested on 10,839 later ones
+  it never saw; prices turn out overconfident (longshots win more often than priced, favourites less); it
+  backs a side only when the gap beats the costs, sizes bets at a quarter of the Kelly stake (max 5% of the
+  budget), and never presses Trade itself.
 - End with ONE short plain sentence for a non-expert (say "good bet" or "price too low", not "edge" or
   "Kelly"). Never promise profit. Never use the word gamble."""
 
@@ -62,6 +72,8 @@ TOOLS = [{"functionDeclarations": [
         {"tag": {**S, "description": "Gamma tag slug: all, sports, politics, crypto, soccer, nba, nfl, tennis, esports..."},
          "within_hours": {**N, "description": "Only markets ending within this many hours (default 24)."},
          "top": {**N, "description": "How many to return (default 10, max 40)."}}),
+    _fn("search_markets", "Find open Polymarket events by words (team, person, topic). Returns event slugs for get_decision.",
+        {"query": S, "top": {**N, "description": "How many (default 5, max 10)."}}, ["query"]),
     _fn("get_decision", "Horizon's call on one market (by market slug) or all legs of an event (by event slug).",
         {"slug": S}, ["slug"]),
     _fn("place_bet", "Add a bet to the plan: Horizon sets up the ticket on Polymarket and the human presses Trade. amount in dollars; omit to use the suggested bet.",
@@ -115,7 +127,8 @@ async def agent_step(request: Request):
     contents = payload.get("contents")
     if not isinstance(contents, list) or not contents or len(contents) > 120:
         raise HTTPException(status_code=400, detail="contents must be a non-empty list (max 120)")
-    system = SYSTEM + (f"\nCurrent state: {str(payload['context'])[:2000]}" if payload.get("context") else "")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    system = SYSTEM + f"\nNow: {now}." + (f"\nCurrent state:{str(payload['context'])[:2000]}" if payload.get("context") else "")
     body = {"systemInstruction": {"parts": [{"text": system}]}, "contents": contents, "tools": TOOLS,
             "toolConfig": {"functionCallingConfig": {"mode": "AUTO"}}, "generationConfig": {"temperature": 0.2}}
     last = ""

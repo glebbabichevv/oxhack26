@@ -186,6 +186,21 @@ export function onePerEvent(legs: Leg[]): Leg[] {
 
 const GAMMA = "https://gamma-api.polymarket.com";
 
+type EventCall = Awaited<ReturnType<typeof decideEvent>>;
+const EVENT_TTL_MS = 60_000;
+const eventCache = new Map<string, { at: number; m: Model; p: Promise<EventCall> }>();
+
+/** decideEvent for the agent: one task decides the same event many times (scan, re-check, place_bet, ticket),
+ *  so reuse the answer for 60 s. The card and event page keep calling decideEvent for fresh prices. */
+export function decideEventCached(m: Model, slug: string): Promise<EventCall> {
+  const hit = eventCache.get(slug);
+  if (hit && hit.m === m && Date.now() - hit.at < EVENT_TTL_MS) return hit.p;
+  const p = decideEvent(m, slug);
+  eventCache.set(slug, { at: Date.now(), m, p });
+  p.catch(() => eventCache.delete(slug));
+  return p;
+}
+
 /** All binary legs of a Polymarket event page, each with Horizon's decision (or why it is skipped). */
 export async function decideEvent(m: Model, slug: string, now = new Date()): Promise<{ title: string; legs: Leg[]; tags: string[]; endDate?: string }> {
   const res = await fetch(`${GAMMA}/events?slug=${encodeURIComponent(slug)}`);

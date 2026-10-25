@@ -104,7 +104,8 @@ class Panel:
             rows.sort(key=lambda r: -r["net_edge"])
             return {"scanned": len(self.m), "picks": [{"market": r["slug"], "question": r["question"], "side": self._side(r),
                     "market_price": round(r["price_yes"], 3), "horizon_prob": round(r["q_yes"], 3), "suggested_bet": self._sug(r),
-                    "hours_left": round(r["hours_to_resolution"], 1)} for r in rows[:top]]}
+                    "hours_left": round(r["hours_to_resolution"], 1),
+                    "verdict": "WAIT" if r.get("wait") else "BET", "check_back_in_hours": r.get("check_back_in_hours")} for r in rows[:top]]}
         if name == "get_decision":
             r = self._find(a.get("slug", ""))
             if not r:
@@ -131,7 +132,8 @@ class Panel:
             total, mx = float(a.get("total", 0)), min(max(int(a.get("max_bets", 10)), 1), 40)
             if total < 1:
                 return {"error": "total must be at least $1"}
-            picks = self._run("scan_markets", {"tag": a.get("tag", "all"), "within_hours": a.get("within_hours", 24), "top": max(mx * 2, 10)})["picks"][:mx]
+            picks = [p for p in self._run("scan_markets", {"tag": a.get("tag", "all"), "within_hours": a.get("within_hours", 24), "top": max(mx * 2, 10)})["picks"]
+                     if p["verdict"] != "WAIT"][:mx]
             if not picks:
                 return {"total": total, "planned_total": 0, "note": "No good bets right now: Horizon would wait and spend nothing."}
             amts, bets = split_budget(total, [max(p["suggested_bet"], 1) for p in picks]), []
@@ -251,7 +253,7 @@ def score(case, panel, answer, markets):
         issues.append("uses 'gamble'")
     if re.search(r"\b(guarantee|sure thing|can't lose|risk-free)", answer, re.I) and not re.search(r"\b(no|not|never|isn't|cannot|can't be)\b[^.]{0,30}guarantee", answer, re.I):
         issues.append("promises profit")
-    if re.search(r"did not catch|didn't catch|I can only|I cannot help|I can't help", answer, re.I):
+    if group != "junk" and re.search(r"did not catch|didn't catch|I can only|I cannot help|I can't help", answer, re.I):
         issues.append("refused / did not understand")
     errs = [c for c in panel.calls if isinstance(c["result"], dict) and c["result"].get("error")]
     if len(errs) > 2:
