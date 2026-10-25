@@ -79,25 +79,23 @@ It fills in the order for me. I press Trade myself, because it's my money.
 There's also an agent. It makes a plan.
 One bet is ready now. One it's waiting on, because it's still too early. One it skips, because it's the same match.
 
-This bet won't settle until tonight. So here's how we know it's not luck.
+This bet won't settle until tonight, and one bet doesn't tell you much anyway. So here's how we know it's not luck.
 
 ---
 
-## 4. Ayaz — the capsule
+## 4. Gleb — the capsule
 
 *Switch to Tab 3 (journal, sealed section).*
 
-**Ayaz:**
+**Gleb:**
+Every decision Horizon makes lands in this journal, with the time and the price, including every "no".
+
 Yesterday afternoon, before any of these markets closed, we saved our predictions on 359 live markets.
 We posted the file's fingerprint in the hackathon Discord, so we couldn't change it afterwards.
 We also wrote down in advance what we expected.
 We opened it at 12:30. Here's what happened.
 
 *Read the result off the screen, whatever it says.*
-
----
-
-## 5. Gleb — close
 
 *Back to Tab 1, scroll to "No edge here".*
 
@@ -111,8 +109,8 @@ That's Horizon. Happy to take any questions.
 
 ## Questions
 
-**Ayaz answers:** overfitting, validation, the ten models, the placebo test, fees, capacity, the formula, the papers.
-**Gleb answers:** the product, the agent, why a human presses Trade, the UK, what's next, "did you build this in 24 hours?"
+**Ayaz answers:** overfitting, validation, the ten models, the placebo test, the formula, the papers.
+**Gleb answers:** the product, the agent, the capsule, fees and capacity, why a human presses Trade, the UK, what's next, "did you build this in 24 hours?"
 
 Don't talk over each other. If someone forgets a number, the other adds one sentence after.
 
