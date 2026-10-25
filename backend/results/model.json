@@ -570,16 +570,21 @@
   "one_per_event": true
  },
  "headline": {
-  "per_dollar": 0.3125,
+  "policy": "COH",
+  "per_dollar": 0.3047,
   "per_dollar_ci": [
-   0.222,
-   0.4047
+   0.2168,
+   0.3947
   ],
-  "return": 4.382,
+  "return": 4.2731,
   "return_ci": [
-   3.12,
-   5.68
+   3.05,
+   5.53
   ],
-  "n_trades": 1827
+  "n_trades": 1827,
+  "hit_rate": 0.3065,
+  "max_drawdown": 0.2173,
+  "peak_open_stake": 0.416,
+  "note": "Policy V3, Polymarket taker fees, open stake <= 1 starting bankroll, test trades entered on/after the cutoff. The rule was chosen on validation (last 20% of training). Test results for all four variants are shown side by side; V1 and V2 were proposed by teammates who had seen test numbers, so the choice used validation only."
  }
 }

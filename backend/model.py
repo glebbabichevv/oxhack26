@@ -294,7 +294,9 @@ def run_policy(test, q, cost, lo, hi, min_edge=MIN_EDGE, enter_from=ENTER_FROM_H
     t = t[t["action"] != "NO_TRADE"].sort_values("horizon_hours", ascending=False)
     trades = t.groupby("market_id").head(1).copy()
     if one_per_event:
-        trades = trades.sort_values("edge", ascending=False).groupby(event_key(trades)).head(1).copy()
+        # Ties at the top edge (11 events on test) must not depend on the platform's sort: stable sort, market_id breaks ties.
+        trades = (trades.sort_values(["edge", "market_id"], ascending=[False, True], kind="mergesort")
+                  .groupby(event_key(trades)).head(1).copy())
     trades["ret"] = payoff(trades["action"].to_numpy(), trades["price_yes"].to_numpy(),
                            trades["cost"].to_numpy(), trades["outcome"].to_numpy())
     return trades.sort_values("resolved_at")

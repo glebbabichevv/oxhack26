@@ -9,7 +9,7 @@ Built at OxHack '26, Oxford, 24–25 October 2026.
 
 ## The result in one paragraph
 
-Prices are too extreme near resolution: 10–35¢ longshots win more often than priced, favourites less. On an out-of-time test (markets resolved after 2026-05-18, never used for fitting or choosing), the shipped policy **COH** (one bet per event, probabilities that sum to 1 across an event's outcomes, enter only within 24 h, net edge ≥ 1¢ after fees) earns **+31.3¢ per $1 staked [90% CI +22.2, +40.5]** over 1,827 trades with open stakes capped at one bankroll (max drawdown 0.22). The previous policy V3 earns +17.2¢. COH is positive in 15 of 17 months of a walk-forward, and a "prices are right" placebo on the same trades loses ~8¢ (p < 0.001). Where it fails: culture markets lose, crypto is about zero, 30 days out there is no edge. Every number is in `backend/results/` and on the site's *How we chose* page.
+Prices are too extreme near resolution: 10–35¢ longshots win more often than priced, favourites less. On an out-of-time test (markets resolved after 2026-05-18, never used for fitting or choosing), the shipped policy **COH** (one bet per event, probabilities that sum to 1 across an event's outcomes, enter only within 24 h, net edge ≥ 1¢ after fees) earns **+30.5¢ per $1 staked [90% CI +21.7, +39.5]** over 1,827 trades with open stakes capped at one bankroll (max drawdown 0.22). The previous policy V3 earns +17.2¢. COH is positive in 15 of 17 months of a walk-forward, and a "prices are right" placebo on the same trades loses ~8¢ (p < 0.001). Where it fails: culture markets lose, crypto is about zero, 30 days out there is no edge. Every number is in `backend/results/` and on the site's *How we chose* page.
 
 **One command reproduces every headline number:**
 
