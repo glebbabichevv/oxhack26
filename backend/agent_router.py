@@ -33,7 +33,10 @@ plan of bets by calling tools; the panel executes them. Rules:
 - A TOTAL to spend ("spend $1,000 tonight", "put $200 into football", "invest my budget"): call spend_budget
   ONCE with that total and nothing else. It scans, splits the total by Horizon's suggested bets with at most
   20% in any one market, and adds every bet to the plan. Never split a total yourself, never pass a total as
-  a place_bet amount. Report planned_total, the number of bets, and unspent / horizon_suggests_total if given.
+  a place_bet amount, even if the user says "all on one bet": spend_budget's 20% cap is the rule; explain it.
+  Report planned_total and bets_planned; mention unspent, capped_to_budget and the note if present. Then list
+  the bets briefly (question, side, amount). Never subtract or add amounts yourself.
+  "Put $X across them / those" after earlier picks: spend_budget with markets = those market slugs.
 - An amount for ONE named market ("$50 on Arsenal"): place_bet with amount and confirmed_amount=true.
 - "N best bets" with no amount: call scan_markets once, then call place_bet WITHOUT amount for ALL chosen
   picks in the SAME turn (parallel calls), best first. Pick only verdict BET. If scan_markets finds no BET,
@@ -45,10 +48,14 @@ plan of bets by calling tools; the panel executes them. Rules:
   user's tab event and the question is about it, call get_decision with that slug; otherwise search_markets,
   then get_decision on the best matching event. Answer with Horizon's verdict and numbers.
 - "this", "it", "that one", "the same" refer to the user's tab or to earlier turns in this conversation.
+- Name markets by their question, never by slug. Show prices and probabilities as the tool gives them.
+- "Which is the best bet / why / what would you pick": answer with scan_markets or get_decision; do NOT call
+  place_bet or spend_budget unless the user asks to bet, buy, spend or put money in.
 - Never invent prices or probabilities. Every number you state (price, probability, edge, amount) must be
   copied from a tool result in this conversation; never compute, estimate or round one yourself.
 - Questions that are not a betting task (how Horizon works, what a term means, why it skipped a market):
-  answer them directly in two or three plain sentences. What Horizon is: it compares each Polymarket price
+  answer them directly in two or three plain sentences, with no example numbers (no made-up prices or
+  percentages); for a live example, call scan_markets or get_decision and quote it. What Horizon is: it compares each Polymarket price
   with its own probability, learned from 34,677 resolved Polymarket markets and tested on 10,839 later ones
   it never saw; prices turn out overconfident (longshots win more often than priced, favourites less); it
   backs a side only when the gap beats the costs, sizes bets at a quarter of the Kelly stake (max 5% of the
@@ -85,7 +92,8 @@ TOOLS = [{"functionDeclarations": [
         {"total": {**N, "description": "dollars to spread"},
          "tag": {**S, "description": "Gamma tag slug, default all"},
          "within_hours": {**N, "description": "Only markets ending within this many hours (default 24)."},
-         "max_bets": {**N, "description": "Most bets to spread over (default 10)."}},
+         "max_bets": {**N, "description": "Most bets to spread over (default 10)."},
+         "markets": {"type": "array", "items": S, "description": "Only these market slugs (the picks the user chose earlier)."}},
         ["total"]),
     _fn("adjust_stake", "Plan raising or lowering a bet placed through Horizon: new_amount in dollars, or factor (0.5 halves, 2 doubles). Lowering = selling part on Polymarket.",
         {"position": {**S, "description": "position id or market slug"}, "new_amount": N, "factor": N}, ["position"]),

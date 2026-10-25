@@ -23,6 +23,12 @@ API = os.environ.get("HORIZON_API", "https://oxhack26-production.up.railway.app"
 ROOT = Path(__file__).resolve().parent.parent
 BANKROLL = 1000.0
 MAX_SHARE = 0.2  # mirrors agent.ts MAX_SHARE
+# .env.local here, or in the main checkout next to this worktree (oxhack26/)
+for _env in (ROOT / ".env.local", ROOT.parent / "oxhack26" / ".env.local"):
+    for _line in _env.read_text(encoding="utf-8").splitlines() if _env.exists() else []:
+        k, _, v = _line.partition("=")
+        if v.strip() and not k.lstrip().startswith("#"):
+            os.environ.setdefault(k.strip(), v.strip().strip('"'))
 
 # (id, group, prompt, checks). Groups: spend (a total), count (N best), single, question, account, junk.
 PROMPTS = [
@@ -40,6 +46,12 @@ PROMPTS = [
     ("stats", "account", "How am I doing?", {}),
     ("sell", "account", "Sell what lost its edge", {}),
     ("junk", "junk", "asdf qwerty", {}),
+    ("over", "spend", "Spend $10,000 tonight", {"total": 1000}),
+    ("tiny", "spend", "Spend $3 on something good", {"total": 3, "min_bets": 1}),
+    ("named50", "single", "Bet $50 on the Serbia prime minister market", {"named": "serbia", "amount": 50}),
+    ("bestwhy", "question", "What's the best bet right now and why?", {}),
+    ("followup", "spend", ["Find me the 3 best bets tonight", "Now put $300 across them instead"], {"total": 300, "chosen": True, "max_bets_exact": 3}),
+    ("russian", "spend", "Потрать 500 долларов на лучшие ставки сегодня", {"total": 500}),
 ]
 
 # ---------- simulated panel (agent.ts runTool, on /api/live) ----------
@@ -59,7 +71,7 @@ def load_markets():
 
 
 def split_budget(total, weights, max_share=MAX_SHARE):
-    cap, out = total * max_share, [0.0] * len(weights)
+    cap, out = max(total * max_share, 1), [0.0] * len(weights)
     free, left = [i for i, w in enumerate(weights) if w > 0], total
     while free and left > 0.005:
         w = sum(weights[i] for i in free)
@@ -72,7 +84,15 @@ def split_budget(total, weights, max_share=MAX_SHARE):
             left -= cap - out[i]
             out[i] = cap
         free = [i for i in free if i not in over]
-    return [math.floor(x * 100) / 100 if x >= 1 else 0 for x in out]
+    cents = [math.floor(x * 100 + 1e-6) if x >= 1 else 0 for x in out]
+    spare = round(sum(x for x, c in zip(out, cents) if c) * 100) - sum(cents)
+    for i in sorted((i for i in range(len(out)) if cents[i]), key=lambda i: -(out[i] * 100 - cents[i])):
+        if spare <= 0:
+            break
+        if cents[i] + 1 <= round(cap * 100):
+            cents[i] += 1
+            spare -= 1
+    return [c / 100 for c in cents]
 
 
 class Panel:
@@ -106,6 +126,12 @@ class Panel:
                     "market_price": round(r["price_yes"], 3), "horizon_prob": round(r["q_yes"], 3), "suggested_bet": self._sug(r),
                     "hours_left": round(r["hours_to_resolution"], 1),
                     "verdict": "WAIT" if r.get("wait") else "BET", "check_back_in_hours": r.get("check_back_in_hours")} for r in rows[:top]]}
+        if name == "search_markets":
+            words = [w for w in re.findall(r"\w+", str(a.get("query", "")).lower()) if len(w) > 2]
+            rows = sorted(self.m, key=lambda r: -sum(w in r["question"].lower() or w in r["slug"].lower() for w in words))
+            rows = [r for r in rows if any(w in r["question"].lower() or w in r["slug"].lower() for w in words)][: min(int(a.get("top", 5)), 10)]
+            return {"results": [{"event": r["slug"], "question": r["question"], "market_price": round(r["price_yes"], 3),
+                                 "hours_left": round(r["hours_to_resolution"], 1)} for r in rows]}
         if name == "get_decision":
             r = self._find(a.get("slug", ""))
             if not r:
@@ -129,23 +155,30 @@ class Panel:
             return {"added_to_plan": True, "amount": round(amt, 2), "horizon_suggests": sug, "above_suggestion": amt > sug + 0.005,
                     "note": "Horizon will set up this ticket on Polymarket; the user presses Trade"}
         if name == "spend_budget":
-            total, mx = float(a.get("total", 0)), min(max(int(a.get("max_bets", 10)), 1), 40)
-            if total < 1:
+            asked = float(a.get("total", 0))
+            if asked < 1:
                 return {"error": "total must be at least $1"}
+            total = min(asked, BANKROLL)
+            mx = min(max(int(a.get("max_bets", 10)), 1), 40, int(total))
+            only = set(map(str, a.get("markets") or []))
             picks = [p for p in self._run("scan_markets", {"tag": a.get("tag", "all"), "within_hours": a.get("within_hours", 24), "top": max(mx * 2, 10)})["picks"]
-                     if p["verdict"] != "WAIT"][:mx]
+                     if p["verdict"] != "WAIT" and (not only or p["market"] in only)][:40 if only else mx]
+            share = max(MAX_SHARE, 1 / len(picks)) if only and picks else MAX_SHARE
+            over = {"capped_to_budget": total, "note_budget": f"Asked for ${asked:g} but the budget is ${total:g}: planned within the budget."} if asked > total else {}
             if not picks:
-                return {"total": total, "planned_total": 0, "note": "No good bets right now: Horizon would wait and spend nothing."}
-            amts, bets = split_budget(total, [max(p["suggested_bet"], 1) for p in picks]), []
+                return {"total": total, **over, "planned_total": 0, "note": "No good bets right now: Horizon would wait and spend nothing."}
+            amts, bets = split_budget(total, [max(p["suggested_bet"], 1) for p in picks], share), []
             for p, x in zip(picks, amts):
                 if x:
                     self._run("place_bet", {"market": p["market"], "side": p["side"], "amount": x, "confirmed_amount": True})
-                    bets.append({"market": p["market"], "side": p["side"], "amount": x})
+                    bets.append({"market": p["market"], "question": p["question"], "side": p["side"], "amount": x})
             spent, sug = round(sum(b["amount"] for b in bets), 2), round(sum(p["suggested_bet"] for p in picks), 2)
-            return {"total": total, "planned_total": spent, "unspent": round(total - spent, 2), "bets": bets, "horizon_suggests_total": sug,
-                    "rule": "split by Horizon's suggested bets, at most 20% of the total in one market, one bet per event",
-                    "note": (f"Only {len(bets)} good bets: the rest stays unspent rather than piling into one market." if spent < total - 0.005
-                             else f"This is more than Horizon's own suggestion (${sug:g}); tell the user." if sug < total else None)}
+            left = round(total - spent, 2)
+            return {"total": total, **over, "planned_total": spent, "bets_planned": len(bets), **({"unspent": left} if left >= 1 else {}), "bets": bets,
+                    "horizon_alone_would_bet": sug,
+                    "rule": f"split by Horizon's suggested bets, at most {round(share * 100)}% of the total in one market, one bet per event",
+                    "note": (f"{len(bets)} bets at most {round(share * 100)}% each: ${left:g} stays unspent rather than piling into one market." if left >= 1
+                             else f"The user asked for more than Horizon would bet on its own (${sug:g}); say so in one plain sentence." if sug < spent else None)}
         if name == "summarize_portfolio":
             return {"budget": BANKROLL, "bets_user_placed": 0, "dollars_in_those_bets": 0, "result_so_far": 0}
         if name == "open_my_results":
@@ -204,7 +237,18 @@ def make_step(direct):
 
 
 def run_prompt(step, markets, text, guard):
-    p, contents, answer = Panel(markets, guard), [{"role": "user", "parts": [{"text": text}]}], ""
+    """One prompt, or a list of turns in one conversation; only the last turn's plan is judged."""
+    p, contents, turns = Panel(markets, guard), [], [text] if isinstance(text, str) else text
+    for k, turn in enumerate(turns):
+        contents.append({"role": "user", "parts": [{"text": turn}]})
+        _, answer = _turn(step, p, contents)
+        if k < len(turns) - 1:
+            p.plan.clear()
+    return p, answer
+
+
+def _turn(step, p, contents):
+    answer = ""
     for _ in range(12):
         for attempt in range(3):
             try:
@@ -229,9 +273,9 @@ NUM = re.compile(r"\$?\d[\d,]*(?:\.\d+)?%?")
 
 
 def _numbers_in(obj):
-    s = json.dumps(obj)
+    s = json.dumps(obj, ensure_ascii=False)
     vals = set()
-    for t in re.findall(r"-?\d+(?:\.\d+)?", s):
+    for t in re.findall(r"-?\d+(?:\.\d+)?", re.sub(r"(?<=\d),(?=\d{3})", "", s)):
         v = float(t)
         vals.update({round(v, 2), round(v * 100, 1), round(v * 100), round(v), round(v, 1)})
     return vals
@@ -247,7 +291,7 @@ def score(case, panel, answer, markets):
         issues.append(answer)
     if not answer:
         issues.append("no final answer text")
-    if re.search(r"\b(placed|bought|executed)\b", answer, re.I) and not re.search(r"\b(not|never|once you|after you)\b[^.]*\b(placed|bought|executed)", answer, re.I):
+    if re.search(r"\b(I|I've|I have|we've|we have|Horizon has|has been|have been|was|were)\s+(just\s+|now\s+|successfully\s+)?(placed|bought|executed)\b", answer, re.I):
         issues.append("claims a bet was placed")
     if re.search(r"\bgambl", answer, re.I):
         issues.append("uses 'gamble'")
@@ -262,16 +306,29 @@ def score(case, panel, answer, markets):
         t = chk["total"]
         if total_planned > t + 0.01:
             issues.append(f"planned ${total_planned} > asked ${t}")
-        if panel.plan and biggest > t * MAX_SHARE + 0.01 and len(tradable) > 1:
+        share = max(MAX_SHARE, 1 / len(panel.plan)) if chk.get("chosen") and panel.plan else MAX_SHARE
+        if panel.plan and biggest > max(t * share, 1) + 0.01 and len(tradable) > 1:
             issues.append(f"one basket: ${biggest} of ${t} in one market")
         if not panel.plan and tradable:
             issues.append("planned nothing though there are tradable markets")
+    if chk.get("min_bets") and tradable and len(panel.plan) < chk["min_bets"]:
+        issues.append(f"{len(panel.plan)} bets, expected at least {chk['min_bets']}")
+    if chk.get("named"):
+        hit = [b for b in panel.plan if chk["named"] in b["market"].lower()]
+        if not hit:
+            issues.append(f"no bet on the named market ({chk['named']})")
+        elif abs(hit[0]["amount"] - chk["amount"]) > 0.01:
+            issues.append(f"named bet ${hit[0]['amount']} != asked ${chk['amount']}")
+    if chk.get("max_bets_exact") and len(panel.plan) != chk["max_bets_exact"]:
+        issues.append(f"{len(panel.plan)} bets, expected the {chk['max_bets_exact']} chosen earlier")
+    if re.search(r"#[0-9a-f]{6}\b|`[a-z0-9-]{12,}`", answer):
+        issues.append("shows a raw market slug")
     if group == "count" and len(panel.plan) > chk["max_bets"]:
         issues.append(f"{len(panel.plan)} bets > {chk['max_bets']} asked")
     if group in ("question", "junk") and panel.plan:
         issues.append(f"added {len(panel.plan)} bets to the plan for a question")
     # invented numbers: every $ amount / % in the answer must come from a tool result or the prompt
-    known = _numbers_in([c["result"] for c in panel.calls]) | _numbers_in(text) | {BANKROLL, 1, 5, 20, 25, 34677, 10839, 0}
+    known = _numbers_in([c["result"] for c in panel.calls]) | _numbers_in(text if isinstance(text, str) else " ".join(text)) | {BANKROLL, 1, 5, 20, 25, 34677, 10839, 0}
     bad = []
     for tok in NUM.findall(answer):
         if not (tok.startswith("$") or tok.endswith("%")):
@@ -281,7 +338,7 @@ def score(case, panel, answer, markets):
             bad.append(tok)
     if bad:
         issues.append(f"numbers not from any tool: {bad[:5]}")
-    return {"id": pid, "group": group, "prompt": text, "ok": not issues, "issues": issues, "answer": answer,
+    return {"id": pid, "group": group, "prompt": text if isinstance(text, str) else " / ".join(text), "ok": not issues, "issues": issues, "answer": answer,
             "plan": panel.plan, "planned_total": total_planned, "tools": [c["tool"] for c in panel.calls]}
 
 
