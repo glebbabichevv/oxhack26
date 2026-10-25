@@ -1,0 +1,141 @@
+% Horizon cheat sheet: every method, model and formula we used. Build: tectonic docs/cheatsheet.tex
+\documentclass[9pt]{extarticle}
+\usepackage[a4paper,margin=1.4cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,multicol,enumitem,xcolor}
+\usepackage[hidelinks]{hyperref}
+\setlist{nosep,leftmargin=1.1em}
+\setlength{\parindent}{0pt}
+\setlength{\columnsep}{1.2em}
+\newcommand{\sect}[1]{\par\medskip{\large\bfseries #1}\par\smallskip}
+\newcommand{\logit}{\operatorname{logit}}
+\pagestyle{empty}
+
+\begin{document}
+{\LARGE\bfseries Horizon} \hfill {\small OxHack '26 \textperiodcentered{} \url{https://github.com/glebbabichevv/oxhack26}}\\[2pt]
+{\small Polymarket prices are miscalibrated as a function of \emph{time to resolution}. Does correcting that survive spreads, fees and an honest out-of-time test, and \emph{when} is it worth acting?}
+
+\begin{multicols}{2}
+
+\sect{1. Data}
+\begin{itemize}
+\item 34{,}677 resolved \textbf{binary} Polymarket markets (Gamma + CLOB hourly price history). Cancelled / 50--50 resolutions dropped.
+\item One row per (market, horizon) with $h \in \{720, 168, 72, 24, 12\}$ hours before the \textbf{scheduled} \texttt{endDate} (live markets only know that; \texttt{closedTime} would leak early closes).
+\item Entry price = last trade print at or before the target time, prior prints only, $\le 6$\,h old (98.9\% $\le 1$\,h). Prices kept in $[3\%, 97\%]$.
+\item Domain from event tags: sports, politics, crypto, culture, economics, science/tech, geopolitics, other. Lifetime volume $\ge \$100$k.
+\end{itemize}
+
+\sect{2. Out-of-time split}
+\begin{itemize}
+\item Train: events that ended before \textbf{2026-05-18} (23{,}838 markets). Test: the 10{,}579 after.
+\item Legs of one event never straddle the split; 260 legs that resolved before the cutoff dropped from test.
+\item Embargo: a test trade counts only if entered on/after the cutoff.
+\item Validation = last 20\% of train events (model and rule selection happen here only).
+\end{itemize}
+
+\sect{3. The model (M0): 4 coefficients}
+With price $p$ and hours $h$, let $\ell = \logit p = \ln\frac{p}{1-p}$ and $\tau = \ln\frac{\mathrm{clip}(h,12,720)}{24}$:
+\[
+q \;=\; \sigma\!\left(\beta_0 + \beta_1\,\ell + \beta_2\,\tau + \beta_3\,\ell\,\tau\right),\qquad \sigma(x)=\frac{1}{1+e^{-x}}
+\]
+Fitted (logistic regression, train only):
+$\beta_0 = 0.066,\ \beta_1 = 0.845,\ \beta_2 = -0.015,\ \beta_3 = 0.022$.\\
+Slope $\beta_1 + \beta_3\tau < 1$ near the end $\Rightarrow$ prices are \textbf{overconfident} there: longshots win more than priced, favourites less; a month out ($\tau \approx 3.4$) the slope is $\approx 0.92$, about fair.
+
+\textbf{Uncertainty band.} 40 refits on bootstrap resamples \emph{by event}; $[q_{10}, q_{90}]$ = 10th/90th percentile of their predictions.
+
+\sect{4. Costs}
+\[
+c = \max\!\left(\tfrac{\text{ask}-\text{bid}}{2},\ 1\text{\textcent}\right) + r\,\bigl(p(1-p)\bigr)^{e}
+\]
+Polymarket taker fee with each market's own \texttt{feeSchedule} (rate $r$, exponent $e$; default rates 4--7\% by domain). Historical spreads are unavailable, so the 1\textcent{} floor is a stated limitation.
+
+\sect{5. Decision rule}
+Net edge on the conservative end of the band:
+\[
+e_{\text{YES}} = q_{10} - (p + c), \qquad e_{\text{NO}} = (p - c) - q_{90}
+\]
+Back YES if $e_{\text{YES}} > 0$, NO if $e_{\text{NO}} > 0$, else no trade. \textbf{Policy V3} adds: net edge $\ge 1$\textcent, and only within \textbf{24\,h} of the end (earlier $\Rightarrow$ WAIT). No call under 12\,h (never trained or tested there).
+
+\textbf{Stake: quarter Kelly, capped.} For YES at cost $\pi = p + c$:
+\[
+f = \min\!\left(\tfrac14\cdot\frac{q_{10} - \pi}{1 - \pi},\ 5\%\right)
+\]
+Open stake $\le 1$ starting bankroll (later entries get what is left, pro rata at ties). P\&L additive, no compounding.
+
+\sect{6. Policy COH (shipped)}
+In a neg-risk event whose legs at one horizon number $\ge 2$ and whose prices sum to $[0.95, 1.25]$:
+\[
+q_i \leftarrow \frac{q_i}{\sum_j q_j},\qquad \text{band offsets } q_i - q_{10,i},\ q_{90,i} - q_i \text{ kept}
+\]
+then V3, then \textbf{one bet per event} (largest net edge; ties broken by market id, stable sort). Thin legs ($<\$100$k) price the book but get no call.
+
+\sect{7. Metrics}
+\[
+\text{Brier} = \tfrac1n\textstyle\sum (q-y)^2
+\]
+\[
+\text{LogLoss} = -\tfrac1n\textstyle\sum \bigl[y\ln q + (1-y)\ln(1-q)\bigr]
+\]
+Return per \$1 staked $= \sum_k f_k r_k \big/ \sum_k f_k$, with payoff $r = \frac{y}{p+c} - 1$ (YES) or $\frac{1-y}{1-p+c} - 1$ (NO).
+90\% intervals: bootstrap resampling \emph{events} (legs of a match move together), 1{,}000--2{,}000 draws, seed 0.
+
+\sect{8. Results (test, out of time)}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+ & per \$1 [90\% CI] & trades & max DD\\
+\midrule
+\textbf{COH} & \textbf{+30.5\textcent} [21.7, 39.5] & 1{,}827 & 0.22\\
+V3 & +17.2\textcent{} [11.8, 23.5] & 3{,}653 & 0.38\\
+V0 (no rule) & +11.1\textcent & & \\
+Back the favourite & $-8.70$ bankrolls & & \\
+\bottomrule
+\end{tabular}\\[2pt]
+Brier 0.1297 (model) vs 0.1305 (market); log loss 0.3917 vs 0.3940. COH: +4.27 bankrolls [3.05, 5.53], 30.7\% of bets won.\\
+\textbf{Where:} sports +33\textcent{} (1{,}241 bets), politics +75\textcent{} (103), culture $-14$\textcent{} (the one losing domain), crypto $\approx 0$.\\
+\textbf{When} (mean return per trade, V3): 7d +7.8\%, 3d +8.8\%, 1d +13.8\%, 12h +18.5\%; 30d no trade clears 1\textcent.\\
+The cited paper (arXiv 2602.19520) found prices compressed toward 50\% far out; \textbf{we did not reproduce that direction}.
+
+\sect{9. Everything we tried (selected on validation only)}
+\begin{tabular}{@{}p{0.39\columnwidth}p{0.53\columnwidth}@{}}
+\toprule
+Candidate & Outcome\\
+\midrule
+M0 (above) & shipped model\\
+M1 logistic + momentum, legs, book share & no gain over M0\\
+M2 market-anchored boosting & no gain over M0\\
+Beta calibration (Kull 2017) & $\le$ M0\\
+Isotonic per horizon & $-7.8$\textcent{} vs M0 (walk-forward)\\
+Hierarchical domain model & domain terms overfit\\
+Shin (1993) de-vig & $-10$\textcent: gets Polymarket backwards\\
+Power method & $\approx$ market\\
+Mean ensemble / log pool & errors correlate 0.99, no gain\\
+Agreement filter & fewer trades, no gain\\
+Rules V0--V3 & V3 picked (+25.5\textcent{} val)\\
+\textbf{COH} & \textbf{picked} (paired +8.8\textcent{} [0.7, 17.3] val)\\
+Dynamic exit (sell early) & no extra profit; DD 0.20 vs 0.23\\
+Crypto as options (Binance) & Brier 0.1471 vs 0.1399, $-16.5$\textcent\\
+\bottomrule
+\end{tabular}\\[2pt]
+10 variants on validation; test opened once for V3 and COH side by side (exit: a second, descriptive look).
+
+\sect{10. Robustness}
+\begin{itemize}
+\item Stale prices: only prints $\le 1$\,h old and markets closed $\ge 12$\,h after the print: COH +29.6\textcent{} [21.1, 39.7].
+\item Placebo ``prices are right'' ($y \sim \text{Bernoulli}(p)$, 1{,}000 draws, same trades): $-8.1$\textcent{} median vs real +31\textcent, $p < 0.001$.
+\item Walk-forward by month (refit on earlier events): COH positive in 15 of 17 months.
+\item Deflated Sharpe 0.9999 over 12 trials (per-trade SR 0.135).
+\item Survives double Polymarket fees (+15.7\textcent{} V3). Capacity $\approx\$10$k per market on liquid football books.
+\item The gain is one bet per event, not leg picking: a random eligible leg gives +33.5\textcent.
+\end{itemize}
+
+\sect{11. Sealed predictions}
+Live predictions frozen to a file; its SHA-256 posted in the event Discord before the markets closed and anchored in Bitcoin via OpenTimestamps (Seal 1 block 972944, Seal 2 block 972999). Pre-registered metric: Brier vs the market with an event-bootstrap 90\% interval; only markets resolved after the post count.
+
+\sect{12. Reproduce}
+\texttt{python integrations/reproduce.py} --- re-runs the pipeline, 13/13 headline numbers.\\
+\texttt{python integrations/backtest\_log.py} --- every test trade as CSV.\\
+\texttt{python integrations/verify\_seals.py} --- hashes + Bitcoin blocks.\\
+\texttt{node extension-module/parity.mjs <seal>} --- extension maths = Python.
+
+\end{multicols}
+\end{document}
