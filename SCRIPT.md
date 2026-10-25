@@ -22,15 +22,14 @@ Lines in *italics* are what you do on screen. Everything else is what you say.
 
 **Gleb:**
 Hi, we're Horizon.
-You've probably seen headlines like "Polymarket gives this a 15% chance." People treat that as a real probability.
-We checked if it actually is. We looked at 34,000 Polymarket markets that have already closed.
+Polymarket says something has a 15% chance. Is that true? We checked 34,000 closed markets.
 
 *Drag the time slider slowly from 30 days to 12 hours.*
 
 **Gleb:**
-A month before a market closes, the prices are pretty fair. The arrows are flat.
-But as the end gets closer, people get too confident. Cheap outcomes win more often than their price says.
-The arrows show how we correct the price. The dots show what actually happened.
+A month before the end, yes. In the last day, no: it actually happens about 20% of the time.
+Near the end people get too sure about the favourite, so the underdog ends up too cheap.
+Horizon finds those mispriced outcomes and tells you if they're worth betting on after fees.
 
 Ayaz built the model and the testing, so he'll explain how it works.
 
