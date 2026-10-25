@@ -99,7 +99,8 @@ const Loader = ({ color = MUTED, dot = 4 }: { color?: string; dot?: number }) =>
 
 export function useAccount(): Account | undefined {
   const [a, setA] = useState<Account>();
-  useEffect(() => { void getAccount().then(setA); return onAccount(setA); }, []);
+  const paper = usePaper(); // re-read the account when Paper trading flips: sizing follows the book in use
+  useEffect(() => { const book = paper ? 'paper' : 'real'; void getAccount(book).then(setA); return onAccount(setA, book); }, [paper]);
   return a;
 }
 
@@ -630,6 +631,12 @@ export function MyDecisions({ model }: { model: Model }) {
 }
 
 /** The paper book: positions at the live ask + fee, marked to the mid, settled at $1/$0 by Gamma. */
+/** Open a market on Polymarket in the user's tab (polymarket.com/market/<slug> redirects to its event and outcome). */
+function openMarket(slug: string) {
+  const u = `https://polymarket.com/market/${slug}`;
+  void chrome.tabs.query({ active: true, currentWindow: true }).then(([t]) => (t?.id !== undefined ? chrome.tabs.update(t.id, { url: u }) : chrome.tabs.create({ url: u })));
+}
+
 function PaperBook({ model }: { model: Model }) {
   const [a, setA] = useState<Account>();
   const [sure, setSure] = useState(false);
@@ -663,12 +670,15 @@ function PaperBook({ model }: { model: Model }) {
           {a.positions.slice(0, 100).map((p) => {
             const pl = p.status === 'open' ? p.shares * (p.mark ?? p.avgPrice) - p.stake : (p.pnl ?? 0);
             return (
-              <li key={p.id} className="hz-rule flex items-center gap-3 py-3">
+              <li key={p.id} className="hz-rule">
+                <button type="button" onClick={() => openMarket(p.marketSlug)} title="Open on Polymarket"
+                  className="hz-row-link -mx-2 flex w-[calc(100%+16px)] items-center gap-3 rounded-control px-2 py-3 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 block text-body font-medium">{clean(p.question)}</span>
                   <span className="flex items-center gap-1.5 text-caption text-[#64748b]"><PaperBadge /> {money(p.stake)} on {p.side === 'YES' ? 'Yes' : 'No'} at {Math.round(p.avgPrice * 100)}¢ · {p.status === 'open' ? 'open' : p.status === 'settled' ? (p.exitPrice === 1 ? 'won' : 'lost') : 'closed'}{p.by === 'agent' ? ' · agent' : ''}</span>
                 </span>
                 <span className="shrink-0 text-footnote font-semibold tabular-nums" style={{ color: Math.abs(pl) < 0.005 ? MUTED : pl > 0 ? UP : DOWN }}>{sign(pl)}</span>
+                </button>
               </li>
             );
           })}
@@ -715,7 +725,10 @@ function RealDecisions({ model }: { model: Model }) {
           {rows.slice(0, 80).map((e) => {
             const r = perDollar(e);
             return (
-              <li key={`${e.slug}:${e.side}`} className="hz-rule flex items-center gap-3 py-3">
+              <li key={`${e.slug}:${e.side}`} className="hz-rule">
+                {/* The whole row opens the market on Polymarket (in this tab), like the site's journal rows. */}
+                <button type="button" onClick={() => openMarket(e.slug)}
+                  className="hz-row-link -mx-2 flex w-[calc(100%+16px)] items-center gap-3 rounded-control px-2 py-3 text-left" title="Open on Polymarket">
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 block text-body font-medium">{clean(e.question)}</span>
                   <span className="block text-caption text-[#64748b]">{e.side === 'YES' ? 'Yes' : 'No'} at {Math.round((e.side === 'YES' ? e.price : 1 - e.price) * 100)}¢ · {STATUS_WORD[e.status]}{e.source === 'agent' ? ' · from the agent' : ''}</span>
@@ -724,6 +737,7 @@ function RealDecisions({ model }: { model: Model }) {
                   {r === undefined ? 'Open' : `${r >= 0 ? '+' : '−'}${money(Math.abs(r))}`}
                   {r !== undefined ? <span className="block text-caption font-normal text-[#64748b]">per $1</span> : null}
                 </span>
+                </button>
               </li>
             );
           })}
