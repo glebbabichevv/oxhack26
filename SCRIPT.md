@@ -8,37 +8,58 @@ Lines in *italics* are what you do on screen. Everything else is what you say.
 ## Setup (before the judges arrive)
 
 *Gleb's laptop, three tabs open:*
-- *Tab 1: the site, scrolled to the very top (the arrows).*
-- *Tab 2: a Polymarket match that ends 12–24 hours from now. Horizon side panel open, budget set to $100–500.*
+- *Tab 1: a Polymarket match that ends 12–24 hours from now. Horizon side panel open, budget set to $100–500.*
+- *Tab 2: the site, scrolled to the very top (the arrows).*
 - *Tab 3: the journal page, scrolled to "Sealed before the outcomes".*
 
 *Backup video open in the background. Phone hotspot ready.*
 
 ---
 
-## 1. Gleb — the idea
+## 1. Gleb — what Horizon is (demo first)
 
-*Tab 1 is on screen. Point at the arrows.*
+*Tab 1 is on screen: the Polymarket match with the Horizon panel.*
 
 **Gleb:**
 Hi, we're Horizon. It's a Chrome extension and an AI agent for Polymarket.
 You open any market, and it tells you if the price is wrong, how much to bet, and whether to bet now or wait.
-The agent can also find tonight's best bets for you and fill in the orders.
 
-Here's why it works. Polymarket says something has a 15% chance. Is that true? We checked 34,000 closed markets.
+*Point at the Horizon card.*
+
+**Gleb:**
+This is a real match. The market says [p]. Horizon says [q]. So the price is too low, and it suggests putting in [k] dollars.
+
+*Click the button. The order ticket fills in.*
+
+**Gleb:**
+It fills in the order for me. I press Trade myself, because it's my money.
+
+*Type into the agent box: "Set up my 3 best bets tonight". Wait for the plan.*
+
+**Gleb:**
+The agent can also find tonight's best bets. It makes a plan: one bet is ready now, one it's waiting on because it's
+still too early, and one it skips because it's the same match.
+
+---
+
+## 2. Gleb — why it works
+
+*Switch to Tab 2 (the site). Point at the arrows.*
+
+**Gleb:**
+So why does this work? Polymarket says something has a 15% chance. Is that true? We checked 34,000 closed markets.
 
 *Drag the time slider slowly from 30 days to 12 hours.*
 
 **Gleb:**
 A month before the end, yes. In the last day, no: it actually happens about 20% of the time.
 Near the end people get too sure about the favourite, so the underdog ends up too cheap.
-Horizon finds those mispriced outcomes and tells you if they're worth betting on after fees.
 
 Ayaz built the model and the testing, so he'll explain how it works.
 
 ---
 
-## 2. Ayaz — the model and the proof
+## 3. Ayaz — the model and the proof
 
 *Scroll down to the headline numbers.*
 
@@ -68,34 +89,11 @@ It was profitable in 15 out of 17 months.
 **Ayaz:**
 To be clear, most of our bets lose. It only works over hundreds of bets.
 
-That's the evidence. Gleb will show you how you actually use it.
+That's the evidence. And here's how we check it live.
 
 ---
 
-## 3. Gleb — the demo
-
-*Switch to Tab 2 (the Polymarket match). Point at the Horizon card.*
-
-**Gleb:**
-This is a real match on Polymarket.
-The market says [p]. Horizon says [q]. So the price is too low, and it suggests putting in [k] dollars.
-
-*Click the button. The order ticket fills in.*
-
-**Gleb:**
-It fills in the order for me. I press Trade myself, because it's my money.
-
-*Type into the agent box: "Set up my 3 best bets tonight". Wait for the plan.*
-
-**Gleb:**
-There's also an agent. It makes a plan.
-One bet is ready now. One it's waiting on, because it's still too early. One it skips, because it's the same match.
-
-This bet won't settle until tonight, and one bet doesn't tell you much anyway. So here's how we know it's not luck.
-
----
-
-## 4. Gleb — the capsule
+## 4. Gleb — the journal and the capsule
 
 *Switch to Tab 3 (journal, sealed section).*
 
@@ -109,7 +107,7 @@ We opened it at 12:30. Here's what happened.
 
 *Read the result off the screen, whatever it says.*
 
-*Back to Tab 1, scroll to "No edge here".*
+*Back to Tab 2 (the site), scroll to "No edge here".*
 
 **Gleb:**
 We're also open about where it doesn't work. Culture markets lose money, crypto is about break-even,
