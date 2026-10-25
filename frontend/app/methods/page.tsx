@@ -116,18 +116,18 @@ function extent(rows: Row[]) {
 function Dots({ rows, f = fmt }: { rows: Row[]; f?: (x: number) => string }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   const mobile = w < 520;
-  const rowH = 30, labelW = mobile ? Math.min(130, w * 0.38) : 190, m = { r: 16, t: 8, b: 26 };
+  const rowH = 30, labelW = mobile ? Math.min(150, w * 0.42) : 240, m = { r: 16, t: 8, b: 26 };
   const H = m.t + rows.length * rowH + m.b;
   const [a, b] = extent(rows);
   const x = (v: number) => labelW + ((v - a) / (b - a)) * Math.max(1, w - labelW - m.r);
-  const ticks = [a, a + (b - a) / 2, b].map((v) => Number(v.toPrecision(2)));
+  const ticks = [...new Set([a, a + (b - a) / 2, b].map((v) => Number(v.toPrecision(3))))];
   return (
     <div ref={ref} className="w-full">
       {w > 0 ? (
         <svg width={w} height={H} viewBox={`0 0 ${w} ${H}`} role="img" aria-label={rows.map((r) => `${r.name}: ${r.value ?? "n/a"}`).join("; ")}>
           {a < 0 && b > 0 ? <line x1={x(0)} x2={x(0)} y1={m.t} y2={H - m.b} stroke="rgba(9,9,11,0.3)" strokeDasharray="3 3" /> : null}
           {ticks.map((v, i) => (
-            <text key={i} x={x(v)} y={H - 8} fontSize="11" fill="#71717a" textAnchor={i === 0 ? "start" : i === 2 ? "end" : "middle"}>{f(v)}</text>
+            <text key={i} x={x(v)} y={H - 8} fontSize="11" fill="#71717a" textAnchor={i === 0 ? "start" : i === ticks.length - 1 ? "end" : "middle"}>{f(v)}</text>
           ))}
           {rows.map((r, i) => {
             const cy = m.t + i * rowH + rowH / 2;
@@ -172,7 +172,7 @@ function Line({ rows, f = fmt }: { rows: Row[]; f?: (x: number) => string }) {
           {band ? <path d={band} fill="rgba(17,17,19,0.07)" /> : null}
           <path d={line} fill="none" stroke="#111113" strokeWidth={1.75} strokeLinejoin="round" />
           {pts.map((r, i) => <circle key={i} cx={x(i)} cy={y(r.value as number)} r={3} fill="#111113" />)}
-          {pts.map((r, i) => (i % every === 0 || i === pts.length - 1 ? <text key={`l${i}`} x={x(i)} y={H - 8} fontSize="11" fill="#71717a" textAnchor="middle">{r.name}</text> : null))}
+          {pts.map((r, i) => (i % every === 0 || i === pts.length - 1 ? <text key={`l${i}`} x={x(i)} y={H - 8} fontSize="11" fill="#71717a" textAnchor={i === pts.length - 1 ? "end" : i === 0 ? "start" : "middle"}>{r.name}</text> : null))}
         </svg>
       ) : <div style={{ height: H }} />}
     </div>
