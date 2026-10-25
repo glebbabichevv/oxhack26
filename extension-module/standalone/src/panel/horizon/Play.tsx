@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ThinkingOrb, type OrbState } from 'thinking-orbs';
 import { decideEvent, searchMarkets, subjectOf, type Decision, type Leg, type Model, type ScanRow } from './horizon';
 import { caution, checkBet, getAccount, onAccount, quotes, recordBuy, recordSell, refresh, resetPaper, setBankroll, suggested, type Account, type Position, type Quote, type Side } from './ledger';
-import { fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
+import { alreadyIn, fillTicket, subTabOf, llmAvailable, planFromWords, planWithLLM, scanMarkets, type Ctx, type MarketPick, type PlanItem, type Step } from './agent';
 import { installId, localJournal, onJournal, record, webUrl, type Entry } from './journal';
 import { AssistantMessage, UserMessage } from './argos/Message';
 import { isPaper, setPaper, usePaper } from './paper';
@@ -370,14 +370,18 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
   useEffect(() => { if (quote?.eventSlug) void heldOnEvent(quote.eventSlug).then(setHeld); }, [quote?.eventSlug]);
   const mine = held.find((p) => p.conditionId && p.conditionId === quote?.conditionId && (p.size ?? 0) > 0);
   const holding = mine ? 0 : held.length;
+  const [dupLocal, setDupLocal] = useState<string>();
   const unsure = d.untested ? 'Closer to the end than anything Horizon was tested on (12 h).' : quote ? caution(quote) : undefined;
-  const verdict = unsure || holding || mine ? 'SKIP' : verdictOf(d);
+  const verdict = unsure || holding || mine || dupLocal ? 'SKIP' : verdictOf(d);
   const side = verdict === 'SKIP' ? undefined : sideOf(d);
   const sug = stakeFor(a, d);
   const kellyUsd = a ? suggested(a, d) : 0; // the true ¼ Kelly amount, before Polymarket's $1 minimum
   const [chosen, setChosen] = useState<number>();
   const amount = chosen ?? sug;
   const [doing, setDoing] = useState<PlanItem[]>();
+  // Already bet here (this book, or a ticket set up in the last 48 h)? Re-checked when a run on this card ends.
+  const paperMode = usePaper();
+  useEffect(() => { if (!quote || doing) return; void alreadyIn({ marketSlug, eventSlug: quote.eventSlug }).then(setDupLocal); }, [quote, doing, marketSlug, paperMode]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
   useEffect(() => {
     let dead = false;
@@ -406,14 +410,15 @@ export function BetCard({ model, a, marketSlug, title, d, tabId, onDetails }: {
     <article className="hz-card hz-enter rounded-panel p-4">
       <h2 className="hz-display text-[27px] leading-[1.1] [overflow-wrap:anywhere]">{clean(title)}</h2>
       <p className="mt-2.5 text-subhead text-[#475569]">
-        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{unsure ? 'Not sure here' : mine ? 'You hold this' : holding ? 'Already in' : priceWord(d)}</b>
+        Market {pct(d.price)} · Horizon <b className="font-semibold text-[#0f172a]">{pct(d.q)}</b> · <b className="font-semibold" style={{ color: side && verdict === 'BET' ? UP : MUTED }}>{unsure ? 'Not sure here' : mine ? 'You hold this' : holding || dupLocal ? 'Already in' : priceWord(d)}</b>
       </p>
       {unsure ? <p className="mt-1.5 text-footnote text-[#64748b]">{unsure} Horizon gives no advice on this one.</p> : null}
+      {!unsure && !holding && !mine && dupLocal ? <p className="mt-1.5 text-footnote text-[#64748b]">You {dupLocal.replace(/^already /, 'already ')}{paperMode ? ' (paper)' : ''}: Horizon won&apos;t bet here twice.</p> : null}
       {!unsure && holding ? <p className="mt-1.5 text-footnote text-[#64748b]">You already hold {holding} bet{holding > 1 ? 's' : ''} on this event: a second one is the same risk, so Horizon won&apos;t suggest more.</p> : null}
       {mine && quote ? <PositionAdvice pos={mine} q={quote} d={d} unsure={!!unsure} title={title} onSell={(it) => setDoing([it])} busy={!!doing} /> : null}
-      {verdict === 'SKIP' && !unsure && !holding && !mine && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
+      {verdict === 'SKIP' && !unsure && !holding && !mine && !dupLocal && Math.abs(d.q - d.price) >= 0.01 ? <p className="mt-1.5 text-footnote text-[#64748b]">Horizon&apos;s range is {pct(d.lo)}–{pct(d.hi)}; after the spread and fees ({Math.max(1, Math.round(d.cost * 100))}¢) that gap isn&apos;t a safe edge.</p> : null}
       {d.domain === 'crypto' ? <p className="mt-1 text-caption text-[#94a3b8]">Crypto: our tests show no edge here. Polymarket prices these well.</p> : null}
-      <p className="mt-1.5 inline-flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {endsLine(d.hours)}{side && verdict === 'BET' ? ` · ${bestTime(d.hours)}` : ''}</p>
+      <p className="mt-1.5 flex items-center gap-1.5 text-footnote text-[#64748b]"><Icon d={I.clock} size={13} /> {endsLine(d.hours)}{side && verdict === 'BET' ? ` · ${bestTime(d.hours)}` : ''}</p>
       {side && verdict === 'WAIT' ? (
         <div className="mt-4 rounded-card bg-[rgba(15,23,42,0.04)] px-3.5 py-3">
           <p className="inline-flex items-center gap-1.5 text-subhead font-semibold text-[#0f172a]"><Icon d={I.clock} size={15} /> Wait. {bestTime(d.hours)}</p>
@@ -949,7 +954,7 @@ function PlanList({ model, tabId, plan: plan0, budget }: { model: Model; tabId?:
                   <p className="mt-0.5 text-caption text-[#94a3b8]">{d && d.kelly * budget < 1 ? <>Horizon suggests {money(Math.floor(d.kelly * budget * 100) / 100)} · Polymarket minimum is $1</> : <>Horizon suggests {money(p.suggested)}</>}{p.amount > p.suggested + 0.005 ? <span className="text-[#64748b]"> · above Horizon's suggestion</span> : null}</p>
                 ) : null}
                 {d ? <p className="mt-0.5 text-caption text-[#64748b]">Market {pct(d.price)} · Horizon {pct(d.q)}. {reasonOf(d)}</p> : null}
-                {d ? <p className="mt-1 inline-flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {endsLine(d.hours)} · {isLater(p) ? `Wait. ${bestTime(d.hours)}` : bestTime(d.hours)}</p> : null}
+                {d ? <p className="mt-1 flex items-center gap-1.5 text-caption font-medium text-[#475569]"><Icon d={I.clock} size={12} /> {endsLine(d.hours)} · {isLater(p) ? `Wait. ${bestTime(d.hours)}` : bestTime(d.hours)}</p> : null}
                 {k >= LIVE && liveDone && one !== k && !isLater(p) ? (subTabOf(p.q) ? (
                   <a href={`https://polymarket.com/event/${p.q.eventSlug}`} target="_blank" rel="noreferrer" className="hz-chip mt-1.5 inline-flex items-center gap-1 rounded-control px-3 py-1 text-footnote font-semibold">Open <Icon d={I.external} size={12} /></a>
                 ) : (

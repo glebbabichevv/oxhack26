@@ -14,6 +14,7 @@ import { markPage, stylePage } from './pageStyle';
 import { intendedAction, verdictOf } from './policy';
 import { fetchMe, openMyResults } from './me';
 import { isPaper } from './paper';
+import { localJournal } from './journal';
 
 export const API = 'https://oxhack26-production.up.railway.app';
 const GAMMA = 'https://gamma-api.polymarket.com';
@@ -120,6 +121,26 @@ export async function scanMarkets(m: Model, tag = 'all', withinHours = 24, top =
   return { picks: final.slice(0, top), scanned: seen.size };
 }
 
+/**
+ * Has the user already bet here? An open position in the book in use (paper or real) on this market or its event,
+ * or a ticket set up / placed for this market in the last 48 h (local journal, same paper/real mode).
+ * Returns a plain reason, or undefined. Every agent bet and the card go through this, so nothing is bet twice.
+ */
+export async function alreadyIn(q: Pick<Quote, 'marketSlug' | 'eventSlug'>): Promise<string | undefined> {
+  const a = await getAccount();
+  const pos = a.positions.find((p) => p.status === 'open' && (p.marketSlug === q.marketSlug || (!!q.eventSlug && p.eventSlug === q.eventSlug)));
+  if (pos) return pos.marketSlug === q.marketSlug
+    ? `already bet on this market (${pos.side === 'YES' ? 'Yes' : 'No'}, $${pos.stake.toFixed(2)})`
+    : `already have a bet on this event (${pos.label || pos.question})`;
+  const paper = isPaper();
+  // The latest entry for this market decides: a ticket set up and then skipped is not a bet.
+  const hit = (await localJournal()).filter((e) => e.slug === q.marketSlug && e.status !== 'shown' && (e.source === 'paper') === paper
+    && Date.now() - Date.parse(e.ts) < 48 * 3.6e6).sort((x, y) => Date.parse(y.ts) - Date.parse(x.ts))[0];
+  if (hit?.status === 'placed') return 'already bet on this market';
+  if (hit?.status === 'set_up') return 'already set up a ticket for this market';
+  return undefined;
+}
+
 async function quoteOne(m: Model, slug: string): Promise<Quote | undefined> {
   return withEventDecision(m, (await quotes(m, [slug])).get(slug));
 }
@@ -159,7 +180,10 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       const tag = String(args.tag ?? 'all'), within = Number(args.within_hours ?? 24), top = Math.min(Number(args.top ?? 10), 40);
       const done = step(within <= 24 ? `Looking at ${tag === 'all' ? '' : `${tag} `}markets that end tonight` : `Looking at ${tag === 'all' ? '' : `${tag} `}markets`);
       try {
-        const { picks, scanned } = await scanMarkets(m, tag, within, top);
+        const found = await scanMarkets(m, tag, within, top + 10);
+        const fresh: typeof found.picks = [];
+        for (const p of found.picks) if (!(await alreadyIn(p))) fresh.push(p);
+        const picks = fresh.slice(0, top), scanned = found.scanned;
         done('ok', undefined, picks.length ? `Found ${picks.length} good bet${picks.length === 1 ? '' : 's'} in ${scanned.toLocaleString()} markets` : `No good bets in ${scanned.toLocaleString()} markets`);
         const a = await getAccount();
         return { scanned, picks: picks.map((p) => ({ market: p.marketSlug, question: p.question, side: sideOf(p.decision),
@@ -205,6 +229,11 @@ export async function runTool(ctx: Ctx, name: string, args: Args): Promise<Recor
       if (q.decision && verdictOf(q.decision) === 'SKIP' && !args.override) return { error: q.decision.blockedBy ? `one bet per event: Horizon backs ${q.decision.blockedBy} instead` : 'price is fair after costs (advantage under 1¢): skip' };
       if (q.decision && verdictOf(q.decision) === 'WAIT' && !args.override)
         return { error: `too early: Horizon only bets in the last 24 hours before the end; check back in about ${Math.round(q.decision.checkBackInHours ?? q.decision.hours - 24)} h`, verdict: 'WAIT' };
+      // Never the same market or event twice: not in this plan, not if the user already bet (paper or real).
+      if (ctx.plan.some((i) => i.kind === 'buy' && (i.q.marketSlug === q.marketSlug || (!!q.eventSlug && i.q.eventSlug === q.eventSlug))))
+        return { error: 'already in this plan (one bet per event)', already_bet: true };
+      const dup = await alreadyIn(q);
+      if (dup && !args.override) { step(short(nameOf(q), 50), 'ok', `Skipped: ${dup}`); return { error: dup, already_bet: true, note: 'pick another market' }; }
       const c = checkBet(a, q, side, args.amount === undefined || args.amount === null ? undefined : Number(args.amount), !!args.override);
       if (!c.ok) { step(short(nameOf(q), 50), 'fail', c.error); return { error: c.error }; }
       ctx.plan.push({ kind: 'buy', q, side, amount: c.amount, name: q.question, suggested: c.suggested });
