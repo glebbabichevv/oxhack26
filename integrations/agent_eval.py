@@ -52,6 +52,14 @@ PROMPTS = [
     ("bestwhy", "question", "What's the best bet right now and why?", {}),
     ("followup", "spend", ["Find me the 3 best bets tonight", "Now put $300 across them instead"], {"total": 300, "chosen": True, "max_bets_exact": 3}),
     ("russian", "spend", "Потрать 500 долларов на лучшие ставки сегодня", {"total": 500}),
+    ("k1", "spend", "spend 1k on tonight's best", {"total": 1000}),
+    ("each50", "count", "Bet $50 each on my 3 best tonight", {"max_bets": 3, "each": 50}),
+    ("sports", "spend", "Spend $300 on sports tonight", {"total": 300, "domain": "sports"}),
+    ("week", "spend", "Spend $400 on bets ending this week", {"total": 400}),
+    ("btc", "question", "Should I bet on Bitcoin?", {}),
+    ("half", "spend", ["Set my budget to $500", "Now spend half of it tonight"], {"total": 250, "exact": True}),
+    ("double", "spend", ["Spend $100 on the best bets tonight", "Double it"], {"total": 200, "exact": True}),
+    ("whydid", "question", ["Spend $100 on the best bets tonight", "Why did you pick those?"], {}),
 ]
 
 # ---------- simulated panel (agent.ts runTool, on /api/live) ----------
@@ -97,13 +105,13 @@ def split_budget(total, weights, max_share=MAX_SHARE):
 
 class Panel:
     def __init__(self, markets, guard):
-        self.m, self.guard, self.plan, self.calls = markets, guard, [], []
+        self.m, self.guard, self.plan, self.calls, self.bankroll = markets, guard, [], [], BANKROLL
 
     def _side(self, r):
         return {"BUY_YES": "YES", "BUY_NO": "NO"}.get(r["action"])
 
     def _sug(self, r):
-        return max(1.0, math.floor(r["kelly_fraction"] * BANKROLL * 100) / 100)
+        return max(1.0, math.floor(r["kelly_fraction"] * self.bankroll * 100) / 100)
 
     def _find(self, slug):
         s = str(slug).lower()
@@ -146,19 +154,19 @@ class Panel:
             if self._side(r) != side and not a.get("override"):
                 return {"error": "Horizon sees no advantage here after costs" if not self._side(r) else f"Horizon backs {self._side(r)} here, not {side}"}
             amt = a.get("amount")
-            if self.guard and amt is not None and float(amt) > BANKROLL * MAX_SHARE and not a.get("confirmed_amount") and not a.get("override"):
+            if self.guard and amt is not None and float(amt) > self.bankroll * MAX_SHARE and not a.get("confirmed_amount") and not a.get("override"):
                 return {"error": f"${amt} is over 20% of the budget in one market. To spend a total across several bets call spend_budget; "
                                  "pass confirmed_amount=true only if the user named this amount for this one market."}
             sug = self._sug(r)
-            amt = min(float(amt) if amt is not None else sug, BANKROLL)
-            self.plan.append({"market": r["slug"], "side": side, "amount": round(amt, 2)})
+            amt = min(float(amt) if amt is not None else sug, self.bankroll)
+            self.plan.append({"market": r["slug"], "side": side, "amount": round(amt, 2), "domain": r["domain"]})
             return {"added_to_plan": True, "amount": round(amt, 2), "horizon_suggests": sug, "above_suggestion": amt > sug + 0.005,
                     "note": "Horizon will set up this ticket on Polymarket; the user presses Trade"}
         if name == "spend_budget":
             asked = float(a.get("total", 0))
             if asked < 1:
                 return {"error": "total must be at least $1"}
-            total = min(asked, BANKROLL)
+            total = min(asked, self.bankroll)
             mx = min(max(int(a.get("max_bets", 10)), 1), 40, int(total))
             only = set(map(str, a.get("markets") or []))
             picks = [p for p in self._run("scan_markets", {"tag": a.get("tag", "all"), "within_hours": a.get("within_hours", 24), "top": max(mx * 2, 10)})["picks"]
@@ -180,7 +188,7 @@ class Panel:
                     "note": (f"{len(bets)} bets at most {round(share * 100)}% each: ${left:g} stays unspent rather than piling into one market." if left >= 1
                              else f"The user asked for more than Horizon would bet on its own (${sug:g}); say so in one plain sentence." if sug < spent else None)}
         if name == "summarize_portfolio":
-            return {"budget": BANKROLL, "bets_user_placed": 0, "dollars_in_those_bets": 0, "result_so_far": 0}
+            return {"budget": self.bankroll, "bets_user_placed": 0, "dollars_in_those_bets": 0, "result_so_far": 0}
         if name == "open_my_results":
             return {"opened": True, "summary": "No decisions recorded yet"}
         if name in ("close_all",):
@@ -188,7 +196,10 @@ class Panel:
         if name in ("close_position", "adjust_stake"):
             return {"error": "no such open bet"}
         if name == "set_bankroll":
-            return {"ok": True, "budget": a.get("amount")}
+            if not float(a.get("amount", 0)) >= 1:
+                return {"error": "amount must be at least 1"}
+            self.bankroll = float(a["amount"])
+            return {"ok": True, "budget": self.bankroll}
         if name in ("open_market_in_tab", "prepare_ticket_on_page"):
             return {"ok": True}
         return {"error": f"unknown tool {name}"}
@@ -311,6 +322,12 @@ def score(case, panel, answer, markets):
             issues.append(f"one basket: ${biggest} of ${t} in one market")
         if not panel.plan and tradable:
             issues.append("planned nothing though there are tradable markets")
+    if chk.get("each") and (len(panel.plan) != chk["max_bets"] or any(abs(b["amount"] - chk["each"]) > 0.01 for b in panel.plan)):
+        issues.append(f"expected {chk['max_bets']} bets of ${chk['each']}, got {[b['amount'] for b in panel.plan]}")
+    if chk.get("domain") and any(b["domain"] != chk["domain"] for b in panel.plan):
+        issues.append(f"bets outside {chk['domain']}: {sorted({b['domain'] for b in panel.plan})}")
+    if chk.get("exact") and tradable and abs(total_planned - chk["total"]) > 0.01:
+        issues.append(f"planned ${total_planned}, asked ${chk['total']}")
     if chk.get("min_bets") and tradable and len(panel.plan) < chk["min_bets"]:
         issues.append(f"{len(panel.plan)} bets, expected at least {chk['min_bets']}")
     if chk.get("named"):
@@ -328,7 +345,7 @@ def score(case, panel, answer, markets):
     if group in ("question", "junk") and panel.plan:
         issues.append(f"added {len(panel.plan)} bets to the plan for a question")
     # invented numbers: every $ amount / % in the answer must come from a tool result or the prompt
-    known = _numbers_in([c["result"] for c in panel.calls]) | _numbers_in(text if isinstance(text, str) else " ".join(text)) | {BANKROLL, 1, 5, 20, 25, 34677, 10839, 0}
+    known = _numbers_in([c["result"] for c in panel.calls]) | _numbers_in(text if isinstance(text, str) else " ".join(text)) | {BANKROLL, panel.bankroll, 1, 5, 20, 25, 34677, 10839, 0}
     bad = []
     for tok in NUM.findall(answer):
         if not (tok.startswith("$") or tok.endswith("%")):

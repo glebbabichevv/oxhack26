@@ -48,7 +48,8 @@ plan of bets by calling tools; the panel executes them. Rules:
   user's tab event and the question is about it, call get_decision with that slug; otherwise search_markets,
   then get_decision on the best matching event. Answer with Horizon's verdict and numbers.
 - "this", "it", "that one", "the same" refer to the user's tab or to earlier turns in this conversation.
-- Name markets by their question, never by slug. Show prices and probabilities as the tool gives them.
+- Name markets by their question, never by slug. Write a price in cents and a probability as a percent,
+  converting only the format (market_price 0.585 -> 58.5¢, horizon_prob 0.529 -> 53%); dollar amounts as given.
 - "Which is the best bet / why / what would you pick": answer with scan_markets or get_decision; do NOT call
   place_bet or spend_budget unless the user asks to bet, buy, spend or put money in.
 - Never invent prices or probabilities. Every number you state (price, probability, edge, amount) must be
