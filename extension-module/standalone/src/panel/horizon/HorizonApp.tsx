@@ -59,8 +59,9 @@ export function HorizonApp() {
   const [model, setModel] = useState<Model>();
   const agent = useAgent(model, tab.id);
   const scroller = useRef<HTMLDivElement>(null);
-  // Test hook for the fill matrix: fill one ticket on the active tab, never presses Trade.
+  // Test hook for the fill matrix (dev builds only): fill one ticket on the active tab, never presses Trade.
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     (window as unknown as Record<string, unknown>).__hzFill = async (marketSlug: string, side: 'YES' | 'NO', amount: number) => {
       const m = await loadModel();
       const q = (await quotes(m, [marketSlug])).get(marketSlug);
