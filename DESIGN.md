@@ -136,7 +136,7 @@ components:
 
 # Design System: Horizon
 
-**Target:** `docs/design-reference/horizon-target-mock.png` (rendered from these tokens). Source looks: `docs/design-reference/landing/` and `extension/`. Code: `frontend/design/`.
+Code: `frontend/design/` (tokens above).
 
 ## Overview
 

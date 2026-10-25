@@ -17,6 +17,10 @@ Prices are too extreme near resolution: 10–35¢ longshots win more often than 
 python integrations/reproduce.py   # re-runs the shipped pipeline from data/horizons.csv, diffs against backend/results/backtest.json
 ```
 
+## Built here vs brought
+
+Built at OxHack '26: the data pipeline, the calibration model, the backtest and every number on the site, the decision rule (COH), the time capsule, the site, the MCP server, and the Horizon extension panel. Brought from Gleb's earlier product Argos and reused with permission (he wrote it): the extension's browser-control layer (find, click, fill on the page) and three small panel pieces under `extension-module/standalone/src/panel/horizon/argos/` (markdown + LaTeX rendering, the "thinking" animation). The Argos product itself is not in this repo.
+
 ## Architecture
 
 ```mermaid

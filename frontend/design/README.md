@@ -1,6 +1,6 @@
 # Horizon design kit — "The Quiet Page" (for Role B)
 
-Spec: `/DESIGN.md`. **Build this:** `docs/design-reference/horizon-target-mock.png` (white page, serif claim, KPI row, white framed cards; real numbers from `backend/results/`). Look references: `docs/design-reference/landing/` and `extension/`. **No glass, no painting backdrop.**
+Spec: `/DESIGN.md`. **Build this:** (white page, serif claim, KPI row, white framed cards; real numbers from `backend/results/`). Look references: `docs/design-reference/landing/` and `extension/`. **No glass, no painting backdrop.**
 
 ## Files
 - `tokens.css` — colours, fonts, radii, shadows (Tailwind v4 `@theme`) + the big CTA (`.hz-cta-*`).

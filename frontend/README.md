@@ -1,6 +1,6 @@
 # Frontend & demo screen — Role B. See CLAUDE.md and DESIGN.md.
 
-One page (`app/page.tsx`) built to `docs/design-reference/horizon-target-mock.png`, every number from the API.
+One page (`app/page.tsx`) built to `/DESIGN.md`, every number from the API.
 
 ```bash
 cd frontend
