@@ -44,8 +44,15 @@ Ayaz built the model and the testing, so he'll explain how it works.
 The model is small on purpose. It only looks at two things: the price, and how much time is left.
 It learned from past markets how far off the crowd usually is at each point in time.
 
-We tried nine other approaches, including bigger models. They weren't better.
-One idea did help: making the outcomes of a match add up to 100%, and only betting once per match.
+Before we settled on it, we compared it with eleven alternatives, on 4,768 validation markets, without touching the test set:
+gradient boosting, a logistic regression with extra features like price momentum, volatility and order-book depth,
+beta calibration, isotonic regression, a hierarchical model with a separate slope for each market type,
+Shin's model and the power method from the betting literature, an average of all the models,
+a filter that only bets when every model agrees, and a pool where each model's weight depends on the time left.
+
+None of the bigger models beat the simple one. Their errors were 99% correlated, because they all read the same price.
+But one variant from that search did win: making the probabilities of all outcomes of a match add up to 100%,
+and placing only one bet per match. That's the rule we use now, and it took us from 17 to about 30 cents per dollar.
 
 We tested it on 10,000 markets the model had never seen.
 After Polymarket's fees, it made about 30 cents for every dollar bet.
