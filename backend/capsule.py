@@ -200,7 +200,9 @@ def open_seal(seal_path, write_dir=CAPSULE):
     # Amendment 1: only markets that resolved after the seal's hash was posted publicly count.
     posts = json.loads((CAPSULE / "posts.json").read_text()) if (CAPSULE / "posts.json").exists() else {}
     posted_at = posts.get(Path(seal_path).name)
-    before_post = df["resolved_at"].notna() & (df["resolved_at"] <= posted_at) if posted_at else pd.Series(False, index=df.index)
+    # Compare as timestamps: when nothing has resolved yet the column is all NaN (float), not strings.
+    res_ts = pd.to_datetime(df["resolved_at"], utc=True, errors="coerce")
+    before_post = res_ts.notna() & (res_ts <= pd.Timestamp(posted_at)) if posted_at else pd.Series(False, index=df.index)
     scored = df[df["y"].notna() & ~before_post].astype({"y": int})
     rng = np.random.default_rng(0)
     now = datetime.now(timezone.utc).replace(microsecond=0)
