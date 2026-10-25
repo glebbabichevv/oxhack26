@@ -10,3 +10,4 @@ __pycache__/
 .DS_Store
 .vercel
 data/raw/
+pitch-proof/
